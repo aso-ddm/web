@@ -1,0 +1,53 @@
+name: DDM Web Deployment
+
+on:
+  push:
+    branches:
+      - preview
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/web.yml'
+
+jobs:
+  deploy:
+    name: Deploy DDM Web
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_DEFAULT_REGION: eu-west-1
+      STAGE: ${{ github.ref_name == 'main' && 'production' || github.ref_name }}
+      FRONTEND_DIR: frontend
+      INFRASTRUCTURE_DIR: infrastructure
+      APP_NAME: ddm-web
+      BASE_DOMAIN: dragondemadera.com
+      ENVIRONMENT: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::330944269058:role/github-action
+          role-session-name: github-action-ddm-web-${{ github.ref_name }}-job-${{ github.run_id }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      - name: Install Frontend Dependencies and Build
+        run: |
+          make -f Makefile.ci ci-build-frontend
+
+      - name: Install CDK Dependencies
+        working-directory: ${{ env.INFRASTRUCTURE_DIR }}
+        run: npm ci
+
+      - name: Deploy with CDK
+        working-directory: ${{ env.INFRASTRUCTURE_DIR }}
+        run: npx cdk deploy --require-approval never --all

@@ -1,0 +1,8 @@
+SHELL = /bin/bash
+
+.PHONY: ci-build-frontend
+ci-build-frontend:
+	corepack enable pnpm
+	cd frontend; \
+	pnpm install; \
+	pnpm run build

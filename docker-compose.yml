@@ -1,0 +1,13 @@
+services:
+  node:
+    build: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+    networks:
+      - ddm
+
+networks:
+  ddm:
+    driver: bridge
