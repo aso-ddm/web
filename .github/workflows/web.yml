@@ -6,6 +6,7 @@ on:
       - preview
     paths:
       - 'frontend/**'
+      - 'infrastructure/**'
       - '.github/workflows/web.yml'
 
 jobs:
