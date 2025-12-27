@@ -9,9 +9,6 @@ import { SPACING } from "@/lib/constants"
 
 
 
-const calendarSrc =
-  "https://calendar.google.com/calendar/u/0/embed?src=pgo2gfducbn70d2eqfbchquopo@group.calendar.google.com&ctz=Europe/Madrid&pli=1"
-
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
@@ -106,7 +103,7 @@ export default function HomePage() {
           </h2>
           <div className="w-6/7 mx-auto">
             <iframe
-              src="https://calendar.google.com/calendar/embed?height=700&wkst=2&ctz=Europe%2FLondon&showPrint=0&showTz=0&showCalendars=0&showTitle=0&src=OWI0MWUxYzJjMTRlYjFiNjkwYzkyNWI3NWQyMDg1ODg3ZDkxMjkzZDIxMmMwNjdmMzRlNDMwNTVlYzFlNjBiZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23ad1457"
+              src="https://calendar.google.com/calendar/embed?src=pgo2gfducbn70d2eqfbchquopo@group.calendar.google.com&ctz=Europe/Madrid"
               height="700"
               className="w-full block"
             ></iframe>
