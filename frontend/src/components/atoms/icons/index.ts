@@ -1,0 +1,5 @@
+export { DragonIcon } from './DragonIcon'
+export { DragonTextLogo } from './DragonTextLogo'
+export { WhatsAppIcon } from './WhatsAppIcon'
+export { MeepleIcon } from './MeepleIcon'
+export type { IconProps } from './types'

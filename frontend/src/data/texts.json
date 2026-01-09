@@ -1,0 +1,271 @@
+{
+  "common": {
+    "clubName": "Dragón de Madera",
+    "clubNameTagline": "CLUB DE JUEGOS DE MESA EN GRANADA",
+    "whatsappGroup": "Grupo de WhatsApp",
+    "whatsappCTA": "Unirse al grupo",
+    "address": {
+      "street": "Pepita Serrador 3, local 6",
+      "city": "18015 - Granada"
+    },
+    "email": "info@dragondemadera.com",
+    "copyright": "Todos los derechos reservados."
+  },
+  "navigation": {
+    "home": "Inicio",
+    "calendar": "Calendario de actividades",
+    "club": "Nuestro Club",
+    "member": "Ser Socio",
+    "memberArea": "Area de Socios",
+    "contact": "Contacto"
+  },
+  "home": {
+    "hero": {
+      "title": "TU CLUB DE JUEGOS DE MESA EN GRANADA",
+      "heading": "Únete a nuestra comunidad",
+      "subtitle": "Un lugar para jugar, disfrutar y conocer gente con tu misma afición.",
+      "description": "En nuestra sede de La Chana te esperamos con más de 800 juegos clásicos y modernos, partidas todas las semanas y un ambiente cercano y familiar.",
+      "features": [
+        "3 invitaciones gratis para concernos.",
+        "Muchos eventos y jornadas abiertas.",
+        "Comunidad de todas las edades."
+      ],
+      "callToAction": "Mantente al día de todos lo eventos, solicita hueco en las partidas, participa y comparte:",
+      "imageAlt": "Club de juegos en un evento"
+    },
+    "firstSteps": {
+      "title": "Primeros pasos:",
+      "steps": [
+        "Entra en Whatsapp y preséntate.",
+        "Mira el calendario de actividades.",
+        "Pregunta por el grupo si te puedes unir al evento o partida."
+      ]
+    },
+    "calendar": {
+      "title": "Calendario de actividades",
+      "note": "Entre corchetes se muestran las plazas. [Ocupadas/Totales], ejemplo: [2/4]"
+    },
+    "instagram": {
+      "title": "Últimas fotos de Instagram",
+      "imageAlt": "Foto del club"
+    },
+    "faq": {
+      "title": "Preguntas rápidas",
+      "items": [
+        {
+          "question": "¿Puedo ir sin experiencia?",
+          "answer": "Claro que sí, siempre explicamos los juegos antes de jugar. Aún así, agradecemos que veas un video de cómo jugar si el juego es complejo."
+        },
+        {
+          "question": "¿Tengo que ser socio para ir a jugar?",
+          "answer": "No, puedes venir pidiendo ocupar una plaza libre en el grupo de WhatsApp. Las 3 primeras visitas son gratis, después el pase de día son 4 euros."
+        },
+        {
+          "question": "¿Puedo crear partidas?",
+          "answer": "Solo los socios pueden crear partidas, pero puedes proponer una partida en el grupo de WhatsApp y esperar que un socio recoja el guante."
+        },
+        {
+          "question": "¿Puedo ir a ver el club si no hay partidas en el calendario?",
+          "answer": "No, el club estará cerrado."
+        },
+        {
+          "question": "¿Puedo ir si hay partidas pero no estoy apuntado?",
+          "answer": "Debes venir apuntado. Tenemos eventos periódicamente con muchas plazas para que puedas venir. Si no te coincide el horario puedes pedir una partida por WhatsApp. Aún así, alguien te atenderá y resolverá tus dudas mientras echas un vistazo."
+        },
+        {
+          "question": "¿Jugáis a rol?",
+          "answer": "Si claro, tenemos un grupo de rol en Telegram abierto a todo el mundo. Entra y pregunta.",
+          "button_text": "Grupo rol Telegram",
+          "button_href": "https://t.me/+1Vs9bN_8LR42MTNk"
+        },
+        {
+          "question": "¿A qué juegos jugáis?",
+          "answer": "Jugamos a todo tipo de juegos: familiares, fillers, partys, eurogames, temáticos, wargames, rol, etc."
+        },
+        {
+          "question": "¿Cómo puedo hacerme socio?",
+          "answer": "Primero tienes que usar tus 3 invitaciones gratuitas, después el secretario del club te dará los pasos."
+        }
+      ]
+    },
+    "cta": {
+      "title": "¿Quieres saber más?",
+      "subtitle": "Descubre todo sobre nuestro club, valores y ludoteca",
+      "button": "Nuestro Club"
+    }
+  },
+  "club": {
+    "hero": {
+      "title": "COMPARTIMOS TU AFICIÓN POR LOS JUEGOS DE MESA EN GRANADA",
+      "subtitle": "Somos una asociación cultural sin ánimo de lucro que promueve el ocio saludable a través de los juegos de mesa... y mucho más. Nos une el buen ambiente, enseñar a quien empieza y hacer muchas amistades.",
+      "imageAlt": "Club vacío con estanterías"
+    },
+    "features": {
+      "text1": "Somos una asociación cultural sin ánimo de lucro que promueve el ocio saludable a través de los juegos de mesa… y mucho más.",
+      "text2": "Nos une el buen ambiente, enseñar a quien empieza y hacer muchas amistades.",
+      "title": "Nuestros valores"
+    },
+    "rules": {
+      "voluntariado": {
+        "title": "Voluntariado",
+        "subtitle": "El club lo construimos juntos:",
+        "items": [
+          "Repartimos las tareas.",
+          "Aportamos tiempo y habilidades.",
+          "Mantenemos el club limpio y ordenado.",
+          "Cuidamos los juegos con cariño.",
+          "Hacemos crecer el club por afición, compromiso y ganas de compartir."
+        ]
+      },
+      "convivencia": {
+        "title": "Convivencia",
+        "subtitle": "Respeto ante todo.",
+        "items": [
+          "Cuidamos que todo el mundo este cómodo.",
+          "Venimos a jugar y a pasarlo bien.",
+          "Damos la bienvenida a todo el mundo.",
+          "Nos encanta hacer nuevas amistades.",
+          "Respetamos el tiempo de los demás, somos puntuales y comprometidos."
+        ]
+      }
+    },
+    "local": {
+      "title": "Nuestro local",
+      "subtitle": "Nuestro propio espacio en el barrio de la Chana de Granada.",
+      "items": [
+        "Sin horario fijo.",
+        "Amplio y bien iluminado.",
+        "Bien comunicado en autobús.",
+        "Con aparcamiento en la zona.",
+        "Refrescos, cafetera, snack y dulces.",
+        "Climatizado."
+      ]
+    },
+    "location": {
+      "title": "Ven a conocernos",
+      "postalTitle": "Dirección postal",
+      "button": "Cómo llegar"
+    },
+    "library": {
+      "title": "Ludoteca",
+      "subtitle": "Más de 800 juegos clásicos y modernos, y creciendo gracias a aportaciones de socios y editoriales.",
+      "description": "En el club tenemos de todo y jugamos a todo tipo de juegos.",
+      "tableNote": "En esta tabla puedes explorar nuestra ludoteca:",
+      "moreGames": {
+        "title": "Y muchos más.",
+        "description": "Además los socios tenemos muchos más juegos en casa. Pregunta por tus juegos de mesa favoritos:"
+      }
+    },
+    "cta": {
+      "title": "¿Ya has gastado tus 3 invitaciones gratis?",
+      "subtitle": "Descubre cómo hacerte socio del club",
+      "button": "Hazte Socio"
+    }
+  },
+  "member": {
+    "hero": {
+      "title": "¡TU NUEVA FAMILIA JUGONA!",
+      "subtitle": "Únete a una comunidad activa que juega cada semana en nuestro Club de juegos de mesa de Granada. Más de 800 juegos, buen ambiente y ganas de compartir afición."
+    },
+    "howToJoin": {
+      "text1": "Únete a una comunidad activa que juega cada semana en nuestro Club de juegos de mesa de Granada.",
+      "text2": "Más de 800 juegos, buen ambiente y ganas de compartir afición.",
+      "title": "¿Cómo unirte al club?",
+      "steps": [
+        {
+          "title": "Prueba el club",
+          "description": "Gasta tus 3 invitaciones gratuitas para conocernos."
+        },
+        {
+          "title": "Sigue viniendo",
+          "description": "Con pase de día por 4€ o hazte socio."
+        },
+        {
+          "title": "Hazte socio",
+          "items": [
+            "Matrícula 15€ (reembolsable si causas baja).",
+            "Cuota 15 €/mes.",
+            "Plan familiar: +5€ cónyuge e hijos mayores de 18. Menores sin coste."
+          ],
+          "description": ""
+        }
+      ]
+    },
+    "benefits": {
+      "title": "Beneficios de ser socio",
+      "items": [
+        "Uso regular de la sede y ludoteca.",
+        "Acceso a prestamo de juegos.",
+        "Telegram de socios para compartir ideas, debatir y votar.",
+        "Voz y voto en decisiones de las asambleas y grupos de trabajo.",
+        "Llaves a los 6 meses.",
+        "Descuentos en tiendas colaboradoras.",
+        "Organizar torneos, eventos y demos.",
+        "Participación en los clubfundings.",
+        "Contacto con personas de intereses afines con las que organizar otras actividades fuera del ámbito de los juegos de mesa."
+      ]
+    },
+    "cta": {
+      "title": "¿Tienes más dudas?",
+      "subtitle": "Pregunta en el grupo de whatsapp por el secretario, él te contactará por privado cuando pueda y resolverá todas tus dudas."
+    }
+  },
+  "contact": {
+    "hero": {
+      "title": "Contacto",
+      "subtitle": "Estamos aquí para ayudarte. Contacta con nosotros por cualquiera de estos medios."
+    },
+    "social": {
+      "title": "A tu disposición en nuestras redes",
+      "platforms": [
+        {
+          "name": "Instagram",
+          "icon": "Instagram"
+        },
+        {
+          "name": "Twitter",
+          "icon": "Twitter"
+        },
+        {
+          "name": "Facebook",
+          "icon": "Facebook"
+        },
+        {
+          "name": "La BSK",
+          "icon": "MessageCircle"
+        }
+      ]
+    },
+    "whatsapp": {
+      "title": "Nuestro grupo de WhatsApp",
+      "subtitle": "La forma más rápida de contactar con la comunidad",
+      "qrCode": "QR Code"
+    },
+    "form": {
+      "title": "Contacta con la dirección del Club",
+      "nameLabel": "Nombre",
+      "emailLabel": "Email",
+      "messageLabel": "Mensaje",
+      "submitButton": "Enviar mensaje"
+    },
+    "address": {
+      "title": "Dirección postal"
+    }
+  },
+  "footer": {
+    "contact": "Contacto",
+    "follow": "Síguenos"
+  },
+  "ludoteca": {
+    "tableTitle": "Listado de Juegos",
+    "loading": "Cargando juegos...",
+    "error": "No se pudieron cargar los juegos",
+    "searchPlaceholder": "Buscar juego...",
+    "clearSearch": "Limpiar búsqueda",
+    "noResults": "No se encontraron juegos que coincidan con \"{searchTerm}\"",
+    "showing": "Mostrando",
+    "of": "de",
+    "games": "juegos",
+    "total": "Total de juegos"
+  }
+}
