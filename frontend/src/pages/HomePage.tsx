@@ -20,25 +20,25 @@ export function HomePage() {
             <div className={`grid lg:grid-cols-2 ${SPACING.contentGap} items-center`}>
               <div className={SPACING.itemsGap}>
                 <h2
-                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold ${SPACING.smallMargin} text-balance font-display text-card mb-4 sm:mb-6 md:mb-8`}
+                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-balance font-display text-card ${SPACING.marginBottomMd}`}
                 >
                   {texts.home.hero.heading}
                 </h2>
 
-                <p className="text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-card leading-7 leading-tighter tracking-wide my-3">
+                <p className={`text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-card tracking-wide ${SPACING.marginBottomXs}`}>
                   {texts.home.hero.subtitle}
                 </p>
-                <p className="text-base sm:text-lg md:text-xl leading-relaxed text-card mb-2.5 leading-7 tracking-wide">
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-card tracking-wide ${SPACING.marginBottomXs}`}>
                   {texts.home.hero.description}
                 </p>
 
-                <ul className="space-y-2 sm:space-y-3">
+                <ul className={SPACING.spaceYSm}>
                   {texts.home.hero.features.map((feature, i) => (
                     <FeatureItem key={i} text={feature} />
                   ))}
                 </ul>
 
-                <p className="text-base sm:text-lg md:text-xl leading-relaxed text-card mt-2.5 mb-6 sm:mb-8 md:mb-10 tracking-wide">
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-card tracking-wide ${SPACING.marginTopXs} ${SPACING.marginBottomMd}`}>
                   {texts.home.hero.callToAction}
                 </p>
 
@@ -62,15 +62,15 @@ export function HomePage() {
 
         {/* First Steps */}
         <section className={`${SPACING.section} text-primary-foreground bg-secondary text-center`}>
-          <div className="inline-block px-4">
-            <h3 className="font-semibold font-display mb-6 sm:mb-7 md:mb-9 text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
+          <div className={`inline-block ${SPACING.padXSm}`}>
+            <h3 className={`font-semibold font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl ${SPACING.marginBottomMd}`}>
               {texts.home.firstSteps.title}
             </h3>
             <div className={SPACING.itemsGap}>
               {texts.home.firstSteps.steps.map((step, index) => (
                 <div
                   key={index}
-                  className="flex gap-3 sm:gap-4 items-center text-center flex-row justify-start leading-7 tracking-wider my-2"
+                  className={`flex ${SPACING.gapSm} items-center text-center flex-row justify-start leading-7 tracking-wider my-2`}
                 >
                   <div className="flex-shrink-0 rounded-full bg-primary-foreground text-primary flex items-center justify-center font-bold text-lg sm:text-xl md:text-2xl size-7 sm:size-8">
                     {index + 1}
@@ -102,7 +102,7 @@ export function HomePage() {
         <section className={`${SPACING.section} bg-background text-card`}>
           <div className={SPACING.container}>
             <SectionHeading>{texts.home.instagram.title}</SectionHeading>
-            <div className={`grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:${SPACING.smallGap}`}>
+            <div className={`grid grid-cols-2 md:grid-cols-3 ${SPACING.gapSm}`}>
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="aspect-square rounded-lg overflow-hidden bg-muted">
                   <img
@@ -122,12 +122,12 @@ export function HomePage() {
             <div className={SPACING.maxWidthNarrow}>
               <SectionHeading className="text-primary">{texts.home.faq.title}</SectionHeading>
 
-              <Accordion type="single" collapsible className="space-y-3 sm:space-y-4 text-card">
+              <Accordion type="single" collapsible className={`${SPACING.spaceYMd} text-card`}>
                 {texts.home.faq.items.map((item, index) => (
                   <AccordionItem
                     key={index}
                     value={`item-${index + 1}`}
-                    className="rounded-lg px-4 sm:px-5 md:px-6 border-0 bg-background text-card"
+                    className={`rounded-lg ${SPACING.padXMd} border-0 bg-background text-card`}
                   >
                     <AccordionTrigger className="text-base sm:text-lg md:text-xl text-left hover:no-underline font-display">
                       {item.question}
@@ -150,15 +150,15 @@ export function HomePage() {
           <div className={`${SPACING.container} text-center`}>
             <SectionHeading className="text-background">{texts.home.cta.title}</SectionHeading>
             <p
-              className={`text-base sm:text-lg md:text-xl tracking-wider ${SPACING.subheadingMargin} text-background px-4`}
+              className={`text-base sm:text-lg md:text-xl tracking-wider ${SPACING.subheadingMargin} text-background ${SPACING.padXSm}`}
             >
               {texts.home.cta.subtitle}
             </p>
-            <div className="text-center px-4">
+            <div className={`text-center ${SPACING.padXSm}`}>
               <Button
                 size="lg"
                 asChild
-                className="text-lg sm:text-xl md:text-2xl rounded-full border-0 px-5 py-4 sm:px-6 sm:py-5 md:p-6 font-display bg-background text-secondary font-bold w-full sm:w-auto"
+                className={`text-lg sm:text-xl md:text-2xl rounded-full border-0 ${SPACING.padMd} font-display bg-background text-secondary font-bold w-full sm:w-auto`}
               >
                 <Link to="/club">{texts.home.cta.button}</Link>
               </Button>

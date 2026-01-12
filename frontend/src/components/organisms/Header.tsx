@@ -6,6 +6,7 @@ import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { NavLink } from '@/components/molecules/NavLink'
 import { useScrollNavigation } from '@/hooks/useScrollNavigation'
 import { navigationItems } from '@/config/navigation'
+import { SPACING } from '@/lib/constants'
 
 export function Header() {
   const { handleNavigation } = useScrollNavigation()
@@ -17,15 +18,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
+      <div className={SPACING.container}>
         <div className="flex h-20 sm:h-24 md:h-28 items-center justify-between">
-          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+          <Link to="/" onClick={handleLogoClick} className={`flex items-center ${SPACING.gapSm}`}>
             <DragonIcon className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 fill-primary flex-shrink-0" />
             <DragonTextLogo className="h-8 sm:h-10 md:h-12 w-2/3 fill-primary flex-shrink-0" />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-2 xl:gap-3">
+          <nav className={`hidden lg:flex items-center ${SPACING.gapXs}`}>
             {navigationItems.map((item) => (
               <NavLink key={item.label} to={item.to} scrollTo={item.scrollTo}>
                 {item.label}
@@ -42,7 +43,7 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <nav className="flex flex-col gap-4 mt-8">
+              <nav className={`flex flex-col ${SPACING.gapSm} ${SPACING.marginTopMd}`}>
                 {navigationItems.map((item) => (
                   <NavLink
                     key={item.label}

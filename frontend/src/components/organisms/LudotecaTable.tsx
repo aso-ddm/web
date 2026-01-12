@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { GOOGLE_SHEETS } from '@/lib/constants'
+import { GOOGLE_SHEETS, SPACING } from '@/lib/constants'
 import texts from '@/data/texts.json'
 
 export function LudotecaTable() {
@@ -46,10 +46,10 @@ export function LudotecaTable() {
   if (loading) {
     return (
       <div className="w-full max-w-5xl border-2 border-muted rounded-lg overflow-hidden shadow-lg">
-        <div className="bg-primary text-primary-foreground p-4 sm:p-5 md:p-6">
+        <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
           <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-center">{texts.ludoteca.tableTitle}</h3>
         </div>
-        <div className="p-8 sm:p-12 text-center">
+        <div className={`${SPACING.padLg} text-center`}>
           <p className="text-base sm:text-lg md:text-xl">{texts.ludoteca.loading}</p>
         </div>
       </div>
@@ -59,10 +59,10 @@ export function LudotecaTable() {
   if (error || games.length === 0) {
     return (
       <div className="w-full max-w-5xl border-2 border-muted rounded-lg overflow-hidden shadow-lg">
-        <div className="bg-primary text-primary-foreground p-4 sm:p-5 md:p-6">
+        <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
           <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-center">{texts.ludoteca.tableTitle}</h3>
         </div>
-        <div className="p-8 sm:p-12 text-center">
+        <div className={`${SPACING.padLg} text-center`}>
           <p className="text-base sm:text-lg md:text-xl">{texts.ludoteca.error}</p>
         </div>
       </div>
@@ -71,8 +71,8 @@ export function LudotecaTable() {
 
   return (
     <div className="w-full max-w-5xl border-2 border-muted rounded-lg overflow-hidden shadow-lg">
-      <div className="bg-primary text-primary-foreground p-4 sm:p-5 md:p-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+      <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
+        <div className={`flex flex-col sm:flex-row items-center justify-between ${SPACING.gapSm}`}>
           <h3 className="text-xl sm:text-2xl md:text-3xl font-bold">{texts.ludoteca.tableTitle}</h3>
           <div className="relative w-full sm:w-auto sm:min-w-[200px] md:min-w-[250px]">
             <input
@@ -105,7 +105,7 @@ export function LudotecaTable() {
                     index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                   }`}
                 >
-                  <td className="p-3 sm:p-4 text-sm sm:text-base md:text-lg">{game}</td>
+                  <td className={`${SPACING.padSm} text-sm sm:text-base md:text-lg`}>{game}</td>
                 </tr>
               ))
             ) : (
@@ -118,7 +118,7 @@ export function LudotecaTable() {
           </tbody>
         </table>
       </div>
-      <div className="bg-muted/50 p-3 sm:p-4 text-center">
+      <div className={`bg-muted/50 ${SPACING.padSm} text-center`}>
         <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
           {searchTerm ? (
             <>

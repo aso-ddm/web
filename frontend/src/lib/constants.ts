@@ -6,20 +6,63 @@ export const SPACING = {
   section: "py-16",
   sectionHero: "py-20 md:py-32",
 
-  // Content spacing
-  contentGap: "gap-12",
-  itemsGap: "gap-6",
-  smallGap: "gap-4",
+  // Gaps - responsive scale
+  gapXs: "gap-2",
+  gapSm: "gap-3 sm:gap-4",
+  gapMd: "gap-4 sm:gap-6",
+  gapLg: "gap-6 sm:gap-8",
+  gapXl: "gap-8 sm:gap-12",
 
-  // Text spacing
-  headingMargin: "mb-12",
-  subheadingMargin: "mb-8",
-  paragraphMargin: "mb-6",
-  smallMargin: "mb-4",
+  // Legacy gap names (for backwards compatibility)
+  contentGap: "gap-8 sm:gap-12",
+  itemsGap: "gap-4 sm:gap-6",
+  smallGap: "gap-3 sm:gap-4",
+
+  // Vertical spacing (space-y)
+  spaceYXs: "space-y-1 sm:space-y-2",
+  spaceYSm: "space-y-2 sm:space-y-3",
+  spaceYMd: "space-y-3 sm:space-y-4",
+  spaceYLg: "space-y-4 sm:space-y-6",
+
+  // Padding - responsive scale
+  padXs: "p-2 sm:p-3",
+  padSm: "p-3 sm:p-4",
+  padMd: "p-4 sm:p-6",
+  padLg: "p-6 sm:p-8",
+
+  // Padding horizontal - responsive scale
+  padXXs: "px-2 sm:px-3",
+  padXSm: "px-3 sm:px-4",
+  padXMd: "px-4 sm:px-5 md:px-6",
+  padXLg: "px-5 sm:px-6 md:px-8",
+
+  // Padding vertical - responsive scale
+  padYXs: "py-1 sm:py-2",
+  padYSm: "py-2 sm:py-3",
+  padYMd: "py-3 sm:py-4",
+  padYLg: "py-4 sm:py-6",
+
+  // Margin bottom - responsive scale
+  marginBottomXs: "mb-2 sm:mb-3",
+  marginBottomSm: "mb-4 sm:mb-6",
+  marginBottomMd: "mb-6 sm:mb-8",
+  marginBottomLg: "mb-8 sm:mb-10 md:mb-12",
+
+  // Legacy margin names (for backwards compatibility)
+  headingMargin: "mb-8 sm:mb-10 md:mb-12",
+  subheadingMargin: "mb-6 sm:mb-8",
+  paragraphMargin: "mb-4 sm:mb-6",
+  smallMargin: "mb-2 sm:mb-4",
+
+  // Margin top - responsive scale
+  marginTopXs: "mt-2 sm:mt-3",
+  marginTopSm: "mt-4 sm:mt-6",
+  marginTopMd: "mt-6 sm:mt-8",
+  marginTopLg: "mt-8 sm:mt-10",
 
   // Card padding
-  cardPadding: "p-6",
-  cardPaddingLarge: "p-8",
+  cardPadding: "p-4 sm:p-6",
+  cardPaddingLarge: "p-6 sm:p-8",
 
   // Max widths for content
   maxWidthContent: "max-w-4xl mx-auto",

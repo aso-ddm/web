@@ -18,12 +18,12 @@ export function SocioPage() {
           <div className={SPACING.container}>
             <div className={SPACING.maxWidthContent}>
               <p
-                className={`text-xl sm:text-2xl md:text-3xl text-center text-balance ${SPACING.headingMargin} ${SPACING.maxWidthNarrow} leading-relaxed px-4`}
+                className={`text-xl sm:text-2xl md:text-3xl text-center text-balance ${SPACING.headingMargin} ${SPACING.maxWidthNarrow} leading-relaxed ${SPACING.padXSm}`}
               >
                 {texts.member.howToJoin.text1}
               </p>
               <p
-                className={`text-xl sm:text-2xl md:text-3xl text-center text-balance ${SPACING.headingMargin} ${SPACING.maxWidthNarrow} leading-relaxed px-4`}
+                className={`text-xl sm:text-2xl md:text-3xl text-center text-balance ${SPACING.headingMargin} ${SPACING.maxWidthNarrow} leading-relaxed ${SPACING.padXSm}`}
               >
                 {texts.member.howToJoin.text2}
               </p>
@@ -31,14 +31,14 @@ export function SocioPage() {
               <SectionHeading>{texts.member.howToJoin.title}</SectionHeading>
 
               {/* Steps 1 and 2 */}
-              <div className="grid gap-6 sm:gap-8 max-w-5xl mx-auto px-4">
-                <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+              <div className={`grid ${SPACING.gapLg} max-w-5xl mx-auto ${SPACING.padXSm}`}>
+                <div className={`grid md:grid-cols-2 ${SPACING.gapLg}`}>
                   {/* Step 1 */}
-                  <div className="bg-accent rounded-lg p-6 sm:p-8 relative pt-16 sm:pt-12 text-center shadow-md">
+                  <div className={`bg-accent rounded-lg ${SPACING.padLg} relative pt-16 sm:pt-12 text-center shadow-md`}>
                     <div className="absolute -top-6 -left-6 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl sm:text-3xl font-display font-bold">
                       1
                     </div>
-                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-primary mb-4 sm:mb-6">
+                    <h3 className={`text-2xl sm:text-3xl md:text-4xl font-display font-bold text-primary ${SPACING.marginBottomSm}`}>
                       {texts.member.howToJoin.steps[0].title}
                     </h3>
                     <p className="text-base sm:text-lg md:text-xl text-primary font-bold leading-tight">
@@ -48,11 +48,11 @@ export function SocioPage() {
                   </div>
 
                   {/* Step 2 */}
-                  <div className="bg-accent rounded-lg p-6 sm:p-8 relative pt-16 sm:pt-12 text-center shadow-md">
+                  <div className={`bg-accent rounded-lg ${SPACING.padLg} relative pt-16 sm:pt-12 text-center shadow-md`}>
                     <div className="absolute -top-6 -left-6 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl sm:text-3xl font-display font-bold">
                       2
                     </div>
-                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-primary mb-4 sm:mb-6">
+                    <h3 className={`text-2xl sm:text-3xl md:text-4xl font-display font-bold text-primary ${SPACING.marginBottomSm}`}>
                       {texts.member.howToJoin.steps[1].title}
                     </h3>
                     <p className="text-base sm:text-lg md:text-xl text-primary leading-tight">
@@ -63,29 +63,29 @@ export function SocioPage() {
                 </div>
 
                 {/* Step 3 */}
-                <div className="bg-secondary rounded-lg p-6 sm:p-8 md:p-12 relative mt-4 sm:mt-8 shadow-md text-primary-foreground">
+                <div className={`bg-secondary rounded-lg ${SPACING.padLg} relative ${SPACING.marginTopSm} shadow-md text-primary-foreground`}>
                   <div className="absolute -top-6 -left-6 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl sm:text-3xl font-display font-bold">
                     3
                   </div>
-                  <h3 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-center mb-8 sm:mb-10 md:mb-12 pt-6 md:pt-0">
+                  <h3 className={`text-3xl sm:text-4xl md:text-5xl font-display font-bold text-center ${SPACING.marginBottomLg} pt-6 md:pt-0`}>
                     {texts.member.howToJoin.steps[2].title}
                   </h3>
 
-                  <div className="grid md:grid-cols-3 gap-6 sm:gap-8 items-center">
-                    <div className="flex flex-col items-center text-center gap-2">
+                  <div className={`grid md:grid-cols-3 ${SPACING.gapLg} items-center`}>
+                    <div className={`flex flex-col items-center text-center ${SPACING.gapXs}`}>
                       <p className="text-base sm:text-lg md:text-xl leading-tight">
                         {texts.member.howToJoin.steps[2].items?.[0]}
                       </p>
                     </div>
 
-                    <div className="bg-background text-secondary rounded-lg py-5 sm:py-6 px-4 text-center transform md:scale-110 shadow-lg">
-                      <div className="flex items-center justify-center gap-2 mb-0">
+                    <div className={`bg-background text-secondary rounded-lg ${SPACING.padYMd} ${SPACING.padXSm} text-center transform md:scale-110 shadow-lg`}>
+                      <div className={`flex items-center justify-center ${SPACING.gapXs} mb-0`}>
                         <MeepleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-secondary" />
                         <p className="text-xl sm:text-2xl font-bold">{texts.member.howToJoin.steps[2].items?.[1]}</p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-center text-center gap-2">
+                    <div className={`flex flex-col items-center text-center ${SPACING.gapXs}`}>
                       <p className="text-base sm:text-lg md:text-xl leading-tight">
                         {texts.member.howToJoin.steps[2].items?.[2]}
                       </p>
@@ -103,13 +103,13 @@ export function SocioPage() {
             <SectionHeading className="text-primary">{texts.member.benefits.title}</SectionHeading>
 
             <div
-              className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:${SPACING.itemsGap} ${SPACING.maxWidthWide}`}
+              className={`grid sm:grid-cols-2 lg:grid-cols-3 ${SPACING.gapMd} ${SPACING.maxWidthWide}`}
             >
               {texts.member.benefits.items.map((benefit, i) => {
                 return (
                   <Card key={i} className="bg-background">
                     <CardContent
-                      className={`p-4 sm:p-5 md:${SPACING.cardPadding} flex flex-col items-center text-center`}
+                      className={`${SPACING.padMd} flex flex-col items-center text-center`}
                     >
                       <MeepleIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-accent mb-2" />
                       <p className="text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">{benefit}</p>
@@ -123,7 +123,7 @@ export function SocioPage() {
 
         {/* CTA Section */}
         <section className={`${SPACING.section} bg-secondary`}>
-          <div className={`${SPACING.container} text-center px-4`}>
+          <div className={`${SPACING.container} text-center ${SPACING.padXSm}`}>
             <SectionHeading className="text-background">{texts.member.cta.title}</SectionHeading>
             <p
               className={`text-base sm:text-lg md:text-xl ${SPACING.subheadingMargin} ${SPACING.maxWidthForm} leading-relaxed text-background`}
