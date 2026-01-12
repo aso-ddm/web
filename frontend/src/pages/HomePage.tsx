@@ -88,9 +88,15 @@ export function HomePage() {
         <section id="calendario" className={`${SPACING.section} mx-auto px-4 bg-accent text-center`}>
           <SectionHeading className="text-primary">{texts.home.calendar.title}</SectionHeading>
           <div className="w-full mx-auto">
+            {/* Mobile: Agenda view */}
+            <iframe
+              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&mode=AGENDA&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23c0ca33"
+              className="w-full block h-[400px] sm:h-[500px] md:hidden"
+            ></iframe>
+            {/* Desktop: Month view */}
             <iframe
               src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23c0ca33"
-              className="w-full block h-[400px] sm:h-[500px] md:h-[600px] lg:h-[700px]"
+              className="w-full hidden md:block h-[600px] lg:h-[700px]"
             ></iframe>
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-left mt-2 tracking-wide">
               {texts.home.calendar.note}
