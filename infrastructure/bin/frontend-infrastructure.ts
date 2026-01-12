@@ -46,7 +46,7 @@ new FrontendStaticSiteStack(app, `ddm-web-${environmentName}`, {
   },
   crossRegionReferences: true,
   environmentName,
-  buildPath: '../frontend/out',
+  buildPath: '../frontend/dist',
   domainName,
   wwwDomainName,
   hostedZoneId,

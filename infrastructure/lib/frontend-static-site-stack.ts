@@ -80,7 +80,7 @@ export class FrontendStaticSiteStack extends Stack {
 
     // Add additional behaviors after construct creation
     const distribution = cfS3.cloudFrontWebDistribution;
-    const s3Origin = new origins.S3Origin(cfS3.s3Bucket!);
+    const s3Origin = new origins.S3StaticWebsiteOrigin(cfS3.s3Bucket!);
 
     distribution.addBehavior('/_next/*', s3Origin, {
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
