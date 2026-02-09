@@ -1,15 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm view:*)",
+      "Skill(remotion-best-practices)",
+      "Bash(npm init:*)",
       "Bash(npm install)",
-      "Bash(grep:*)",
-      "Bash(npm run build:*)",
-      "Bash(git ls-tree:*)",
-      "Bash(head:*)",
-      "Bash(cat:*)",
-      "Bash(git rm:*)",
-      "Bash(pnpm run build:*)"
+      "Bash(npx remotion:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "WebSearch",
+      "Bash(find:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npm exec:*)",
+      "Bash(npx pnpm add react-helmet-async)",
+      "Bash(npx pnpm run build)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

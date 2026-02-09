@@ -6,7 +6,7 @@ Web oficial de la asociación granadina de juegos de mesa **Dragón de Madera**.
 
 ---
 
-## Tabla de Contenidos
+## Tabla de Contenidos!!
 
 - [Tecnologías](#tecnologías)
 - [Requisitos Previos](#requisitos-previos)
@@ -17,6 +17,7 @@ Web oficial de la asociación granadina de juegos de mesa **Dragón de Madera**.
 - [Sistema de Estilos](#sistema-de-estilos)
 - [Rutas](#rutas)
 - [Contenido y Textos](#contenido-y-textos)
+- [Gestión de Imágenes](#gestión-de-imágenes)
 - [Despliegue](#despliegue)
 - [Guía de Contribución](#guía-de-contribución)
 
@@ -329,7 +330,125 @@ export const navigationItems = [
 
 Todo el contenido de texto está centralizado en `src/data/texts.json`.
 
-### Estructura del archivo
+### Cómo modificar los textos de la web desde GitHub
+
+Esta guía te permite actualizar los textos de la web sin necesidad de conocimientos técnicos. Solo necesitas una cuenta de GitHub con permisos en el proyecto.
+
+#### 📝 PASO 1: Acceder al archivo texts.json
+
+1. **Accede directamente al editor:**
+   - [📄 Editar texts.json](https://github.com/19Matu91/Dragon-de-madera/edit/main/src/data/texts.json)
+
+2. **Haz clic en el icono del lápiz** (arriba a la derecha) que dice "Edit this file"
+
+#### 🔍 PASO 2: Encontrar el texto que quieres cambiar
+
+El archivo está organizado por secciones. Aquí están las principales:
+
+| Sección | Qué contiene | Ejemplo de clave |
+|---------|--------------|------------------|
+| `"common"` | Información general del club | `"clubName"`, `"email"`, `"address"` |
+| `"navigation"` | Textos del menú de navegación | `"home"`, `"calendar"`, `"club"`, `"member"` |
+| `"home"` | Textos de la página principal | `"hero"`, `"faq"`, `"calendar"` |
+| `"club"` | Textos de la página "Nuestro Club" | `"features"`, `"rules"`, `"library"` |
+| `"member"` | Textos de la página "Ser Socio" | `"howToJoin"`, `"benefits"` |
+
+**Consejo:** Usa `Ctrl + F` (Windows) o `Cmd + F` (Mac) para buscar el texto que quieres cambiar.
+
+#### ✏️ PASO 3: Modificar el texto
+
+**⚠️ IMPORTANTE: Mantén siempre las comillas `"` y las comas `,` en su lugar**
+
+##### Ejemplo 1: Cambiar un texto simple
+
+```json
+// ANTES:
+"clubName": "Dragón de Madera"
+
+// DESPUÉS:
+"clubName": "Dragón de Madera Granada"
+```
+
+##### Ejemplo 2: Cambiar una dirección
+
+```json
+// ANTES:
+"address": {
+  "street": "Pepita Serrador 3, local 6",
+  "city": "18015 - Granada"
+}
+
+// DESPUÉS:
+"address": {
+  "street": "Nueva Calle 123",
+  "city": "18001 - Granada"
+}
+```
+
+##### Ejemplo 3: Modificar una pregunta frecuente (FAQ)
+
+```json
+// ANTES:
+{
+  "question": "¿Puedo ir sin experiencia?",
+  "answer": "Claro que sí, siempre explicamos los juegos antes de jugar."
+}
+
+// DESPUÉS:
+{
+  "question": "¿Necesito experiencia previa?",
+  "answer": "No es necesario, te enseñamos todo lo que necesitas saber."
+}
+```
+
+##### Ejemplo 4: Añadir un nuevo beneficio de ser socio
+
+```json
+// Busca la sección "benefits" en "member":
+"items": [
+  "Uso regular de la sede y ludoteca.",
+  "Acceso a prestamo de juegos.",
+  "Tu nuevo beneficio aquí."  // ⚠️ No olvides la coma en la línea anterior
+]
+```
+
+#### 💾 PASO 4: Guardar los cambios
+
+1. **Revisa tus cambios** para asegurarte de que no borraste comillas ni comas accidentalmente
+
+2. **Desplázate hacia abajo** hasta encontrar el botón verde "Commit changes"
+
+3. **Describe el cambio** en el cuadro (ejemplo: "Actualizar dirección del club")
+
+4. **Haz clic en "Commit changes"** de nuevo
+
+#### ⏱️ PASO 5: Esperar y verificar
+
+1. **GitHub actualizará la web automáticamente** en unos minutos (normalmente 2-5 minutos)
+
+2. **Verifica los cambios:**
+   - Ve a https://dragondemadera.com
+   - Refresca la página (**F5** o **Ctrl+R**)
+   - Busca el texto que modificaste
+
+#### 💡 Consejos importantes
+
+- ✅ **Siempre mantén la estructura**: No borres llaves `{}`, corchetes `[]`, comillas `"` ni comas `,`
+- ✅ **JSON es sensible**: Un solo carácter mal colocado puede romper toda la web
+- ✅ **Si cometes un error**:
+  1. Ve al [historial de cambios](https://github.com/19Matu91/Dragon-de-madera/commits/main/src/data/texts.json)
+  2. Busca el último commit que funcionaba
+  3. Haz clic en "Browse files" para restaurar esa versión
+- ⚠️ **En caso de duda**, mejor pide ayuda que hacer cambios de los que no estés seguro
+- 📧 **Si rompes algo**, contacta con el administrador del repositorio
+
+#### 📚 Enlaces rápidos
+
+- [Editar texts.json](https://github.com/19Matu91/Dragon-de-madera/edit/main/src/data/texts.json)
+- [Ver historial de cambios](https://github.com/19Matu91/Dragon-de-madera/commits/main/src/data/texts.json)
+- [Ver archivo completo](https://github.com/19Matu91/Dragon-de-madera/blob/main/src/data/texts.json)
+
+### Estructura del archivo (para desarrolladores)
 
 ```json
 {
@@ -362,7 +481,7 @@ Todo el contenido de texto está centralizado en `src/data/texts.json`.
 }
 ```
 
-### Uso en componentes
+### Uso en componentes (para desarrolladores)
 
 ```tsx
 import texts from '@/data/texts.json'
@@ -370,6 +489,104 @@ import texts from '@/data/texts.json'
 <h1>{texts.home.hero.title}</h1>
 <p>{texts.common.clubNameTagline}</p>
 ```
+
+---
+
+## Gestión de Imágenes
+
+### Cómo cambiar las imágenes de la web desde GitHub
+
+Esta guía te permite actualizar las fotos de la web sin necesidad de conocimientos técnicos. Solo necesitas una cuenta de GitHub con permisos en el proyecto.
+
+#### 📋 PASO 1: Subir la imagen a la carpeta `public`
+
+1. **Accede a la carpeta public en GitHub:**
+   - [📁 Ir a la carpeta public](https://github.com/19Matu91/Dragon-de-madera/tree/main/public)
+
+2. **Sube tu imagen:**
+   - Haz clic en el botón **"Add file"** → **"Upload files"** (arriba a la derecha)
+   - Arrastra tu imagen desde tu ordenador a la zona que dice **"Drag files here"**
+
+3. **Nombra tu imagen correctamente:**
+   - ⚠️ **IMPORTANTE**: Usa nombres descriptivos sin espacios, tildes ni caracteres especiales
+   - Ejemplos válidos:
+     - `club-community-people-playing.jpg`
+     - `instagram-1.jpg`
+     - `club-local-empty.jpg`
+   - ❌ Evita: `Foto del Club 2024.jpg`, `nueva_imágen.png`
+
+4. **Guarda los cambios:**
+   - Escribe un mensaje descriptivo (ejemplo: `Actualizar foto de Instagram 1`)
+   - Haz clic en **"Commit changes"** (botón verde)
+
+#### 📝 PASO 2: Actualizar el archivo `images.json`
+
+1. **Accede al archivo images.json:**
+   - [📄 Editar images.json](https://github.com/19Matu91/Dragon-de-madera/edit/main/src/data/images.json)
+
+2. **Busca la sección que quieres modificar:**
+
+   | Foto a cambiar | Busca esta clave | Ejemplo |
+   |----------------|------------------|---------|
+   | Foto principal "Únete a nuestra comunidad" | `"community"` | `"community": "/club-community-people-playing.jpg"` |
+   | Fotos de Instagram | `"instagram"` | Array con 6 fotos |
+   | Foto del local | `"local"` | `"local": "/club-local-empty.jpg"` |
+
+3. **Cambia el nombre del archivo:**
+   - Mantén la estructura y **NO borres las comillas** ni la **barra `/`** inicial
+   - Ejemplo de cambio:
+     ```json
+     // ANTES:
+     "community": "/club-community-people-playing.jpg"
+
+     // DESPUÉS (si subiste una foto llamada "nueva-foto-club.jpg"):
+     "community": "/nueva-foto-club.jpg"
+     ```
+
+4. **Para fotos de Instagram:**
+   ```json
+   "instagram": [
+     "/instagram-1.jpg",  // Primera foto
+     "/instagram-2.jpg",  // Segunda foto
+     "/instagram-3.jpg",  // Tercera foto
+     "/instagram-4.jpg",  // Cuarta foto
+     "/instagram-5.jpg",  // Quinta foto
+     "/instagram-6.jpg"   // Sexta foto
+   ]
+   ```
+   - La galería muestra exactamente **6 fotos**
+   - Cambia solo las rutas que necesites
+
+5. **Guarda los cambios:**
+   - Haz clic en **"Commit changes"** (arriba a la derecha)
+   - Escribe una descripción del cambio
+   - Haz clic en **"Commit changes"** de nuevo
+
+#### ⏱️ PASO 3: Esperar y verificar
+
+1. **GitHub actualizará la web automáticamente** en unos minutos (normalmente 2-5 minutos)
+
+2. **Verifica los cambios:**
+   - Ve a https://dragondemadera.com
+   - Refresca la página (**F5** o **Ctrl+R**)
+   - Si no ves los cambios, espera un poco más y vuelve a refrescar
+
+#### 💡 Consejos y buenas prácticas
+
+- ✅ **Formatos aceptados**: JPG, PNG
+- ✅ **Tamaño recomendado**: No más de **2MB** por imagen (para carga rápida)
+- ✅ **Resolución recomendada**:
+  - Foto principal comunidad: 1200x900px (4:3)
+  - Foto del local: 1200x900px (4:3)
+  - Fotos Instagram: 800x800px (1:1)
+- ⚠️ **Si tienes dudas, NO borres nada** del archivo `images.json`, solo cambia los nombres entre comillas
+- 📧 Si necesitas ayuda, contacta con el administrador del repositorio
+
+#### 📚 Enlaces rápidos
+
+- [Ver carpeta public](https://github.com/19Matu91/Dragon-de-madera/tree/main/public)
+- [Editar images.json](https://github.com/19Matu91/Dragon-de-madera/edit/main/src/data/images.json)
+- [Subir archivos a public](https://github.com/19Matu91/Dragon-de-madera/upload/main/public)
 
 ---
 

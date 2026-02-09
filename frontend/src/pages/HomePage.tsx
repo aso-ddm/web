@@ -3,12 +3,15 @@ import { Header, Footer, PageHero, SectionHeading, WhatsAppButton, FaqButton } f
 import { FeatureItem } from '@/components/molecules'
 import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { SPACING } from '@/lib/constants'
+import { SOCIAL_URLS, SPACING } from '@/lib/constants'
+import { SEOHead } from '@/components/SEOHead'
 import texts from '@/data/texts.json'
+import images from '@/data/images.json'
 
 export function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead path="/" />
       <Header />
 
       <PageHero title={texts.home.hero.title} />
@@ -50,7 +53,7 @@ export function HomePage() {
               <div className="relative mt-8 lg:mt-0">
                 <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
                   <img
-                    src="/board-game-club-event-with-people-playing-games.jpg"
+                    src={images.home.hero.community}
                     alt={texts.home.hero.imageAlt}
                     className="w-full h-full object-cover"
                   />
@@ -90,16 +93,19 @@ export function HomePage() {
           <div className="w-full mx-auto">
             {/* Mobile: Agenda view */}
             <iframe
-              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&mode=AGENDA&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23c0ca33"
+              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&mode=AGENDA&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23004c48"
               className="w-full block h-[400px] sm:h-[500px] md:hidden"
             ></iframe>
-            {/* Desktop: Month view */}
+            {/* Desktop: Agenda view */}
             <iframe
-              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23c0ca33"
+              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&mode=WEEK&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23004c48"
               className="w-full hidden md:block h-[600px] lg:h-[700px]"
             ></iframe>
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-left mt-2 tracking-wide">
               {texts.home.calendar.note}
+            </p>
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-left mt-2 tracking-wide">
+              {texts.home.calendar.subnote}
             </p>
           </div>
         </section>
@@ -109,16 +115,27 @@ export function HomePage() {
           <div className={SPACING.container}>
             <SectionHeading>{texts.home.instagram.title}</SectionHeading>
             <div className={`grid grid-cols-2 md:grid-cols-3 ${SPACING.gapSm}`}>
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-muted">
+              {images.home.instagram.map((imgSrc, i) => (
+                <div key={i} className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
                   <img
-                    src={`/board-games-event-photo-.jpg?height=400&width=400&query=board games event photo ${i}`}
-                    alt={`${texts.home.instagram.imageAlt} ${i}`}
+                    src={imgSrc}
+                    alt={`${texts.home.instagram.imageAlt} ${i + 1}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform"
                   />
                 </div>
               ))}
             </div>
+            <p className={`text-center text-base sm:text-lg md:text-xl tracking-wide ${SPACING.marginTopMd}`}>
+              {texts.home.instagram.followText}
+              <a
+                href={SOCIAL_URLS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-semibold"
+              >
+                {texts.home.instagram.accountHandle}
+              </a>
+            </p>
           </div>
         </section>
 
@@ -164,7 +181,7 @@ export function HomePage() {
               <Button
                 size="lg"
                 asChild
-                className={`text-lg sm:text-xl md:text-2xl rounded-full border-0 ${SPACING.padMd} font-display bg-background text-secondary font-bold w-full sm:w-auto`}
+                className={`text-lg sm:text-xl md:text-2xl rounded-full border-0 px-12 py-4 sm:px-20 sm:py-6 font-display bg-background text-secondary font-bold w-full sm:w-auto`}
               >
                 <Link to="/club">{texts.home.cta.button}</Link>
               </Button>

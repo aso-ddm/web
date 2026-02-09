@@ -10,7 +10,7 @@ interface WhatsAppButtonProps {
 
 export function WhatsAppButton({ className, size = 'lg', variant = 'default' }: WhatsAppButtonProps) {
   const baseClasses =
-    'text-lg sm:text-xl md:text-2xl rounded-full border-0 px-5 py-4 sm:px-6 sm:py-5 md:p-6 font-display w-full sm:w-auto'
+    'text-lg sm:text-xl md:text-2xl rounded-full border-0 px-16 py-4 sm:px-20 sm:py-5 md:px-20 md:py-6 font-display w-full sm:w-auto'
 
   const variantClasses = variant === 'default' ? 'text-background bg-primary' : 'bg-background text-secondary'
 

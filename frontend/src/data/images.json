@@ -1,0 +1,18 @@
+{
+  "home": {
+    "hero": {
+      "community": "/club-community-people-playing.jpg"
+    },
+    "instagram": [
+      "/instagram-1a.jpg",
+      "/instagram-2a.jpg",
+      "/instagram-3a.jpg",
+      "/instagram-4a.jpg",
+      "/instagram-5a.jpg",
+      "/instagram-6a.jpg"
+    ]
+  },
+  "club": {
+    "local": "/club-local-empty.jpg"
+  }
+}

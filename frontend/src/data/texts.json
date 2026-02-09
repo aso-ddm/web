@@ -43,11 +43,14 @@
     },
     "calendar": {
       "title": "Calendario de actividades",
-      "note": "Entre corchetes se muestran las plazas. [Ocupadas/Totales], ejemplo: [2/4]"
+      "note": "Entre corchetes se muestran las plazas. [Ocupadas/Totales], ejemplo: [2/4]",
+      "subnote": "Haz clic en una partida para ver más información"
     },
     "instagram": {
-      "title": "Últimas fotos de Instagram",
-      "imageAlt": "Foto del club"
+      "title": "Fotos de Instagram",
+      "imageAlt": "Foto del club",
+      "followText": "Más fotos en nuestro instagram: ",
+      "accountHandle": "@dragondemadera"
     },
     "faq": {
       "title": "Preguntas rápidas",

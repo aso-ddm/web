@@ -2,11 +2,17 @@ import { Header, Footer, PageHero, SectionHeading, WhatsAppButton } from '@/comp
 import { MeepleIcon } from '@/components/atoms/icons'
 import { Card, CardContent } from '@/components/ui/card'
 import { SPACING } from '@/lib/constants'
+import { SEOHead } from '@/components/SEOHead'
 import texts from '@/data/texts.json'
 
 export function SocioPage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <SEOHead
+        title="Hazte Socio"
+        description="Únete al club Dragón de Madera. Descubre las ventajas de ser socio y disfruta de juegos de mesa en Granada."
+        path="/socio"
+      />
       <Header />
 
       <main className="flex-1">
@@ -78,11 +84,8 @@ export function SocioPage() {
                       </p>
                     </div>
 
-                    <div className={`bg-background text-secondary rounded-lg ${SPACING.padYMd} ${SPACING.padXSm} text-center transform md:scale-110 shadow-lg`}>
-                      <div className={`flex items-center justify-center ${SPACING.gapXs} mb-0`}>
-                        <MeepleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-secondary" />
-                        <p className="text-xl sm:text-2xl font-bold">{texts.member.howToJoin.steps[2].items?.[1]}</p>
-                      </div>
+                    <div className={`bg-primary-foreground/15 rounded-lg ${SPACING.padYMd} ${SPACING.padXSm} text-center md:scale-110`}>
+                      <p className="text-2xl sm:text-3xl font-bold text-primary-foreground whitespace-nowrap">{texts.member.howToJoin.steps[2].items?.[1]}</p>
                     </div>
 
                     <div className={`flex flex-col items-center text-center ${SPACING.gapXs}`}>

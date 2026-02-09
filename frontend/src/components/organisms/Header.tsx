@@ -17,7 +17,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
       <div className={SPACING.container}>
         <div className="flex h-20 sm:h-24 md:h-28 items-center justify-between">
           <Link to="/" onClick={handleLogoClick} className={`flex items-center ${SPACING.gapSm}`}>
@@ -37,7 +37,7 @@ export function Header() {
           {/* Mobile Navigation */}
           <Sheet>
             <SheetTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon" className="lg:hidden">
+              <Button variant="ghost" size="icon" className="lg:hidden hover:text-primary">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
@@ -49,7 +49,7 @@ export function Header() {
                     key={item.label}
                     to={item.to}
                     scrollTo={item.scrollTo}
-                    className="text-xl font-medium text-card hover:text-accent transition-colors"
+                    className="text-xl font-medium text-card hover:text-primary transition-colors"
                   >
                     {item.label}
                   </NavLink>
