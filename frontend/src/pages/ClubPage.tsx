@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Header, Footer, PageHero, SectionHeading, LudotecaTable } from '@/components/organisms'
 import { MeepleIcon } from '@/components/atoms/icons'
@@ -6,6 +7,42 @@ import { SPACING, SOCIAL_URLS } from '@/lib/constants'
 import { SEOHead } from '@/components/SEOHead'
 import texts from '@/data/texts.json'
 import images from '@/data/images.json'
+
+function MapEmbed() {
+  const [loaded, setLoaded] = useState(false)
+
+  return (
+    <div className="aspect-video rounded-xl overflow-hidden border-2 border-primary-foreground/20 shadow-xl relative">
+      {!loaded && (
+        <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-10 w-10 sm:h-14 sm:w-14 text-muted-foreground/40"
+          >
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        </div>
+      )}
+      <iframe
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3179.089!2d-3.614!3d37.177!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzfCsDEwJzM3LjIiTiAzwrAzNic1MC40Ilc!5e0!3m2!1ses!2ses!4v1234567890"
+        width="100%"
+        height="100%"
+        style={{ border: 0 }}
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  )
+}
 
 export function ClubPage() {
   return (
@@ -35,75 +72,49 @@ export function ClubPage() {
               {texts.club.features.text2}
             </p>
             <SectionHeading>{texts.club.features.title}</SectionHeading>
-          </div>
 
-            <div
-              className={`grid md:grid-cols-2 w-full md:w-[50%] mx-auto gap-8 md:gap-0 ${SPACING.marginTopLg}`}
-            >
-              <div className={`${SPACING.spaceYMd} flex flex-col items-center justify-start ${SPACING.padXSm}`}>
-                <div className={`flex items-center ${SPACING.gapSm} ${SPACING.marginBottomSm} justify-center`}>
-                  <MeepleIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary flex-shrink-0" />
-                  <h3 className={`text-2xl sm:text-3xl md:text-4xl font-bold font-display`}>
-                    {texts.club.rules.voluntariado.title}
-                  </h3>
-                </div>
-                <p className="text-base sm:text-lg md:text-xl font-medium text-center">{texts.club.rules.voluntariado.subtitle}</p>
-                <ul className={`${SPACING.spaceYXs} inline-block text-left`}>
-                  {texts.club.rules.voluntariado.items.map((item: string, i: number) => {
-                    const isLast = i === texts.club.rules.voluntariado.items.length - 1
-                    const parts = isLast ? item.split(', ') : [item]
-                    return (
-                      <li key={i} className={`text-sm sm:text-base md:text-lg text-balance flex ${SPACING.gapXs}`}>
-                        <span>-</span>
-                        <span>
-                          {isLast && parts.length > 1 ? (
-                            <>
-                              {parts[0]},
-                              <br />
-                              {parts.slice(1).join(', ')}
-                            </>
-                          ) : (
-                            item
-                          )}
-                        </span>
-                      </li>
-                    )
-                  })}
+            <div className={`grid md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto ${SPACING.marginTopSm}`}>
+              {/* Voluntariado */}
+              <div className="bg-secondary rounded-xl p-6 sm:p-8 shadow-md flex flex-col">
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold font-display text-secondary-foreground mb-2">
+                  {texts.club.rules.voluntariado.title}
+                </h3>
+                <p className="text-base sm:text-lg md:text-xl font-semibold text-secondary-foreground/80 mb-5 sm:mb-6">
+                  {texts.club.rules.voluntariado.subtitle}
+                </p>
+                <ul className="space-y-3 sm:space-y-4">
+                  {texts.club.rules.voluntariado.items.map((item: string, i: number) => (
+                    <li key={i} className="flex gap-3 items-start">
+                      <MeepleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground/50 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm sm:text-base md:text-lg leading-snug text-secondary-foreground">
+                        {item}
+                      </span>
+                    </li>
+                  ))}
                 </ul>
               </div>
 
-              <div className={`${SPACING.spaceYMd} flex flex-col items-center justify-start ${SPACING.padXSm}`}>
-                <div className={`flex items-center ${SPACING.gapSm} ${SPACING.marginBottomSm} justify-center`}>
-                  <MeepleIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary flex-shrink-0" />
-                  <h3 className={`text-2xl sm:text-3xl md:text-4xl font-bold font-display`}>
-                    {texts.club.rules.convivencia.title}
-                  </h3>
-                </div>
-                <p className="text-base sm:text-lg md:text-xl font-medium text-center">{texts.club.rules.convivencia.subtitle}</p>
-                <ul className={`${SPACING.spaceYXs} inline-block text-left`}>
-                  {texts.club.rules.convivencia.items.map((item: string, i: number) => {
-                    const isLast = i === texts.club.rules.convivencia.items.length - 1
-                    const parts = isLast ? item.split(', ') : [item]
-                    return (
-                      <li key={i} className={`text-sm sm:text-base md:text-lg text-balance flex ${SPACING.gapXs}`}>
-                        <span>-</span>
-                        <span>
-                          {isLast && parts.length > 1 ? (
-                            <>
-                              {parts[0]},
-                              <br />
-                              {parts.slice(1).join(', ')}
-                            </>
-                          ) : (
-                            item
-                          )}
-                        </span>
-                      </li>
-                    )
-                  })}
+              {/* Convivencia */}
+              <div className="bg-primary rounded-xl p-6 sm:p-8 shadow-md flex flex-col">
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold font-display text-primary-foreground mb-2">
+                  {texts.club.rules.convivencia.title}
+                </h3>
+                <p className="text-base sm:text-lg md:text-xl font-semibold text-primary-foreground/80 mb-5 sm:mb-6">
+                  {texts.club.rules.convivencia.subtitle}
+                </p>
+                <ul className="space-y-3 sm:space-y-4">
+                  {texts.club.rules.convivencia.items.map((item: string, i: number) => (
+                    <li key={i} className="flex gap-3 items-start">
+                      <MeepleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground/50 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm sm:text-base md:text-lg leading-snug text-primary-foreground">
+                        {item}
+                      </span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
+          </div>
         </section>
 
         {/* Local Section */}
@@ -138,17 +149,7 @@ export function ClubPage() {
           <div className={SPACING.container}>
             <SectionHeading>{texts.club.location.title}</SectionHeading>
             <div className={`grid md:grid-cols-2 ${SPACING.gapLg} items-center max-w-6xl mx-auto`}>
-              <div className="aspect-video bg-muted rounded-xl overflow-hidden border-2 border-primary-foreground/20 shadow-xl">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3179.089!2d-3.614!3d37.177!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzfCsDEwJzM3LjIiTiAzwrAzNic1MC40Ilc!5e0!3m2!1ses!2ses!4v1234567890"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
+              <MapEmbed />
 
               <div className={`flex flex-col items-center md:items-start text-center md:text-left ${SPACING.spaceYLg} ${SPACING.padXSm}`}>
                 <div className={SPACING.spaceYXs}>

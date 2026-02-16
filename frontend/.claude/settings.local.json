@@ -14,7 +14,8 @@
       "Bash(npx pnpm add react-helmet-async)",
       "Bash(npx pnpm run build)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

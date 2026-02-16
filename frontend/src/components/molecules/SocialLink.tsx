@@ -26,7 +26,7 @@ export function SocialLink({ platform, className, iconClassName }: SocialLinkPro
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn('text-muted-foreground hover:text-primary transition-colors', className)}
+      className={cn('text-background/70 hover:text-background hover:scale-110 transition-all', className)}
       aria-label={label}
     >
       <Icon className={cn('h-5 w-5 sm:h-6 sm:w-6 text-background', iconClassName)} />

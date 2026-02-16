@@ -64,6 +64,9 @@ export const SPACING = {
   cardPadding: "p-4 sm:p-6",
   cardPaddingLarge: "p-6 sm:p-8",
 
+  // CTA Button standard style
+  ctaButton: "text-lg sm:text-xl md:text-2xl rounded-full border-0 px-12 py-4 sm:px-16 sm:py-5 font-display font-bold w-full sm:w-auto",
+
   // Max widths for content
   maxWidthContent: "max-w-4xl mx-auto",
   maxWidthWide: "max-w-6xl mx-auto",

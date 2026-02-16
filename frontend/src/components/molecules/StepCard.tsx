@@ -15,17 +15,17 @@ export function StepCard({ number, title, children, variant = 'primary', classNa
   return (
     <div
       className={cn(
-        'rounded-lg p-6 sm:p-8 relative pt-16 sm:pt-12 text-center shadow-md',
+        'rounded-xl p-6 sm:p-8 relative text-center shadow-md overflow-visible',
         isPrimary ? 'bg-accent' : 'bg-secondary text-primary-foreground',
         className
       )}
     >
-      <div className="absolute -top-6 -left-6 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl sm:text-3xl font-display font-bold">
+      <div className="absolute -top-5 -left-5 w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl sm:text-3xl font-display font-bold shadow-lg">
         {number}
       </div>
       <h3
         className={cn(
-          'text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-4 sm:mb-6',
+          'text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-4 sm:mb-6 mt-4',
           isPrimary && 'text-primary'
         )}
       >

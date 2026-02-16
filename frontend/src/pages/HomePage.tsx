@@ -23,15 +23,15 @@ export function HomePage() {
             <div className={`grid lg:grid-cols-2 ${SPACING.contentGap} items-center`}>
               <div className={SPACING.itemsGap}>
                 <h2
-                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-balance font-display text-card ${SPACING.marginBottomMd}`}
+                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-balance font-display text-foreground ${SPACING.marginBottomMd}`}
                 >
                   {texts.home.hero.heading}
                 </h2>
 
-                <p className={`text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-card tracking-wide ${SPACING.marginBottomXs}`}>
+                <p className={`text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-foreground tracking-wide ${SPACING.marginBottomXs}`}>
                   {texts.home.hero.subtitle}
                 </p>
-                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-card tracking-wide ${SPACING.marginBottomXs}`}>
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginBottomXs}`}>
                   {texts.home.hero.description}
                 </p>
 
@@ -41,7 +41,7 @@ export function HomePage() {
                   ))}
                 </ul>
 
-                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-card tracking-wide ${SPACING.marginTopXs} ${SPACING.marginBottomMd}`}>
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginTopXs} ${SPACING.marginBottomMd}`}>
                   {texts.home.hero.callToAction}
                 </p>
 
@@ -111,12 +111,12 @@ export function HomePage() {
         </section>
 
         {/* Instagram Gallery */}
-        <section className={`${SPACING.section} bg-background text-card`}>
+        <section className={`${SPACING.section} bg-background text-foreground`}>
           <div className={SPACING.container}>
             <SectionHeading>{texts.home.instagram.title}</SectionHeading>
             <div className={`grid grid-cols-2 md:grid-cols-3 ${SPACING.gapSm}`}>
               {images.home.instagram.map((imgSrc, i) => (
-                <div key={i} className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+                <div key={i} className="aspect-[3/4] rounded-xl overflow-hidden bg-muted">
                   <img
                     src={imgSrc}
                     alt={`${texts.home.instagram.imageAlt} ${i + 1}`}
@@ -145,17 +145,17 @@ export function HomePage() {
             <div className={SPACING.maxWidthNarrow}>
               <SectionHeading className="text-primary">{texts.home.faq.title}</SectionHeading>
 
-              <Accordion type="single" collapsible className={`${SPACING.spaceYMd} text-card`}>
+              <Accordion type="single" collapsible className={`${SPACING.spaceYMd} text-foreground`}>
                 {texts.home.faq.items.map((item, index) => (
                   <AccordionItem
                     key={index}
                     value={`item-${index + 1}`}
-                    className={`rounded-lg ${SPACING.padXMd} border-0 bg-background text-card`}
+                    className={`rounded-lg ${SPACING.padXMd} border-0 bg-background text-foreground`}
                   >
                     <AccordionTrigger className="text-base sm:text-lg md:text-xl text-left hover:no-underline font-display">
                       {item.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-sm sm:text-base md:text-lg leading-relaxed text-card">
+                    <AccordionContent className="text-sm sm:text-base md:text-lg leading-relaxed text-foreground">
                       {item.answer}
                       {item.button_text && item.button_href && (
                         <FaqButton text={item.button_text} href={item.button_href} />
@@ -181,7 +181,7 @@ export function HomePage() {
               <Button
                 size="lg"
                 asChild
-                className={`text-lg sm:text-xl md:text-2xl rounded-full border-0 px-12 py-4 sm:px-20 sm:py-6 font-display bg-background text-secondary font-bold w-full sm:w-auto`}
+                className={`${SPACING.ctaButton} bg-background text-secondary`}
               >
                 <Link to="/club">{texts.home.cta.button}</Link>
               </Button>

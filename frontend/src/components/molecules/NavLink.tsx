@@ -28,7 +28,7 @@ export function NavLink({ to, children, scrollTo, className, onClick }: NavLinkP
       to={to}
       onClick={handleClick}
       className={cn(
-        `text-lg xl:text-xl font-medium text-card hover:text-primary transition-colors ${SPACING.padXSm} py-2`,
+        `text-lg xl:text-xl font-medium text-foreground hover:text-primary transition-colors ${SPACING.padXSm} py-2`,
         className
       )}
     >

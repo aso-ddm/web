@@ -11,7 +11,7 @@ export function SectionHeading({ children, className, centered = true }: Section
   return (
     <h2
       className={cn(
-        `text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold ${SPACING.headingMargin} text-balance font-display mb-6 sm:mb-8 px-4`,
+        `text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold ${SPACING.headingMargin} text-balance font-display px-4`,
         centered && 'text-center',
         className
       )}

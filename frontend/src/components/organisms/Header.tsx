@@ -17,7 +17,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+    <header className="sticky top-0 z-50 w-full border-b border-border backdrop-blur-sm bg-background/95">
       <div className={SPACING.container}>
         <div className="flex h-20 sm:h-24 md:h-28 items-center justify-between">
           <Link to="/" onClick={handleLogoClick} className={`flex items-center ${SPACING.gapSm}`}>
@@ -49,7 +49,7 @@ export function Header() {
                     key={item.label}
                     to={item.to}
                     scrollTo={item.scrollTo}
-                    className="text-xl font-medium text-card hover:text-primary transition-colors"
+                    className="text-xl font-medium text-foreground hover:text-primary transition-colors"
                   >
                     {item.label}
                   </NavLink>
