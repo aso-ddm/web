@@ -478,4 +478,5 @@ import { Button } from '@/components/ui/button'
 
 ## Licencia
 
+
 Proyecto privado de la Asociación Dragón de Madera.
