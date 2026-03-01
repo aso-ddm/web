@@ -164,7 +164,7 @@ export function ClubPage() {
                   className={`text-lg sm:text-xl md:text-2xl bg-background text-secondary rounded-full border-0 px-12 py-4 sm:px-20 sm:py-6 font-display w-full sm:w-auto`}
                 >
                   <a
-                    href="https://www.google.com/maps/search/?api=1&query=Pepita+Serrador+3,+Granada"
+                    href="https://maps.app.goo.gl/i4RijwbrQFAHwfww9"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
