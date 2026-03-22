@@ -109,6 +109,10 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Generar cliente Prisma (CI)
+        working-directory: backend
+        run: npx prisma generate
+
       - name: Compilar TypeScript
         working-directory: backend
         run: npm run build
@@ -133,6 +137,7 @@ jobs:
           cp -r backend/dist "$DEPLOY_PATH/backend/dist"
           cp backend/package.json "$DEPLOY_PATH/backend/package.json"
           cp backend/package-lock.json "$DEPLOY_PATH/backend/package-lock.json"
+          rm -rf "$DEPLOY_PATH/backend/prisma"
           cp -r backend/prisma "$DEPLOY_PATH/backend/prisma"
 
       - name: Instalar dependencias de producción en servidor
