@@ -22,6 +22,11 @@ import { PrestamosPage } from '@/pages/area/PrestamosPage'
 import { GestionJuegosPage } from '@/pages/ludoteca/GestionJuegosPage'
 import { GestionPrestamosPage } from '@/pages/ludoteca/GestionPrestamosPage'
 
+// Panel directiva — Sprint 5
+import { SolicitudesPage } from '@/pages/directiva/SolicitudesPage'
+import { GestionSociosPage } from '@/pages/directiva/GestionSociosPage'
+import { ConfiguracionPage } from '@/pages/directiva/ConfiguracionPage'
+
 // Placeholder para sprints futuros
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -64,9 +69,9 @@ export function AppRoutes() {
       >
         <Route element={<AreaLayout />}>
           <Route path="/directiva" element={<Navigate to="/directiva/solicitudes" replace />} />
-          <Route path="/directiva/socios" element={<ComingSoon label="Gestión de socios" />} />
-          <Route path="/directiva/solicitudes" element={<ComingSoon label="Solicitudes pendientes" />} />
-          <Route path="/directiva/configuracion" element={<ComingSoon label="Configuración" />} />
+          <Route path="/directiva/socios" element={<GestionSociosPage />} />
+          <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
+          <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
         </Route>
       </Route>
 

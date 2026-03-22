@@ -1,0 +1,368 @@
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { Search, Users, ChevronRight, Loader2, UserX, Shield } from 'lucide-react'
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from '@/components/ui/sheet'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SEOHead } from '@/components/SEOHead'
+import { sociosApi, type SocioAdmin } from '@/services/api/socios'
+import type { Rol, EstadoSocio } from '@/types/api'
+
+const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+
+const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  activo: 'default',
+  pendiente: 'secondary',
+  inactivo: 'outline',
+  baja: 'destructive',
+}
+
+function formatDate(d?: string | null) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function RolBadge({ rol }: { rol: Rol }) {
+  const colors: Record<Rol, string> = {
+    presidente: 'bg-primary text-primary-foreground',
+    secretario: 'bg-primary/80 text-primary-foreground',
+    tesorero: 'bg-primary/70 text-primary-foreground',
+    vocal: 'bg-secondary/20 text-secondary-foreground',
+    ludotecario: 'bg-accent text-accent-foreground',
+    socio_basico: 'bg-muted text-muted-foreground',
+  }
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-display capitalize ${colors[rol]}`}>
+      {rol.replace(/_/g, ' ')}
+    </span>
+  )
+}
+
+function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [rolesEditados, setRolesEditados] = useState<Rol[]>(socio.roles)
+  const [confirmBaja, setConfirmBaja] = useState(false)
+
+  const invalidar = () => {
+    queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
+    onClose()
+  }
+
+  const { mutate: darBaja, isPending: bajando } = useMutation({
+    mutationFn: () => sociosApi.darDeBaja(socio.id),
+    onSuccess: () => { toast.success(`${socio.nombre} dado de baja`); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const { mutate: guardarRoles, isPending: guardandoRoles } = useMutation({
+    mutationFn: () => sociosApi.updateRoles(socio.id, rolesEditados),
+    onSuccess: () => { toast.success('Roles actualizados'); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const toggleRol = (rol: Rol) => {
+    setRolesEditados((prev) =>
+      prev.includes(rol) ? prev.filter((r) => r !== rol) : [...prev, rol],
+    )
+  }
+
+  const rolesChanged = JSON.stringify([...rolesEditados].sort()) !== JSON.stringify([...socio.roles].sort())
+
+  return (
+    <>
+      <div className="space-y-5 py-2">
+        {/* Info básica */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground font-display">Estado</p>
+            <Badge variant={estadoVariant[socio.estado]} className="mt-0.5 font-display capitalize">
+              {socio.estado}
+            </Badge>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-display">Cuota</p>
+            <p className="font-medium capitalize">{socio.tipo_cuota}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-display">DNI</p>
+            <p className="font-medium">{socio.dni}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-display">Alta</p>
+            <p className="font-medium">{formatDate(socio.fecha_alta)}</p>
+          </div>
+          {socio.telefono && (
+            <div>
+              <p className="text-xs text-muted-foreground font-display">Teléfono</p>
+              <p className="font-medium">{socio.telefono}</p>
+            </div>
+          )}
+          {socio.alias_telegram && (
+            <div>
+              <p className="text-xs text-muted-foreground font-display">Telegram</p>
+              <p className="font-medium">{socio.alias_telegram}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground font-display">Llaves</p>
+            <p className="font-medium">{socio.tiene_llaves ? 'Sí' : 'No'}</p>
+          </div>
+          {socio.aprobado_por && (
+            <div>
+              <p className="text-xs text-muted-foreground font-display">Aprobado por</p>
+              <p className="font-medium text-xs">{socio.aprobado_por.nombre} {socio.aprobado_por.apellidos}</p>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Roles */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-primary" />
+            <p className="font-display font-bold text-sm">Roles</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {ALL_ROLES.map((rol) => (
+              <button
+                key={rol}
+                onClick={() => toggleRol(rol)}
+                className={`px-2.5 py-1 rounded text-xs font-display capitalize transition-colors border ${
+                  rolesEditados.includes(rol)
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                }`}
+              >
+                {rol.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
+          {rolesChanged && (
+            <Button
+              size="sm"
+              onClick={() => guardarRoles()}
+              disabled={guardandoRoles || rolesEditados.length === 0}
+              className="font-display font-bold"
+            >
+              {guardandoRoles ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Guardar roles
+            </Button>
+          )}
+        </div>
+
+        {socio.estado !== 'baja' && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <p className="font-display font-bold text-sm text-destructive">Zona peligrosa</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmBaja(true)}
+                className="font-display text-destructive border-destructive/30 hover:bg-destructive/10 gap-2"
+              >
+                <UserX className="h-4 w-4" />
+                Dar de baja al socio
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <AlertDialog open={confirmBaja} onOpenChange={setConfirmBaja}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-primary">
+              ¿Dar de baja a {socio.nombre} {socio.apellidos}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El socio quedará en estado "baja" y perderá acceso al área privada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => darBaja()}
+              disabled={bajando}
+              className="font-display font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bajando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Dar de baja'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
+export function GestionSociosPage() {
+  const [search, setSearch] = useState('')
+  const [estadoFiltro, setEstadoFiltro] = useState<EstadoSocio | 'todos'>('activo')
+  const [page, setPage] = useState(1)
+  const [socioSeleccionado, setSocioSeleccionado] = useState<SocioAdmin | null>(null)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['socios-gestion', search, estadoFiltro, page],
+    queryFn: () =>
+      sociosApi.getAll({
+        search: search || undefined,
+        estado: estadoFiltro !== 'todos' ? (estadoFiltro as EstadoSocio) : undefined,
+        page,
+        limit: 20,
+      }),
+  })
+
+  const socios = data?.data ?? []
+  const pag = data?.pagination
+
+  return (
+    <>
+      <SEOHead title="Gestión de socios" description="Panel de directiva" path="/directiva/socios" noindex />
+
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Gestión de socios</h1>
+          <p className="text-muted-foreground mt-1">
+            {pag ? `${pag.total} socio${pag.total !== 1 ? 's' : ''} registrado${pag.total !== 1 ? 's' : ''}` : '…'}
+          </p>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Nombre, email, DNI, apodo..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={estadoFiltro}
+            onValueChange={(v) => { setEstadoFiltro(v as EstadoSocio | 'todos'); setPage(1) }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="activo">Activos</SelectItem>
+              <SelectItem value="pendiente">Pendientes</SelectItem>
+              <SelectItem value="inactivo">Inactivos</SelectItem>
+              <SelectItem value="baja">Baja</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Lista */}
+        <Card>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-4 space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+              </div>
+            ) : socios.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <p className="text-sm text-muted-foreground">No hay socios con los filtros aplicados</p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {socios.map((socio) => (
+                  <li key={socio.id}>
+                    <button
+                      className="w-full flex items-center gap-4 px-4 py-3 hover:bg-accent/30 transition-colors text-left"
+                      onClick={() => setSocioSeleccionado(socio)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-display font-bold text-sm">
+                            {socio.nombre} {socio.apellidos}
+                          </p>
+                          {socio.apodo && (
+                            <span className="text-xs text-muted-foreground">({socio.apodo})</span>
+                          )}
+                          <Badge variant={estadoVariant[socio.estado]} className="text-xs font-display capitalize">
+                            {socio.estado}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{socio.email}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {socio.roles.map((r) => <RolBadge key={r} rol={r} />)}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Paginación */}
+        {pag && pag.totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Página {pag.page} de {pag.totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+                className="font-display"
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= pag.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="font-display"
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Drawer detalle */}
+      <Sheet open={!!socioSeleccionado} onOpenChange={(v) => !v && setSocioSeleccionado(null)}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          {socioSeleccionado && (
+            <>
+              <SheetHeader className="mb-4">
+                <SheetTitle className="font-display text-primary">
+                  {socioSeleccionado.nombre} {socioSeleccionado.apellidos}
+                </SheetTitle>
+                <SheetDescription>{socioSeleccionado.email}</SheetDescription>
+              </SheetHeader>
+              <SocioDetalle
+                socio={socioSeleccionado}
+                onClose={() => setSocioSeleccionado(null)}
+              />
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  )
+}

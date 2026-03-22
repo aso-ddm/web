@@ -11,6 +11,7 @@ import sociosRoutes from './routes/socios.routes.js'
 import juegosRoutes from './routes/juegos.routes.js'
 import prestamosRoutes from './routes/prestamos.routes.js'
 import visitasRoutes from './routes/visitas.routes.js'
+import configuracionRoutes from './routes/configuracion.routes.js'
 
 const app = Fastify({
   logger: {
@@ -40,7 +41,8 @@ await app.register(authRoutes,     { prefix: '/api/auth' })
 await app.register(sociosRoutes,   { prefix: '/api/socios' })
 await app.register(juegosRoutes,   { prefix: '/api/juegos' })
 await app.register(prestamosRoutes,{ prefix: '/api/prestamos' })
-await app.register(visitasRoutes,  { prefix: '/api/visitas' })
+await app.register(visitasRoutes,       { prefix: '/api/visitas' })
+await app.register(configuracionRoutes, { prefix: '/api/config' })
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
