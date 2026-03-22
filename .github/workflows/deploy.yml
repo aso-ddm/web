@@ -1,0 +1,89 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  changes:
+    runs-on: self-hosted
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detectar cambios
+        id: filter
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -q "^frontend/"; then
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED" | grep -q "^backend/"; then
+            echo "backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend=false" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: frontend
+        run: pnpm run build
+
+      - name: Desplegar build
+        run: |
+          rm -rf /var/www/dragon-de-madera/dragondemadera/frontend/dist
+          cp -r frontend/dist /var/www/dragon-de-madera/dragondemadera/frontend/dist
+
+      - name: Recargar Nginx
+        run: sudo systemctl reload nginx
+
+  deploy-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Enlazar .env
+        run: |
+          ln -sf /var/www/dragon-de-madera/dragondemadera/backend/.env \
+                 $GITHUB_WORKSPACE/backend/.env
+
+      - name: Ejecutar migraciones
+        working-directory: backend
+        run: npm run prisma:migrate
+
+      - name: Reiniciar backend con PM2
+        run: |
+          if pm2 describe dragon-backend > /dev/null 2>&1; then
+            pm2 reload dragon-backend
+          else
+            pm2 start /var/www/dragon-de-madera/dragondemadera/backend/src/index.js \
+              --name dragon-backend \
+              --cwd /var/www/dragon-de-madera/dragondemadera/backend
+            pm2 save
+          fi
