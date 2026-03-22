@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DEPLOY_PATH: /var/www/dragon-de-madera/dragondemadera
 
 jobs:
   changes:
@@ -48,17 +49,55 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        working-directory: frontend
+        run: pnpm run lint
+
+      - name: Verificar tipos TypeScript
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
+
       - name: Build
         working-directory: frontend
         run: pnpm run build
 
+      - name: Verificar que el build no está vacío
+        run: |
+          if [ ! -f frontend/dist/index.html ]; then
+            echo "ERROR: el build no generó index.html"
+            exit 1
+          fi
+
+      - name: Backup del build anterior
+        run: |
+          if [ -d "$DEPLOY_PATH/frontend/dist" ]; then
+            cp -r "$DEPLOY_PATH/frontend/dist" "$DEPLOY_PATH/frontend/dist.backup"
+          fi
+
       - name: Desplegar build
         run: |
-          rm -rf /var/www/dragon-de-madera/dragondemadera/frontend/dist
-          cp -r frontend/dist /var/www/dragon-de-madera/dragondemadera/frontend/dist
+          rm -rf "$DEPLOY_PATH/frontend/dist"
+          cp -r frontend/dist "$DEPLOY_PATH/frontend/dist"
 
       - name: Recargar Nginx
         run: sudo systemctl reload nginx
+
+      - name: Verificar que Nginx responde
+        run: |
+          sleep 2
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost)
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: Nginx devuelve $STATUS — ejecutando rollback"
+            rm -rf "$DEPLOY_PATH/frontend/dist"
+            mv "$DEPLOY_PATH/frontend/dist.backup" "$DEPLOY_PATH/frontend/dist"
+            sudo systemctl reload nginx
+            exit 1
+          fi
+          echo "OK: Nginx responde con 200"
+
+      - name: Limpiar backup
+        if: success()
+        run: rm -rf "$DEPLOY_PATH/frontend/dist.backup"
 
   deploy-backend:
     needs: changes
@@ -67,17 +106,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verificar sintaxis
+        run: node --check backend/src/index.js
+
       - name: Instalar dependencias
         working-directory: backend
         run: npm ci
 
-      - name: Enlazar .env
+      - name: Backup del backend anterior
         run: |
-          ln -sf /var/www/dragon-de-madera/dragondemadera/backend/.env \
-                 $GITHUB_WORKSPACE/backend/.env
+          if [ -d "$DEPLOY_PATH/backend/src" ]; then
+            cp -r "$DEPLOY_PATH/backend/src" "$DEPLOY_PATH/backend/src.backup"
+            cp "$DEPLOY_PATH/backend/package.json" "$DEPLOY_PATH/backend/package.json.backup" 2>/dev/null || true
+          fi
+
+      - name: Desplegar código
+        run: |
+          cp -r backend/src "$DEPLOY_PATH/backend/src"
+          cp backend/package.json "$DEPLOY_PATH/backend/package.json"
+
+      - name: Instalar dependencias en servidor
+        working-directory: ${{ env.DEPLOY_PATH }}/backend
+        run: npm ci
 
       - name: Ejecutar migraciones
-        working-directory: backend
+        working-directory: ${{ env.DEPLOY_PATH }}/backend
         run: npm run prisma:migrate
 
       - name: Reiniciar backend con PM2
@@ -85,8 +138,28 @@ jobs:
           if pm2 describe dragon-backend > /dev/null 2>&1; then
             pm2 reload dragon-backend
           else
-            pm2 start /var/www/dragon-de-madera/dragondemadera/backend/src/index.js \
+            pm2 start "$DEPLOY_PATH/backend/src/index.js" \
               --name dragon-backend \
-              --cwd /var/www/dragon-de-madera/dragondemadera/backend
+              --cwd "$DEPLOY_PATH/backend"
             pm2 save
           fi
+
+      - name: Verificar que el backend responde
+        run: |
+          sleep 3
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: backend devuelve $STATUS — ejecutando rollback"
+            cp -r "$DEPLOY_PATH/backend/src.backup" "$DEPLOY_PATH/backend/src"
+            cp "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package.json" 2>/dev/null || true
+            npm ci --prefix "$DEPLOY_PATH/backend"
+            pm2 reload dragon-backend
+            exit 1
+          fi
+          echo "OK: backend responde con 200"
+
+      - name: Limpiar backups
+        if: success()
+        run: |
+          rm -rf "$DEPLOY_PATH/backend/src.backup"
+          rm -f "$DEPLOY_PATH/backend/package.json.backup"
