@@ -100,6 +100,23 @@ export interface Prestamo {
   socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }
 }
 
+// ── Visita ────────────────────────────────────────────────────────────────────
+export interface Visita {
+  id: string
+  nombre_completo: string
+  fecha_visita: string
+  numero_visita: number
+  es_pago: boolean
+  importe?: string | null
+  socio_registro_id: string
+}
+
+export interface VisitanteSugerido {
+  nombre_completo: string
+  total_visitas: number
+  ultima_visita: string | null
+}
+
 // ── Respuesta paginada ────────────────────────────────────────────────────────
 export interface PaginatedResponse<T> {
   data: T[]

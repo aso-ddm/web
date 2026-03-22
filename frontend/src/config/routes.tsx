@@ -27,6 +27,9 @@ import { SolicitudesPage } from '@/pages/directiva/SolicitudesPage'
 import { GestionSociosPage } from '@/pages/directiva/GestionSociosPage'
 import { ConfiguracionPage } from '@/pages/directiva/ConfiguracionPage'
 
+// Visitas — Sprint 6
+import { RegistroVisitaPage } from '@/pages/area/RegistroVisitaPage'
+
 // Placeholder para sprints futuros
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -54,7 +57,7 @@ export function AppRoutes() {
           <Route path="/area" element={<DashboardPage />} />
           <Route path="/area/perfil" element={<PerfilPage />} />
           <Route path="/area/prestamos" element={<PrestamosPage />} />
-          <Route path="/area/visita" element={<ComingSoon label="Registrar visita" />} />
+          <Route path="/area/visita" element={<RegistroVisitaPage />} />
           <Route path="/area/llaves" element={<ComingSoon label="Solicitar llaves" />} />
         </Route>
       </Route>
