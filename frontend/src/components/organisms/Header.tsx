@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { NavLink } from '@/components/molecules/NavLink'
 import { useScrollNavigation } from '@/hooks/useScrollNavigation'
-import { navigationItems } from '@/config/navigation'
+import { navigationItems, memberAreaItem } from '@/config/navigation'
 import { SPACING } from '@/lib/constants'
 
 export function Header() {
@@ -32,6 +32,9 @@ export function Header() {
                 {item.label}
               </NavLink>
             ))}
+            <Button asChild size="sm" className="ml-2">
+              <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
+            </Button>
           </nav>
 
           {/* Mobile Navigation */}
@@ -54,6 +57,9 @@ export function Header() {
                     {item.label}
                   </NavLink>
                 ))}
+                <Button asChild className="mt-2">
+                  <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
+                </Button>
               </nav>
             </SheetContent>
           </Sheet>

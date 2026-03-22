@@ -12,3 +12,8 @@ export const navigationItems: NavigationItem[] = [
   { label: texts.navigation.club, to: '/club' },
   { label: texts.navigation.member, to: '/socio' },
 ]
+
+export const memberAreaItem: NavigationItem = {
+  label: texts.navigation.memberArea,
+  to: '/login',
+}
