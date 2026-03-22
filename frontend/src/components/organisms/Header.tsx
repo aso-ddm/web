@@ -1,20 +1,37 @@
-import { Link } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Menu, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { NavLink } from '@/components/molecules/NavLink'
 import { useScrollNavigation } from '@/hooks/useScrollNavigation'
 import { navigationItems, memberAreaItem } from '@/config/navigation'
+import { useAuthStore } from '@/store/authStore'
 import { SPACING } from '@/lib/constants'
 
 export function Header() {
   const { handleNavigation } = useScrollNavigation()
+  const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore()
+  const navigate = useNavigate()
 
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
     handleNavigation('/', 'top')
   }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  const areaPath = isAuthenticated ? getRedirectPath() : memberAreaItem.to
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border backdrop-blur-sm bg-background/95">
@@ -32,9 +49,37 @@ export function Header() {
                 {item.label}
               </NavLink>
             ))}
-            <Button asChild size="sm" className="ml-2">
-              <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
-            </Button>
+
+            {isAuthenticated && usuario ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="ml-2 gap-1.5">
+                    <span className="max-w-[120px] truncate">{usuario.nombre}</span>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to={areaPath} className="flex items-center gap-2 cursor-pointer">
+                      <LayoutDashboard className="h-4 w-4" />
+                      Mi área
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button asChild size="sm" className="ml-2">
+                <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
+              </Button>
+            )}
           </nav>
 
           {/* Mobile Navigation */}
@@ -57,9 +102,29 @@ export function Header() {
                     {item.label}
                   </NavLink>
                 ))}
-                <Button asChild className="mt-2">
-                  <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
-                </Button>
+
+                {isAuthenticated && usuario ? (
+                  <>
+                    <Button asChild className="mt-2">
+                      <Link to={areaPath}>
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Mi área ({usuario.nombre})
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Cerrar sesión
+                    </Button>
+                  </>
+                ) : (
+                  <Button asChild className="mt-2">
+                    <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
+                  </Button>
+                )}
               </nav>
             </SheetContent>
           </Sheet>

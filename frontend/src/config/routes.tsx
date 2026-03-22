@@ -1,15 +1,82 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
+
+// Páginas públicas
 import { HomePage } from '@/pages/HomePage'
 import { ClubPage } from '@/pages/ClubPage'
 import { SocioPage } from '@/pages/SocioPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { LoginPage } from '@/pages/LoginPage'
+import { RegistroPage } from '@/pages/RegistroPage'
+
+// Layouts y guards
+import { AreaLayout } from '@/components/organisms/AreaLayout'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute'
+
+// Placeholder para sprints futuros
+function ComingSoon({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+      <p className="text-5xl">🐉</p>
+      <h2 className="font-display font-bold text-2xl text-primary">{label}</h2>
+      <p className="text-muted-foreground">Esta sección se implementa en el próximo sprint</p>
+    </div>
+  )
+}
 
 export function AppRoutes() {
   return (
     <Routes>
+      {/* ── Rutas públicas ──────────────────────────────────────────── */}
       <Route path="/" element={<HomePage />} />
       <Route path="/club" element={<ClubPage />} />
       <Route path="/socio" element={<SocioPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/registro" element={<RegistroPage />} />
+
+      {/* ── Área de socio (cualquier autenticado) ───────────────────── */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AreaLayout />}>
+          <Route path="/area" element={<ComingSoon label="Mi panel" />} />
+          <Route path="/area/perfil" element={<ComingSoon label="Mi perfil" />} />
+          <Route path="/area/prestamos" element={<ComingSoon label="Mis préstamos" />} />
+          <Route path="/area/visita" element={<ComingSoon label="Registrar visita" />} />
+          <Route path="/area/llaves" element={<ComingSoon label="Solicitar llaves" />} />
+        </Route>
+      </Route>
+
+      {/* ── Panel directiva ─────────────────────────────────────────── */}
+      <Route
+        element={
+          <RoleBasedRoute
+            allowedRoles={['presidente', 'secretario', 'tesorero', 'vocal']}
+          />
+        }
+      >
+        <Route element={<AreaLayout />}>
+          <Route path="/directiva" element={<Navigate to="/directiva/solicitudes" replace />} />
+          <Route path="/directiva/socios" element={<ComingSoon label="Gestión de socios" />} />
+          <Route path="/directiva/solicitudes" element={<ComingSoon label="Solicitudes pendientes" />} />
+          <Route path="/directiva/configuracion" element={<ComingSoon label="Configuración" />} />
+        </Route>
+      </Route>
+
+      {/* ── Panel ludotecario ────────────────────────────────────────── */}
+      <Route
+        element={
+          <RoleBasedRoute
+            allowedRoles={['presidente', 'secretario', 'tesorero', 'ludotecario']}
+          />
+        }
+      >
+        <Route element={<AreaLayout />}>
+          <Route path="/ludoteca" element={<Navigate to="/ludoteca/prestamos" replace />} />
+          <Route path="/ludoteca/juegos" element={<ComingSoon label="Gestión de juegos" />} />
+          <Route path="/ludoteca/prestamos" element={<ComingSoon label="Préstamos pendientes" />} />
+        </Route>
+      </Route>
+
+      {/* ── 404 ─────────────────────────────────────────────────────── */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

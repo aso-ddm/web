@@ -10,6 +10,7 @@ env:
   DEPLOY_PATH: /var/www/dragon-de-madera/dragondemadera
 
 jobs:
+  # ── Detectar qué cambió ────────────────────────────────────────────────────
   changes:
     runs-on: self-hosted
     outputs:
@@ -38,6 +39,7 @@ jobs:
             echo "backend=false" >> $GITHUB_OUTPUT
           fi
 
+  # ── Deploy Frontend ────────────────────────────────────────────────────────
   deploy-frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
@@ -95,6 +97,7 @@ jobs:
         if: success()
         run: rm -rf "$DEPLOY_PATH/frontend/dist.backup"
 
+  # ── Deploy Backend (TypeScript) ────────────────────────────────────────────
   deploy-backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
@@ -102,28 +105,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verificar sintaxis
-        run: node --check backend/src/index.js
-
       - name: Instalar dependencias
         working-directory: backend
         run: npm ci
 
-      - name: Backup del backend anterior
+      - name: Compilar TypeScript
+        working-directory: backend
+        run: npm run build
+
+      - name: Verificar que el build generó dist/index.js
         run: |
-          if [ -d "$DEPLOY_PATH/backend/src" ]; then
-            cp -r "$DEPLOY_PATH/backend/src" "$DEPLOY_PATH/backend/src.backup"
-            cp "$DEPLOY_PATH/backend/package.json" "$DEPLOY_PATH/backend/package.json.backup" 2>/dev/null || true
+          if [ ! -f backend/dist/index.js ]; then
+            echo "ERROR: la compilación no generó dist/index.js"
+            exit 1
           fi
 
-      - name: Desplegar código
+      - name: Backup del backend anterior
         run: |
-          cp -r backend/src "$DEPLOY_PATH/backend/src"
-          cp backend/package.json "$DEPLOY_PATH/backend/package.json"
+          if [ -d "$DEPLOY_PATH/backend/dist" ]; then
+            cp -r "$DEPLOY_PATH/backend/dist" "$DEPLOY_PATH/backend/dist.backup"
+          fi
+          cp "$DEPLOY_PATH/backend/package.json" "$DEPLOY_PATH/backend/package.json.backup" 2>/dev/null || true
 
-      - name: Instalar dependencias en servidor
+      - name: Desplegar código compilado
+        run: |
+          rm -rf "$DEPLOY_PATH/backend/dist"
+          cp -r backend/dist "$DEPLOY_PATH/backend/dist"
+          cp backend/package.json "$DEPLOY_PATH/backend/package.json"
+          cp backend/package-lock.json "$DEPLOY_PATH/backend/package-lock.json"
+          cp -r backend/prisma "$DEPLOY_PATH/backend/prisma"
+
+      - name: Instalar dependencias de producción en servidor
         working-directory: ${{ env.DEPLOY_PATH }}/backend
-        run: npm ci
+        run: npm ci --omit=dev
+
+      - name: Generar cliente Prisma
+        working-directory: ${{ env.DEPLOY_PATH }}/backend
+        run: npx prisma generate
 
       - name: Ejecutar migraciones
         working-directory: ${{ env.DEPLOY_PATH }}/backend
@@ -134,7 +152,7 @@ jobs:
           if pm2 describe dragon-backend > /dev/null 2>&1; then
             pm2 reload dragon-backend
           else
-            pm2 start "$DEPLOY_PATH/backend/src/index.js" \
+            pm2 start "$DEPLOY_PATH/backend/dist/index.js" \
               --name dragon-backend \
               --cwd "$DEPLOY_PATH/backend"
             pm2 save
@@ -146,7 +164,8 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
           if [ "$STATUS" != "200" ]; then
             echo "ERROR: backend devuelve $STATUS — ejecutando rollback"
-            cp -r "$DEPLOY_PATH/backend/src.backup" "$DEPLOY_PATH/backend/src"
+            rm -rf "$DEPLOY_PATH/backend/dist"
+            cp -r "$DEPLOY_PATH/backend/dist.backup" "$DEPLOY_PATH/backend/dist"
             cp "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package.json" 2>/dev/null || true
             npm ci --prefix "$DEPLOY_PATH/backend"
             pm2 reload dragon-backend
@@ -157,5 +176,5 @@ jobs:
       - name: Limpiar backups
         if: success()
         run: |
-          rm -rf "$DEPLOY_PATH/backend/src.backup"
+          rm -rf "$DEPLOY_PATH/backend/dist.backup"
           rm -f "$DEPLOY_PATH/backend/package.json.backup"
