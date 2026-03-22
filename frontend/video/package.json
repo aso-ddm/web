@@ -1,0 +1,25 @@
+{
+  "name": "dragon-de-madera-promo-video",
+  "version": "1.0.0",
+  "description": "Video promocional para Dragon de Madera - Club de Juegos de Mesa",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "build": "remotion render src/index.ts DragonDeMaderaPromo out/promo.mp4",
+    "build:reel": "remotion render src/index.ts DragonDeMaderaReel out/reel.mp4",
+    "build:all": "npm run build && npm run build:reel"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "@remotion/transitions": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/react": "^19.0.0",
+    "playwright": "^1.58.0",
+    "typescript": "^5.0.0"
+  }
+}

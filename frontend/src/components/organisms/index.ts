@@ -1,0 +1,7 @@
+export { Header } from './Header'
+export { Footer } from './Footer'
+export { PageHero } from './PageHero'
+export { SectionHeading } from './SectionHeading'
+export { WhatsAppButton } from './WhatsAppButton'
+export { FaqButton } from './FaqButton'
+export { LudotecaTable } from './LudotecaTable'

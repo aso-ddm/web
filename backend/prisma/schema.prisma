@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  admin
+  bibliotecario
+  socio
+  visitante
+}
+
+enum EstadoUsuario {
+  pendiente
+  activo
+  inactivo
+}
+
+enum EstadoCopia {
+  disponible
+  prestado
+  reservado
+  baja
+}
+
+enum EstadoPrestamo {
+  activo
+  devuelto
+  vencido
+}
+
+enum EstadoReserva {
+  pendiente
+  completada
+  cancelada
+}
+
+model Usuario {
+  id             Int           @id @default(autoincrement())
+  email          String        @unique
+  password_hash  String
+  nombre         String
+  apellidos      String
+  telefono       String?
+  rol            Rol           @default(visitante)
+  estado         EstadoUsuario @default(pendiente)
+  fecha_alta     DateTime      @default(now())
+  prestamos      Prestamo[]
+  reservas       Reserva[]
+}
+
+model Juego {
+  id                  Int      @id @default(autoincrement())
+  titulo              String
+  descripcion         String?
+  categoria           String?
+  genero              String?
+  edad_minima         Int?
+  num_jugadores_min   Int?
+  num_jugadores_max   Int?
+  num_copias_total    Int      @default(1)
+  imagen_url          String?
+  copias              Copia[]
+  reservas            Reserva[]
+}
+
+model Copia {
+  id                String      @id
+  juego_id          Int
+  juego             Juego       @relation(fields: [juego_id], references: [id])
+  codigo_inventario String      @unique
+  estado            EstadoCopia @default(disponible)
+  prestamos         Prestamo[]
+}
+
+model Prestamo {
+  id               Int            @id @default(autoincrement())
+  copia_id         String
+  copia            Copia          @relation(fields: [copia_id], references: [id])
+  usuario_id       Int
+  usuario          Usuario        @relation(fields: [usuario_id], references: [id])
+  fecha_inicio     DateTime       @default(now())
+  fecha_limite     DateTime
+  fecha_devolucion DateTime?
+  estado           EstadoPrestamo @default(activo)
+  notas            String?
+}
+
+model Reserva {
+  id            Int           @id @default(autoincrement())
+  juego_id      Int
+  juego         Juego         @relation(fields: [juego_id], references: [id])
+  usuario_id    Int
+  usuario       Usuario       @relation(fields: [usuario_id], references: [id])
+  fecha_reserva DateTime      @default(now())
+  estado        EstadoReserva @default(pendiente)
+}

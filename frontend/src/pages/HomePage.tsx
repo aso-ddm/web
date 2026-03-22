@@ -1,0 +1,196 @@
+import { Link } from 'react-router-dom'
+import { Header, Footer, PageHero, SectionHeading, WhatsAppButton, FaqButton } from '@/components/organisms'
+import { FeatureItem } from '@/components/molecules'
+import { Button } from '@/components/ui/button'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { SOCIAL_URLS, SPACING } from '@/lib/constants'
+import { SEOHead } from '@/components/SEOHead'
+import texts from '@/data/texts.json'
+import images from '@/data/images.json'
+
+export function HomePage() {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <SEOHead path="/" />
+      <Header />
+
+      <PageHero title={texts.home.hero.title} />
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className={`relative ${SPACING.sectionHero} bg-background`}>
+          <div className={SPACING.container}>
+            <div className={`grid lg:grid-cols-2 ${SPACING.contentGap} items-center`}>
+              <div className={SPACING.itemsGap}>
+                <h2
+                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-balance font-display text-foreground ${SPACING.marginBottomMd}`}
+                >
+                  {texts.home.hero.heading}
+                </h2>
+
+                <p className={`text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-foreground tracking-wide ${SPACING.marginBottomXs}`}>
+                  {texts.home.hero.subtitle}
+                </p>
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginBottomXs}`}>
+                  {texts.home.hero.description}
+                </p>
+
+                <ul className={SPACING.spaceYSm}>
+                  {texts.home.hero.features.map((feature, i) => (
+                    <FeatureItem key={i} text={feature} />
+                  ))}
+                </ul>
+
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginTopXs} ${SPACING.marginBottomMd}`}>
+                  {texts.home.hero.callToAction}
+                </p>
+
+                <div className="text-center">
+                  <WhatsAppButton />
+                </div>
+              </div>
+
+              <div className="relative mt-8 lg:mt-0">
+                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
+                  <img
+                    src={images.home.hero.community}
+                    alt={texts.home.hero.imageAlt}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* First Steps */}
+        <section className={`${SPACING.section} text-primary-foreground bg-secondary text-center`}>
+          <div className={`inline-block ${SPACING.padXSm}`}>
+            <h3 className={`font-semibold font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl ${SPACING.marginBottomMd}`}>
+              {texts.home.firstSteps.title}
+            </h3>
+            <div className={SPACING.itemsGap}>
+              {texts.home.firstSteps.steps.map((step, index) => (
+                <div
+                  key={index}
+                  className={`flex ${SPACING.gapSm} items-center text-center flex-row justify-start leading-7 tracking-wider my-2`}
+                >
+                  <div className="flex-shrink-0 rounded-full bg-primary-foreground text-primary flex items-center justify-center font-bold text-lg sm:text-xl md:text-2xl size-7 sm:size-8">
+                    {index + 1}
+                  </div>
+                  <p className="leading-relaxed text-left pt-0 text-base sm:text-lg md:text-xl lg:text-2xl tracking-wide">
+                    {step}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Calendar Section */}
+        <section id="calendario" className={`${SPACING.section} mx-auto px-4 bg-accent text-center`}>
+          <SectionHeading className="text-primary">{texts.home.calendar.title}</SectionHeading>
+          <div className="w-full mx-auto">
+            {/* Mobile: Agenda view */}
+            <iframe
+              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&mode=AGENDA&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23004c48"
+              className="w-full block h-[400px] sm:h-[500px] md:hidden"
+            ></iframe>
+            {/* Desktop: Agenda view */}
+            <iframe
+              src="https://calendar.google.com/calendar/embed?height=600&wkst=2&ctz=Europe%2FMadrid&showPrint=0&showTitle=0&showCalendars=0&mode=WEEK&src=cGdvMmdmZHVjYm43MGQyZXFmYmNocXVvcG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23004c48"
+              className="w-full hidden md:block h-[600px] lg:h-[700px]"
+            ></iframe>
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-left mt-2 tracking-wide">
+              {texts.home.calendar.note}
+            </p>
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-left mt-2 tracking-wide">
+              {texts.home.calendar.subnote}
+            </p>
+          </div>
+        </section>
+
+        {/* Instagram Gallery */}
+        <section className={`${SPACING.section} bg-background text-foreground`}>
+          <div className={SPACING.container}>
+            <SectionHeading>{texts.home.instagram.title}</SectionHeading>
+            <div className={`grid grid-cols-2 md:grid-cols-3 ${SPACING.gapSm}`}>
+              {images.home.instagram.map((imgSrc, i) => (
+                <div key={i} className="aspect-[3/4] rounded-xl overflow-hidden bg-muted">
+                  <img
+                    src={imgSrc}
+                    alt={`${texts.home.instagram.imageAlt} ${i + 1}`}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className={`text-center text-base sm:text-lg md:text-xl tracking-wide ${SPACING.marginTopMd}`}>
+              {texts.home.instagram.followText}
+              <a
+                href={SOCIAL_URLS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-semibold"
+              >
+                {texts.home.instagram.accountHandle}
+              </a>
+            </p>
+          </div>
+        </section>
+
+        {/* FAQs */}
+        <section className={`${SPACING.section} bg-accent`}>
+          <div className={SPACING.container}>
+            <div className={SPACING.maxWidthNarrow}>
+              <SectionHeading className="text-primary">{texts.home.faq.title}</SectionHeading>
+
+              <Accordion type="single" collapsible className={`${SPACING.spaceYMd} text-foreground`}>
+                {texts.home.faq.items.map((item, index) => (
+                  <AccordionItem
+                    key={index}
+                    value={`item-${index + 1}`}
+                    className={`rounded-lg ${SPACING.padXMd} border-0 bg-background text-foreground`}
+                  >
+                    <AccordionTrigger className="text-base sm:text-lg md:text-xl text-left hover:no-underline font-display">
+                      {item.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-sm sm:text-base md:text-lg leading-relaxed text-foreground">
+                      {item.answer}
+                      {item.button_text && item.button_href && (
+                        <FaqButton text={item.button_text} href={item.button_href} />
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className={`${SPACING.section} bg-secondary text-background`}>
+          <div className={`${SPACING.container} text-center`}>
+            <SectionHeading className="text-background">{texts.home.cta.title}</SectionHeading>
+            <p
+              className={`text-base sm:text-lg md:text-xl tracking-wider ${SPACING.subheadingMargin} text-background ${SPACING.padXSm}`}
+            >
+              {texts.home.cta.subtitle}
+            </p>
+            <div className={`text-center ${SPACING.padXSm}`}>
+              <Button
+                size="lg"
+                asChild
+                className={`${SPACING.ctaButton} bg-background text-secondary`}
+              >
+                <Link to="/club">{texts.home.cta.button}</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}
