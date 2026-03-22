@@ -13,6 +13,11 @@ import { AreaLayout } from '@/components/organisms/AreaLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute'
 
+// Área de socio — Sprint 3
+import { DashboardPage } from '@/pages/area/DashboardPage'
+import { PerfilPage } from '@/pages/area/PerfilPage'
+import { PrestamosPage } from '@/pages/area/PrestamosPage'
+
 // Placeholder para sprints futuros
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -37,9 +42,9 @@ export function AppRoutes() {
       {/* ── Área de socio (cualquier autenticado) ───────────────────── */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AreaLayout />}>
-          <Route path="/area" element={<ComingSoon label="Mi panel" />} />
-          <Route path="/area/perfil" element={<ComingSoon label="Mi perfil" />} />
-          <Route path="/area/prestamos" element={<ComingSoon label="Mis préstamos" />} />
+          <Route path="/area" element={<DashboardPage />} />
+          <Route path="/area/perfil" element={<PerfilPage />} />
+          <Route path="/area/prestamos" element={<PrestamosPage />} />
           <Route path="/area/visita" element={<ComingSoon label="Registrar visita" />} />
           <Route path="/area/llaves" element={<ComingSoon label="Solicitar llaves" />} />
         </Route>

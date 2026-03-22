@@ -62,6 +62,52 @@ export interface LoginResponse {
   }
 }
 
+// ── Juego ─────────────────────────────────────────────────────────────────────
+export type EstadoJuego = 'disponible' | 'prestado' | 'mantenimiento'
+
+export interface Juego {
+  id: string
+  titulo: string
+  autor?: string | null
+  editorial?: string | null
+  anio_publicacion?: number | null
+  num_jugadores_min?: number | null
+  num_jugadores_max?: number | null
+  duracion_minutos?: number | null
+  edad_recomendada?: number | null
+  categoria?: string | null
+  estado: EstadoJuego
+  propietario?: string | null
+  foto_url?: string | null
+  bgg_id?: string | null
+}
+
+// ── Préstamo ──────────────────────────────────────────────────────────────────
+export type EstadoPrestamo = 'pendiente' | 'aprobado' | 'rechazado' | 'activo' | 'devuelto'
+
+export interface Prestamo {
+  id: string
+  juego_id: string
+  socio_id: string
+  estado: EstadoPrestamo
+  fecha_solicitud: string
+  fecha_aprobacion?: string | null
+  fecha_prestamo?: string | null
+  fecha_devolucion?: string | null
+  motivo_rechazo?: string | null
+  notas?: string | null
+  juego?: Pick<Juego, 'id' | 'titulo' | 'foto_url' | 'categoria'>
+}
+
+// ── Respuesta paginada ────────────────────────────────────────────────────────
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 // ── Respuesta genérica de la API ──────────────────────────────────────────────
 export interface ApiError {
   error: string
