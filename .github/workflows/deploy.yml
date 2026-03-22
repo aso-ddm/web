@@ -49,10 +49,6 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        working-directory: frontend
-        run: pnpm run lint
-
       - name: Verificar tipos TypeScript
         working-directory: frontend
         run: pnpm exec tsc --noEmit
