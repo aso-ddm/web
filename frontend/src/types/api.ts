@@ -97,6 +97,7 @@ export interface Prestamo {
   motivo_rechazo?: string | null
   notas?: string | null
   juego?: Pick<Juego, 'id' | 'titulo' | 'foto_url' | 'categoria'>
+  socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }
 }
 
 // ── Respuesta paginada ────────────────────────────────────────────────────────

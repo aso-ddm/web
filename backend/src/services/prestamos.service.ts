@@ -1,5 +1,5 @@
 import { PrismaClient, EstadoPrestamo } from '@prisma/client'
-import type { SolicitarPrestamoInput, FiltrosPrestamosInput } from '../schemas/prestamo.schema.js'
+import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema.js'
 
 export class PrestamosService {
   constructor(private prisma: PrismaClient) {}
@@ -52,6 +52,108 @@ export class PrestamosService {
       include: {
         juego: { select: { id: true, titulo: true } },
       },
+    })
+  }
+
+  // ── Métodos para ludotecario / directiva ──────────────────────────────────
+
+  async getAll(filtros: FiltrosGestionPrestamosInput) {
+    const { page, limit, estado, socio_id } = filtros
+    const skip = (page - 1) * limit
+
+    const where = {
+      ...(estado ? { estado } : {}),
+      ...(socio_id ? { socio_id } : {}),
+    }
+
+    const [prestamos, total] = await Promise.all([
+      this.prisma.prestamo.findMany({
+        where,
+        include: {
+          juego: { select: { id: true, titulo: true, categoria: true } },
+          socio: { select: { id: true, nombre: true, apellidos: true, email: true, apodo: true } },
+        },
+        orderBy: { fecha_solicitud: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.prestamo.count({ where }),
+    ])
+
+    return { data: prestamos, total, page, limit, totalPages: Math.ceil(total / limit) }
+  }
+
+  async aprobar(prestamoId: string, aprobadoPorId: string) {
+    const prestamo = await this.prisma.prestamo.findUnique({ where: { id: prestamoId } })
+    if (!prestamo) throw new Error('Préstamo no encontrado')
+    if (prestamo.estado !== EstadoPrestamo.pendiente) {
+      throw new Error('Solo se pueden aprobar préstamos en estado pendiente')
+    }
+    return this.prisma.prestamo.update({
+      where: { id: prestamoId },
+      data: {
+        estado: EstadoPrestamo.aprobado,
+        fecha_aprobacion: new Date(),
+        usuario_aprobo_id: aprobadoPorId,
+      },
+      include: {
+        juego: { select: { id: true, titulo: true } },
+        socio: { select: { id: true, nombre: true, apellidos: true } },
+      },
+    })
+  }
+
+  async activar(prestamoId: string) {
+    const prestamo = await this.prisma.prestamo.findUnique({ where: { id: prestamoId } })
+    if (!prestamo) throw new Error('Préstamo no encontrado')
+    if (prestamo.estado !== EstadoPrestamo.aprobado) {
+      throw new Error('Solo se pueden activar préstamos en estado aprobado')
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.prestamo.update({
+        where: { id: prestamoId },
+        data: { estado: EstadoPrestamo.activo, fecha_prestamo: new Date() },
+      })
+      await tx.juego.update({
+        where: { id: prestamo.juego_id },
+        data: { estado: 'prestado' },
+      })
+      return updated
+    })
+  }
+
+  async rechazar(prestamoId: string, motivo?: string) {
+    const prestamo = await this.prisma.prestamo.findUnique({ where: { id: prestamoId } })
+    if (!prestamo) throw new Error('Préstamo no encontrado')
+    if (!['pendiente', 'aprobado'].includes(prestamo.estado)) {
+      throw new Error('Solo se pueden rechazar préstamos pendientes o aprobados')
+    }
+    return this.prisma.prestamo.update({
+      where: { id: prestamoId },
+      data: { estado: EstadoPrestamo.rechazado, motivo_rechazo: motivo ?? null },
+    })
+  }
+
+  async confirmarDevolucion(prestamoId: string, confirmadoPorId: string) {
+    const prestamo = await this.prisma.prestamo.findUnique({ where: { id: prestamoId } })
+    if (!prestamo) throw new Error('Préstamo no encontrado')
+    if (prestamo.estado !== EstadoPrestamo.activo) {
+      throw new Error('Solo se pueden devolver préstamos en estado activo')
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.prestamo.update({
+        where: { id: prestamoId },
+        data: {
+          estado: EstadoPrestamo.devuelto,
+          fecha_devolucion: new Date(),
+          usuario_confirmo_dev_id: confirmadoPorId,
+        },
+      })
+      await tx.juego.update({
+        where: { id: prestamo.juego_id },
+        data: { estado: 'disponible' },
+      })
+      return updated
     })
   }
 

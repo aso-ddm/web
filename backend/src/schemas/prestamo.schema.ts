@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { EstadoPrestamo } from '@prisma/client'
 
 export const solicitarPrestamoSchema = z.object({
   juego_id: z.string().uuid('ID de juego no válido'),
@@ -10,5 +11,17 @@ export const filtrosPrestamosSchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 })
 
+export const filtrosGestionPrestamosSchema = z.object({
+  estado: z.nativeEnum(EstadoPrestamo).optional(),
+  socio_id: z.string().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(30),
+})
+
+export const rechazarPrestamoSchema = z.object({
+  motivo: z.string().optional(),
+})
+
 export type SolicitarPrestamoInput = z.infer<typeof solicitarPrestamoSchema>
 export type FiltrosPrestamosInput = z.infer<typeof filtrosPrestamosSchema>
+export type FiltrosGestionPrestamosInput = z.infer<typeof filtrosGestionPrestamosSchema>

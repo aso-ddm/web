@@ -18,6 +18,10 @@ import { DashboardPage } from '@/pages/area/DashboardPage'
 import { PerfilPage } from '@/pages/area/PerfilPage'
 import { PrestamosPage } from '@/pages/area/PrestamosPage'
 
+// Panel ludotecario — Sprint 4
+import { GestionJuegosPage } from '@/pages/ludoteca/GestionJuegosPage'
+import { GestionPrestamosPage } from '@/pages/ludoteca/GestionPrestamosPage'
+
 // Placeholder para sprints futuros
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -76,8 +80,8 @@ export function AppRoutes() {
       >
         <Route element={<AreaLayout />}>
           <Route path="/ludoteca" element={<Navigate to="/ludoteca/prestamos" replace />} />
-          <Route path="/ludoteca/juegos" element={<ComingSoon label="Gestión de juegos" />} />
-          <Route path="/ludoteca/prestamos" element={<ComingSoon label="Préstamos pendientes" />} />
+          <Route path="/ludoteca/juegos" element={<GestionJuegosPage />} />
+          <Route path="/ludoteca/prestamos" element={<GestionPrestamosPage />} />
         </Route>
       </Route>
 

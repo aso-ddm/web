@@ -1,6 +1,12 @@
 import { FastifyPluginAsync } from 'fastify'
 import { PrestamosService } from '../services/prestamos.service.js'
-import { solicitarPrestamoSchema, filtrosPrestamosSchema } from '../schemas/prestamo.schema.js'
+import {
+  solicitarPrestamoSchema,
+  filtrosPrestamosSchema,
+  filtrosGestionPrestamosSchema,
+  rechazarPrestamoSchema,
+} from '../schemas/prestamo.schema.js'
+import { requireRoles, ROLES } from '../plugins/authenticate.plugin.js'
 
 const prestamosRoutes: FastifyPluginAsync = async (fastify) => {
   const prestamosService = new PrestamosService(fastify.prisma)
@@ -28,6 +34,80 @@ const prestamosRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const prestamo = await prestamosService.solicitar(request.user.id, parsed.data)
       return reply.status(201).send({ data: prestamo })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      return reply.status(400).send({ error: message })
+    }
+  })
+
+  // ── Rutas para ludotecario / directiva ──────────────────────────────────────
+
+  // GET /api/prestamos — listado con filtros (todos)
+  fastify.get('/', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
+  }, async (request, reply) => {
+    const parsed = filtrosGestionPrestamosSchema.safeParse(request.query)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Parámetros inválidos' })
+    }
+    const result = await prestamosService.getAll(parsed.data)
+    return reply.send(result)
+  })
+
+  // POST /api/prestamos/:id/aprobar
+  fastify.post('/:id/aprobar', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    try {
+      const prestamo = await prestamosService.aprobar(id, request.user.id)
+      return reply.send({ data: prestamo })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      return reply.status(400).send({ error: message })
+    }
+  })
+
+  // POST /api/prestamos/:id/activar — entrega física del juego
+  fastify.post('/:id/activar', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    try {
+      const prestamo = await prestamosService.activar(id)
+      return reply.send({ data: prestamo })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      return reply.status(400).send({ error: message })
+    }
+  })
+
+  // POST /api/prestamos/:id/rechazar
+  fastify.post('/:id/rechazar', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const parsed = rechazarPrestamoSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Datos inválidos' })
+    }
+    try {
+      const prestamo = await prestamosService.rechazar(id, parsed.data.motivo)
+      return reply.send({ data: prestamo })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      return reply.status(400).send({ error: message })
+    }
+  })
+
+  // POST /api/prestamos/:id/devolucion — confirmar que el juego fue devuelto
+  fastify.post('/:id/devolucion', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    try {
+      const prestamo = await prestamosService.confirmarDevolucion(id, request.user.id)
+      return reply.send({ data: prestamo })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error'
       return reply.status(400).send({ error: message })
