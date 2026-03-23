@@ -136,7 +136,7 @@ export class AuthService {
 
       // Crear miembros adicionales y sus relaciones
       for (const m of miembros_adicionales) {
-        const { password: _p, confirmPassword: _cp, tipo_relacion, ...restoMiembro } = m
+        const { password: _p, confirmPassword: _cp, tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
         const password_hash_miembro = await bcrypt.hash(m.password, SALT_ROUNDS)
 
         const miembro = await tx.usuario.create({
@@ -147,6 +147,7 @@ export class AuthService {
             roles: [Rol.socio_basico],
             estado: 'pendiente',
             solicitud_grupal_id: grupo.id,
+            fecha_nacimiento: fecha_nacimiento ? new Date(fecha_nacimiento) : undefined,
           },
         })
 

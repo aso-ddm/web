@@ -45,6 +45,10 @@ export interface MiembroAdicionalPayload {
   apellidos: string
   dni: string
   email: string
+  telefono?: string
+  fecha_nacimiento?: string
+  alias_telegram: string
+  consentimiento_tiendas: boolean
   password: string
   tipo_relacion: TipoRelacion
 }

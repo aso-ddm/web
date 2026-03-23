@@ -41,6 +41,10 @@ const miembroAdicionalSchema = z
     apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
     dni: dniSchema,
     email: z.string().email('Introduce un email válido'),
+    telefono: z.string().optional(),
+    fecha_nacimiento: z.string().optional(),
+    alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
+    consentimiento_tiendas: z.boolean().default(false),
     password: passwordSchema,
     confirmPassword: z.string(),
     tipo_relacion: z.enum(['pareja', 'familiar_directo'], {
@@ -259,6 +263,7 @@ function MiembroForm({
   setValue,
   watch,
   onRemove,
+  textoConsentimiento,
 }: {
   index: number
   register: ReturnType<typeof useForm<RegistroForm>>['register']
@@ -266,10 +271,12 @@ function MiembroForm({
   setValue: ReturnType<typeof useForm<RegistroForm>>['setValue']
   watch: ReturnType<typeof useForm<RegistroForm>>['watch']
   onRemove: () => void
+  textoConsentimiento?: string
 }) {
   const miembrosErrors = (errors as { miembros_adicionales?: AnyErrors[] }).miembros_adicionales
   const err = miembrosErrors?.[index] as AnyErrors | undefined
   const tipoRelacion = (watch as (name: string) => string)(`miembros_adicionales.${index}.tipo_relacion`)
+  const consentimiento = (watch as (name: string) => boolean)(`miembros_adicionales.${index}.consentimiento_tiendas`)
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
@@ -317,6 +324,34 @@ function MiembroForm({
           <FieldError message={(err?.email as { message?: string } | undefined)?.message} />
         </div>
       </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold text-sm">Teléfono</Label>
+          <Input type="tel" placeholder="600 000 000" {...register(`miembros_adicionales.${index}.telefono` as const)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold text-sm">Fecha de nacimiento</Label>
+          <Input type="date" {...register(`miembros_adicionales.${index}.fecha_nacimiento` as const)} />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="font-display font-bold text-sm">Alias de Telegram <span className="text-destructive">*</span></Label>
+        <Input placeholder="@tuusuario" {...register(`miembros_adicionales.${index}.alias_telegram` as const)} />
+        <FieldError message={(err?.alias_telegram as { message?: string } | undefined)?.message} />
+      </div>
+
+      <label className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/30 transition-colors">
+        <Checkbox
+          checked={consentimiento}
+          onCheckedChange={(v) => (setValue as (name: string, value: boolean) => void)(`miembros_adicionales.${index}.consentimiento_tiendas`, Boolean(v))}
+          className="mt-0.5 flex-shrink-0"
+        />
+        <span className="text-sm leading-relaxed">
+          {textoConsentimiento ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'}
+        </span>
+      </label>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
@@ -621,6 +656,7 @@ export function RegistroPage() {
                       setValue={setValue}
                       watch={watch}
                       onRemove={() => remove(index)}
+                      textoConsentimiento={configConsentimiento?.data?.valor}
                     />
                   ))}
 
@@ -629,7 +665,7 @@ export function RegistroPage() {
                     variant="outline"
                     className="w-full font-display font-bold gap-2 border-dashed"
                     disabled={fields.length >= 5}
-                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
+                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', alias_telegram: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
                   >
                     <PlusCircle className="h-4 w-4" />
                     {fields.length >= 5 ? 'Máximo 5 miembros adicionales' : 'Añadir miembro'}
