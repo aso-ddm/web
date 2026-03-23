@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/SEOHead'
 import { authApi } from '@/services/api/auth'
+import { configuracionApi } from '@/services/api/configuracion'
 import { SPACING } from '@/lib/constants'
 
 const registroSchema = z
@@ -51,6 +52,53 @@ const registroSchema = z
   })
 
 type RegistroForm = z.infer<typeof registroSchema>
+
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(https?:\/\/[^\s)]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g)
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^https?:\/\//.test(part))
+          return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-secondary underline hover:opacity-80 break-all">{part}</a>
+        if (/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(part))
+          return <a key={i} href={`mailto:${part}`} className="text-secondary underline hover:opacity-80">{part}</a>
+        return part
+      })}
+    </>
+  )
+}
+
+function BienvenidaCard({ texto }: { texto: string }) {
+  const lines = texto.split('\n')
+  const nonEmptyIdx = lines.reduce<number[]>((acc, l, i) => (l.trim() ? [...acc, i] : acc), [])
+  const titleIdx = nonEmptyIdx[0] ?? -1
+  const subtitleIdx = nonEmptyIdx[1] ?? -1
+
+  return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardContent className="pt-5 pb-5 space-y-0.5">
+        {lines.map((line, idx) => {
+          if (!line.trim()) return <div key={idx} className="h-2" />
+
+          if (idx === titleIdx)
+            return <p key={idx} className="font-display font-bold text-lg text-primary">{line}</p>
+
+          if (idx === subtitleIdx)
+            return <p key={idx} className="font-display font-bold text-base text-secondary mb-1">{line}</p>
+
+          if (/^\*\*[^*]+\*\*$/.test(line.trim()))
+            return (
+              <h4 key={idx} className="font-display font-bold text-xs uppercase tracking-wide text-primary mt-4 pt-3 border-t border-primary/20">
+                {line.replace(/\*\*/g, '')}
+              </h4>
+            )
+
+          return <p key={idx} className="text-sm text-foreground leading-relaxed">{renderInline(line)}</p>
+        })}
+      </CardContent>
+    </Card>
+  )
+}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -90,6 +138,13 @@ export function RegistroPage() {
     pareja: { precio: '20€/mes', descripcion: 'Para dos socios (la pareja puede registrarse después)' },
     familiar: { precio: 'A definir', descripcion: 'Pareja + hijos (contactar con directiva)' },
   }
+
+  const { data: configBienvenida, isPending: isBienvenidaLoading } = useQuery({
+    queryKey: ['config', 'texto_bienvenida_alta'],
+    queryFn: () => configuracionApi.getOne('texto_bienvenida_alta'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
@@ -158,6 +213,21 @@ export function RegistroPage() {
           <p className="text-muted-foreground text-center mt-2 max-w-sm">
             Rellena el formulario y la directiva aprobará tu solicitud
           </p>
+        </div>
+
+        {/* ── TEXTO DE BIENVENIDA ───────────────────────────────────── */}
+        <div className={`${SPACING.maxWidthForm} mb-6`}>
+          {isBienvenidaLoading ? (
+            <Card className="border-primary/40">
+              <CardContent className="pt-5 pb-5 space-y-3">
+                {[80, 40, 100, 60, 90, 70].map((w, i) => (
+                  <div key={i} className={`h-3 bg-muted animate-pulse rounded`} style={{ width: `${w}%` }} />
+                ))}
+              </CardContent>
+            </Card>
+          ) : configBienvenida?.data?.valor ? (
+            <BienvenidaCard texto={configBienvenida.data.valor} />
+          ) : null}
         </div>
 
         <form
