@@ -52,10 +52,9 @@ function AltaSolicitudCard({ socio }: { socio: SocioAdmin }) {
             <span>Cuota: {tipoCuotaLabel(socio.tipo_cuota)}</span>
             <span>Solicitud: {formatDate(socio.created_at)}</span>
           </div>
-          {(socio.alias_telegram || socio.usuario_bgg) && (
+          {socio.alias_telegram && (
             <div className="flex gap-3 text-xs text-muted-foreground">
-              {socio.alias_telegram && <span>Telegram: {socio.alias_telegram}</span>}
-              {socio.usuario_bgg && <span>BGG: {socio.usuario_bgg}</span>}
+              <span>Telegram: {socio.alias_telegram}</span>
             </div>
           )}
         </div>

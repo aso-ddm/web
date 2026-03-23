@@ -8,7 +8,6 @@ export interface UpdateSocioPayload {
   fecha_nacimiento?: string
   direccion?: string
   alias_telegram?: string
-  usuario_bgg?: string
   apodo?: string
   consentimiento_tiendas?: boolean
 }

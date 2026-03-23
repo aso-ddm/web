@@ -36,8 +36,7 @@ const registroSchema = z
     telefono: z.string().min(1, 'El teléfono es obligatorio'),
     fecha_nacimiento: z.string().min(1, 'La fecha de nacimiento es obligatoria'),
     direccion: z.string().min(1, 'La dirección es obligatoria'),
-    alias_telegram: z.string().optional(),
-    usuario_bgg: z.string().optional(),
+    alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
     apodo: z.string().optional(),
     consentimiento_tiendas: z.boolean().default(false),
     password: z
@@ -224,6 +223,12 @@ export function RegistroPage() {
     retry: false,
     staleTime: 1000 * 60 * 10,
   })
+  const { data: configConsentimiento } = useQuery({
+    queryKey: ['config', 'texto_consentimiento_tiendas'],
+    queryFn: () => configuracionApi.getOne('texto_consentimiento_tiendas'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
@@ -234,8 +239,7 @@ export function RegistroPage() {
         fecha_nacimiento: payload.fecha_nacimiento,
         telefono: payload.telefono,
         direccion: payload.direccion,
-        alias_telegram: payload.alias_telegram || undefined,
-        usuario_bgg: payload.usuario_bgg || undefined,
+        alias_telegram: payload.alias_telegram,
         apodo: payload.apodo || undefined,
       })
     },
@@ -489,22 +493,15 @@ export function RegistroPage() {
           <Card>
             <CardHeader className="pb-3">
               <SectionTitle>Comunicación en el club</SectionTitle>
-              <CardDescription>Opcional — nos ayuda a conectarte con la comunidad</CardDescription>
+              <CardDescription>La asociación usa Telegram como canal principal de comunicación</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="alias_telegram" className="font-display font-bold">
-                    Alias de Telegram
-                  </Label>
-                  <Input id="alias_telegram" placeholder="@tuusuario" {...register('alias_telegram')} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="usuario_bgg" className="font-display font-bold">
-                    Usuario BoardGameGeek
-                  </Label>
-                  <Input id="usuario_bgg" placeholder="Tu usuario en BGG" {...register('usuario_bgg')} />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="alias_telegram" className="font-display font-bold">
+                  Alias de Telegram <span className="text-destructive">*</span>
+                </Label>
+                <Input id="alias_telegram" placeholder="@tuusuario" {...register('alias_telegram')} />
+                <FieldError message={errors.alias_telegram?.message} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="apodo" className="font-display font-bold">
@@ -532,10 +529,7 @@ export function RegistroPage() {
                   htmlFor="consentimiento_tiendas"
                   className="text-sm leading-relaxed cursor-pointer"
                 >
-                  Acepto que se compartan mis datos con las tiendas colaboradoras{' '}
-                  <span className="font-bold">(FreakMondo, Bazar de Iglesias, Dune)</span>{' '}
-                  para obtener el{' '}
-                  <span className="text-secondary font-bold">10% de descuento</span>.
+                  {configConsentimiento?.data?.valor ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'}
                 </Label>
               </div>
               <Separator className="my-4" />

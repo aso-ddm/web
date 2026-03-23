@@ -21,7 +21,6 @@ export interface Usuario {
   fecha_nacimiento?: string | null
   direccion?: string | null
   alias_telegram?: string | null
-  usuario_bgg?: string | null
   apodo?: string | null
   tipo_cuota: TipoCuota
   consentimiento_tiendas?: boolean
@@ -48,8 +47,7 @@ export interface RegisterPayload {
   telefono?: string
   fecha_nacimiento?: string
   direccion?: string
-  alias_telegram?: string
-  usuario_bgg?: string
+  alias_telegram: string
   apodo?: string
   tipo_cuota: TipoCuota
   consentimiento_tiendas: boolean

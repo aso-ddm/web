@@ -8,7 +8,6 @@ export const updateSocioSchema = z.object({
   fecha_nacimiento: z.string().optional(),
   direccion: z.string().optional(),
   alias_telegram: z.string().optional(),
-  usuario_bgg: z.string().optional(),
   apodo: z.string().optional(),
   tipo_cuota: z.nativeEnum(TipoCuota).optional(),
   consentimiento_tiendas: z.boolean().optional(),

@@ -105,6 +105,12 @@ Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o e
       tipo: 'url',
       descripcion: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
     },
+    {
+      clave: 'texto_consentimiento_tiendas',
+      tipo: 'texto_largo',
+      descripcion: 'Texto del checkbox de consentimiento de datos con tiendas colaboradoras (visible en el formulario de alta)',
+      valor: 'Acepto que se compartan mis datos (nombre y apellidos) con las tiendas colaboradoras de la asociación (FreakMondo, Bazar de Iglesias, Dune) para poder beneficiarme del descuento del 10% en compras como socio de Dragón de Madera.',
+    },
   ]
 
   for (const config of configsIniciales) {
