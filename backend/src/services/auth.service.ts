@@ -31,7 +31,7 @@ export class AuthService {
 
     const password_hash = await bcrypt.hash(data.password, SALT_ROUNDS)
 
-    const { password: _, confirmPassword: __, ...rest } = data
+    const { password: _, ...rest } = data
 
     const usuario = await this.prisma.usuario.create({
       data: {
@@ -98,7 +98,7 @@ export class AuthService {
       // Crear SolicitudGrupal con titular_id temporal (se actualizará)
       // Necesitamos crear el titular primero para tener su id
       const password_hash_titular = await bcrypt.hash(data.password, SALT_ROUNDS)
-      const { password: _, confirmPassword: __, miembros_adicionales, ...restoTitular } = data
+      const { password: _, miembros_adicionales, ...restoTitular } = data
 
       // Crear SolicitudGrupal con un titular_id placeholder — lo actualizamos tras crear el titular
       // Prisma requiere titular_id no nulo, así que creamos titular primero sin solicitud_grupal_id
@@ -138,7 +138,7 @@ export class AuthService {
 
       // Crear miembros adicionales y sus relaciones
       for (const m of miembros_adicionales) {
-        const { password: _p, confirmPassword: _cp, tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
+        const { password: _p, tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
         const password_hash_miembro = await bcrypt.hash(m.password, SALT_ROUNDS)
 
         const miembro = await tx.usuario.create({
