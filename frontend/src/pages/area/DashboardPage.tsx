@@ -66,14 +66,17 @@ export function DashboardPage() {
   const prestamosPendientes = prestamosData?.data.filter((p) => p.estado === 'pendiente') ?? []
   const ultimosPrestamos = prestamosData?.data.slice(0, 3) ?? []
 
-  // Lógica de llaves
+  // Lógica de llaves — admins exentos del requisito de 6 meses
+  const esAdmin = usuario?.roles.some((r) => ['presidente', 'secretario', 'tesorero'].includes(r))
   const puedesolicitarLlaves =
     usuario?.estado === 'activo' &&
     !usuario.tiene_llaves &&
     !usuario.fecha_solicitud_llaves &&
-    usuario.fecha_alta
-      ? new Date().getTime() - new Date(usuario.fecha_alta).getTime() >= 180 * 24 * 60 * 60 * 1000
-      : false
+    (esAdmin || (
+      !!usuario.fecha_alta
+        ? new Date().getTime() - new Date(usuario.fecha_alta).getTime() >= 180 * 24 * 60 * 60 * 1000
+        : false
+    ))
 
   return (
     <>

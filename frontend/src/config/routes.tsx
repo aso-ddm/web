@@ -59,7 +59,6 @@ export function AppRoutes() {
           <Route path="/area/perfil" element={<PerfilPage />} />
           <Route path="/area/prestamos" element={<PrestamosPage />} />
           <Route path="/area/visita" element={<RegistroVisitaPage />} />
-          <Route path="/area/llaves" element={<ComingSoon label="Solicitar llaves" />} />
         </Route>
       </Route>
 

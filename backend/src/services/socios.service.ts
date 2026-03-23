@@ -310,12 +310,18 @@ export class SociosService {
       throw new Error('Ya tienes una solicitud de llaves pendiente')
     }
 
-    // Verificar 6 meses de antigüedad
-    if (!socio.fecha_alta) throw new Error('Fecha de alta no registrada')
-    const seisM = new Date(socio.fecha_alta)
-    seisM.setMonth(seisM.getMonth() + 6)
-    if (new Date() < seisM) {
-      throw new Error(`Podrás solicitar llaves a partir del ${seisM.toLocaleDateString('es-ES')}`)
+    // Los roles de administración están exentos del requisito de antigüedad
+    const ROLES_ADMIN: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero]
+    const esAdmin = socio.roles.some((r) => ROLES_ADMIN.includes(r))
+
+    if (!esAdmin) {
+      // Verificar 6 meses de antigüedad
+      if (!socio.fecha_alta) throw new Error('Fecha de alta no registrada')
+      const seisM = new Date(socio.fecha_alta)
+      seisM.setMonth(seisM.getMonth() + 6)
+      if (new Date() < seisM) {
+        throw new Error(`Podrás solicitar llaves a partir del ${seisM.toLocaleDateString('es-ES')}`)
+      }
     }
 
     return this.prisma.usuario.update({

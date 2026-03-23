@@ -81,13 +81,16 @@ export function PerfilPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  // Calcular si puede solicitar llaves (≥ 6 meses como socio)
+  // Calcular si puede solicitar llaves (≥ 6 meses como socio, o rol de admin)
+  const esAdmin = usuario?.roles.some((r) => ['presidente', 'secretario', 'tesorero'].includes(r))
   const puedesolicitarLlaves =
     usuario?.estado === 'activo' &&
     !usuario.tiene_llaves &&
     !usuario.fecha_solicitud_llaves &&
-    !!usuario.fecha_alta &&
-    new Date().getTime() - new Date(usuario.fecha_alta).getTime() >= 180 * 24 * 60 * 60 * 1000
+    (esAdmin || (
+      !!usuario.fecha_alta &&
+      new Date().getTime() - new Date(usuario.fecha_alta).getTime() >= 180 * 24 * 60 * 60 * 1000
+    ))
 
   if (isLoading) {
     return (
