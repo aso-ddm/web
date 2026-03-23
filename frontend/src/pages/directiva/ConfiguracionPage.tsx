@@ -12,6 +12,16 @@ import { SEOHead } from '@/components/SEOHead'
 import { configuracionApi, type ConfigItem } from '@/services/api/configuracion'
 
 const configLabels: Record<string, { label: string; description: string; suffix?: string }> = {
+  precio_cuota_individual: {
+    label: 'Precio cuota individual',
+    description: 'Precio mensual de la cuota individual',
+    suffix: '€/mes',
+  },
+  precio_cuota_adicional: {
+    label: 'Precio por miembro adicional (conjunta)',
+    description: 'Importe adicional por cada miembro en una cuota conjunta (se suma al precio individual del titular)',
+    suffix: '€/mes',
+  },
   visitas_gratuitas: {
     label: 'Visitas gratuitas',
     description: 'Número de visitas gratuitas permitidas para no socios antes de tener que pagar',

@@ -48,6 +48,18 @@ async function main() {
   // ── Configuración inicial ──────────────────────────────────────────────
   const configsIniciales = [
     {
+      clave: 'precio_cuota_individual',
+      valor: '15',
+      tipo: 'numero',
+      descripcion: 'Precio mensual de la cuota individual (en euros)',
+    },
+    {
+      clave: 'precio_cuota_adicional',
+      valor: '5',
+      tipo: 'numero',
+      descripcion: 'Precio mensual por cada miembro adicional en una cuota conjunta (en euros)',
+    },
+    {
       clave: 'visitas_gratuitas',
       valor: '3',
       tipo: 'numero',

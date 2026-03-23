@@ -377,6 +377,21 @@ export function RegistroPage() {
     retry: false,
     staleTime: 1000 * 60 * 10,
   })
+  const { data: configPrecioIndividual } = useQuery({
+    queryKey: ['config', 'precio_cuota_individual'],
+    queryFn: () => configuracionApi.getOne('precio_cuota_individual'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+  const { data: configPrecioAdicional } = useQuery({
+    queryKey: ['config', 'precio_cuota_adicional'],
+    queryFn: () => configuracionApi.getOne('precio_cuota_adicional'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+
+  const precioIndividual = Number(configPrecioIndividual?.data?.valor ?? 15)
+  const precioAdicional = Number(configPrecioAdicional?.data?.valor ?? 5)
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
@@ -485,8 +500,8 @@ export function RegistroPage() {
                 className="space-y-2.5"
               >
                 {([
-                  { tipo: 'individual', precio: '15€/mes', descripcion: 'Para un socio' },
-                  { tipo: 'conjunta', precio: 'desde 20€/mes', descripcion: 'Para parejas o familiares directos mayores de edad (15€ titular + 5€ por cada miembro adicional)' },
+                  { tipo: 'individual', precio: `${precioIndividual}€/mes`, descripcion: 'Para un socio' },
+                  { tipo: 'conjunta', precio: `desde ${precioIndividual + precioAdicional}€/mes`, descripcion: `Para parejas o familiares directos mayores de edad (${precioIndividual}€ titular + ${precioAdicional}€ por cada miembro adicional)` },
                 ] as const).map(({ tipo, precio, descripcion }) => (
                   <label
                     key={tipo}
@@ -596,7 +611,7 @@ export function RegistroPage() {
 
             {/* 5. Miembros adicionales (solo cuota conjunta) */}
             {tipoCuota === 'conjunta' && (
-              <FormSection number={5} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Precio total: ${calcularPrecio(fields.length)}€/mes`} className="border-secondary/40">
+              <FormSection number={5} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Precio total: ${calcularPrecio(fields.length, precioIndividual, precioAdicional)}€/mes`} className="border-secondary/40">
                 <div className="space-y-4">
                   {'miembros_adicionales' in errors && (errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message && (
                     <FieldError message={(errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message} />

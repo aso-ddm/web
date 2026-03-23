@@ -51,7 +51,7 @@ export type MiembroAdicionalInput = z.infer<typeof miembroAdicionalSchema>
 
 // ─── Register schema (discriminatedUnion) ────────────────────────────────────
 
-export const registerSchema = z.discriminatedUnion('tipo_cuota', [
+export const registerSchema = z.union([
   // Rama individual
   z
     .object({
