@@ -15,53 +15,54 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Separator } from '@/components/ui/separator'
 import { DragonIcon } from '@/components/atoms/icons'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
-interface NavItem {
-  label: string
-  to: string
-  icon: React.ReactNode
-}
+/* ── Tipos ───────────────────────────────────────────────────────── */
+type NavItem    = { type: 'item';    label: string; to: string; icon: React.ReactNode }
+type NavSection = { type: 'section'; label: string }
+type NavEntry   = NavItem | NavSection
 
-function useSidebarItems(): NavItem[] {
+/* ── Hook de items ───────────────────────────────────────────────── */
+function useSidebarItems(): NavEntry[] {
   const { isDirectiva, isLudotecario, isDirectivaOVocal } = useAuthStore()
 
-  const items: NavItem[] = [
-    { label: 'Mi panel', to: '/area', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { label: 'Mi perfil', to: '/area/perfil', icon: <User className="h-4 w-4" /> },
-    { label: 'Mis préstamos', to: '/area/prestamos', icon: <BookOpen className="h-4 w-4" /> },
-    { label: 'Registrar visita', to: '/area/visita', icon: <UserCheck className="h-4 w-4" /> },
-    { label: 'Llaves del club', to: '/area/llaves', icon: <Key className="h-4 w-4" /> },
+  const items: NavEntry[] = [
+    { type: 'section', label: 'Mi área' },
+    { type: 'item', label: 'Mi panel',         to: '/area',          icon: <LayoutDashboard className="h-4 w-4" /> },
+    { type: 'item', label: 'Mi perfil',        to: '/area/perfil',   icon: <User            className="h-4 w-4" /> },
+    { type: 'item', label: 'Mis préstamos',    to: '/area/prestamos',icon: <BookOpen        className="h-4 w-4" /> },
+    { type: 'item', label: 'Registrar visita', to: '/area/visita',   icon: <UserCheck       className="h-4 w-4" /> },
+    { type: 'item', label: 'Llaves del club',  to: '/area/llaves',   icon: <Key             className="h-4 w-4" /> },
   ]
 
   if (isDirectivaOVocal()) {
     items.push(
-      { label: '──────────', to: '#', icon: <></> },
-      { label: 'Gestión socios', to: '/directiva/socios', icon: <Users className="h-4 w-4" /> },
-      { label: 'Solicitudes', to: '/directiva/solicitudes', icon: <ClipboardList className="h-4 w-4" /> },
+      { type: 'section', label: 'Directiva' },
+      { type: 'item', label: 'Gestión socios', to: '/directiva/socios',       icon: <Users        className="h-4 w-4" /> },
+      { type: 'item', label: 'Solicitudes',    to: '/directiva/solicitudes',  icon: <ClipboardList className="h-4 w-4" /> },
     )
   }
 
   if (isDirectiva()) {
     items.push(
-      { label: 'Configuración', to: '/directiva/configuracion', icon: <Settings className="h-4 w-4" /> },
+      { type: 'item', label: 'Configuración', to: '/directiva/configuracion', icon: <Settings className="h-4 w-4" /> },
     )
   }
 
   if (isLudotecario()) {
     items.push(
-      { label: '──────────', to: '#', icon: <></> },
-      { label: 'Gestión juegos', to: '/ludoteca/juegos', icon: <Library className="h-4 w-4" /> },
-      { label: 'Préstamos', to: '/ludoteca/prestamos', icon: <Handshake className="h-4 w-4" /> },
+      { type: 'section', label: 'Ludoteca' },
+      { type: 'item', label: 'Gestión juegos', to: '/ludoteca/juegos',    icon: <Library  className="h-4 w-4" /> },
+      { type: 'item', label: 'Préstamos',      to: '/ludoteca/prestamos', icon: <Handshake className="h-4 w-4" /> },
     )
   }
 
   return items
 }
 
+/* ── Sidebar ─────────────────────────────────────────────────────── */
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const { usuario, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -72,61 +73,81 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
     navigate('/')
   }
 
+  // Iniciales del usuario para el avatar
+  const initials = [usuario?.nombre?.[0], usuario?.apellidos?.[0]]
+    .filter(Boolean)
+    .join('')
+    .toUpperCase()
+
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 p-4 border-b border-border">
-        <DragonIcon className="h-8 w-8 fill-primary flex-shrink-0" />
-        <span className="font-display font-bold text-primary text-lg leading-tight">
-          Área de socios
-        </span>
+      <div className="flex items-center gap-3 px-4 py-5 border-b border-border">
+        <DragonIcon className="h-9 w-9 fill-primary flex-shrink-0" />
+        <div className="min-w-0">
+          <span className="font-display font-bold text-primary text-base leading-tight block">
+            Dragón de Madera
+          </span>
+          <span className="text-xs text-muted-foreground">Área de socios</span>
+        </div>
       </div>
 
-      {/* User info */}
-      <div className="px-4 py-3 bg-accent/30 border-b border-border">
-        <p className="font-display font-bold text-sm text-foreground">
-          {usuario?.nombre} {usuario?.apellidos}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {usuario?.roles.join(', ').replace(/_/g, ' ')}
-        </p>
+      {/* Avatar + datos de usuario */}
+      <div className="px-4 py-3 border-b border-border bg-muted/30">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/20">
+            <span className="font-display font-bold text-primary text-sm select-none">
+              {initials || <User className="h-4 w-4 text-primary" />}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="font-display font-bold text-sm text-foreground truncate leading-tight">
+              {usuario?.nombre} {usuario?.apellidos}
+            </p>
+            <p className="text-xs text-muted-foreground capitalize truncate mt-0.5">
+              {usuario?.roles?.[0]?.replace(/_/g, ' ') ?? 'Socio'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2">
-        {items.map((item) =>
-          item.to === '#' ? (
-            <div key={item.label} className="px-4 py-1">
-              <Separator className="my-1" />
+        {items.map((entry, idx) =>
+          entry.type === 'section' ? (
+            <div key={`section-${idx}`} className="px-5 pt-4 pb-1.5">
+              <p className="text-[10px] font-display font-bold uppercase tracking-widest text-muted-foreground/55 select-none">
+                {entry.label}
+              </p>
             </div>
           ) : (
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/area'}
+              key={entry.to}
+              to={entry.to}
+              end={entry.to === '/area'}
               onClick={onClose}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors rounded-none',
+                  'flex items-center gap-2.5 mx-2 px-3 py-2.5 text-sm rounded-md transition-all duration-150',
                   isActive
-                    ? 'bg-primary text-primary-foreground font-display font-bold'
-                    : 'text-foreground hover:bg-accent hover:text-accent-foreground',
+                    ? 'bg-primary text-primary-foreground font-display font-bold shadow-sm'
+                    : 'text-foreground/75 hover:bg-accent hover:text-foreground',
                 )
               }
             >
-              {item.icon}
-              {item.label}
+              {entry.icon}
+              {entry.label}
             </NavLink>
           ),
         )}
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-border">
+      <div className="p-3 border-t border-border">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
@@ -137,9 +158,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   )
 }
 
+/* ── Layout principal ────────────────────────────────────────────── */
 export function AreaLayout() {
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-muted/20">
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card flex-shrink-0">
         <SidebarContent />
@@ -147,10 +169,10 @@ export function AreaLayout() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar mobile */}
-        <header className="lg:hidden flex items-center justify-between px-4 h-16 border-b border-border bg-card">
+        <header className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-border bg-card sticky top-0 z-40">
           <Link to="/area" className="flex items-center gap-2">
             <DragonIcon className="h-7 w-7 fill-primary" />
-            <span className="font-display font-bold text-primary">Área de socios</span>
+            <span className="font-display font-bold text-primary text-sm">Área de socios</span>
           </Link>
           <Sheet>
             <SheetTrigger asChild>
@@ -165,7 +187,7 @@ export function AreaLayout() {
           </Sheet>
         </header>
 
-        {/* Contenido de la ruta activa */}
+        {/* Contenido */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>

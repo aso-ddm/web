@@ -93,28 +93,30 @@ export function DashboardPage() {
         </div>
 
         {/* Estadísticas rápidas */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Estado */}
-          <Card>
+          <Card className="border-t-2 border-t-primary overflow-hidden">
             <CardContent className="pt-5 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground font-display">Estado</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground font-display mb-1">Estado</p>
                   {loadingMe ? (
-                    <Skeleton className="h-6 w-20 mt-1" />
+                    <Skeleton className="h-6 w-20" />
                   ) : (
                     <Badge
                       variant={estadoVariants[usuario?.estado ?? 'pendiente']}
-                      className="mt-1 font-display"
+                      className="font-display"
                     >
                       {estadoLabels[usuario?.estado ?? 'pendiente']}
                     </Badge>
                   )}
                 </div>
-                <User className="h-5 w-5 text-primary opacity-60" />
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
               </div>
               {usuario?.fecha_alta && (
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-3">
                   Socio desde {formatDate(usuario.fecha_alta)}
                 </p>
               )}
@@ -122,79 +124,85 @@ export function DashboardPage() {
           </Card>
 
           {/* Préstamos activos */}
-          <Card>
+          <Card className="border-t-2 border-t-secondary overflow-hidden">
             <CardContent className="pt-5 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground font-display">Préstamos activos</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground font-display mb-1">Préstamos activos</p>
                   {loadingPrestamos ? (
-                    <Skeleton className="h-8 w-8 mt-1" />
+                    <Skeleton className="h-8 w-10" />
                   ) : (
-                    <p className="text-3xl font-display font-bold text-primary mt-1">
+                    <p className="text-3xl font-display font-bold text-secondary leading-none">
                       {prestamosActivos.length}
                     </p>
                   )}
                 </div>
-                <BookOpen className="h-5 w-5 text-primary opacity-60" />
+                <div className="h-9 w-9 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="h-4 w-4 text-secondary" />
+                </div>
               </div>
-              {prestamosPendientes.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {prestamosPendientes.length} pendiente{prestamosPendientes.length > 1 ? 's' : ''} de aprobación
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground mt-3">
+                {prestamosPendientes.length > 0
+                  ? `${prestamosPendientes.length} pendiente${prestamosPendientes.length > 1 ? 's' : ''} de aprobación`
+                  : 'Sin solicitudes pendientes'}
+              </p>
             </CardContent>
           </Card>
 
           {/* Llaves */}
-          <Card>
+          <Card className="border-t-2 border-t-primary/40 overflow-hidden">
             <CardContent className="pt-5 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground font-display">Llaves del club</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground font-display mb-1">Llaves del club</p>
                   {loadingMe ? (
-                    <Skeleton className="h-6 w-24 mt-1" />
+                    <Skeleton className="h-6 w-24" />
                   ) : usuario?.tiene_llaves ? (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       <span className="text-sm font-display font-bold text-emerald-600">Tienes llaves</span>
                     </div>
                   ) : usuario?.fecha_solicitud_llaves ? (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Clock className="h-4 w-4 text-amber-500" />
-                      <span className="text-sm font-display text-amber-600">Solicitud enviada</span>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      <span className="text-sm font-display text-amber-600">Pendiente</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm text-muted-foreground">Sin llaves</span>
                     </div>
                   )}
                 </div>
-                <Key className="h-5 w-5 text-primary opacity-60" />
+                <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <Key className="h-4 w-4 text-primary" />
+                </div>
               </div>
               {puedesolicitarLlaves && (
-                <p className="text-xs text-secondary mt-2 font-display">¡Ya puedes solicitarlas!</p>
+                <p className="text-xs text-secondary mt-3 font-display font-bold">¡Ya puedes solicitarlas!</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Socio desde */}
-          <Card>
+          {/* Cuota */}
+          <Card className="border-t-2 border-t-muted-foreground/30 overflow-hidden">
             <CardContent className="pt-5 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground font-display">Cuota</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground font-display mb-1">Cuota</p>
                   {loadingMe ? (
-                    <Skeleton className="h-6 w-24 mt-1" />
+                    <Skeleton className="h-6 w-24" />
                   ) : (
-                    <p className="text-sm font-display font-bold capitalize mt-1 text-foreground">
+                    <p className="text-sm font-display font-bold capitalize text-foreground leading-tight">
                       {usuario?.tipo_cuota ?? '—'}
                     </p>
                   )}
                 </div>
-                <User className="h-5 w-5 text-primary opacity-60" />
+                <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground mt-3 truncate">
                 {usuario?.email ?? '—'}
               </p>
             </CardContent>
