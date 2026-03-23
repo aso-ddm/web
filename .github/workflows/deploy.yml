@@ -148,6 +148,22 @@ jobs:
         working-directory: ${{ env.DEPLOY_PATH }}/backend
         run: npx prisma generate
 
+      - name: Resolver migraciones fallidas
+        working-directory: ${{ env.DEPLOY_PATH }}/backend
+        run: |
+          # Detecta y marca como rolled-back cualquier migración en estado 'failed'
+          # para que prisma migrate deploy pueda continuar
+          FAILED=$(npx prisma migrate status 2>/dev/null | grep -oP '(?<=• )\S+(?= \(failed\))' || true)
+          if [ -n "$FAILED" ]; then
+            echo "Migraciones fallidas detectadas: $FAILED"
+            for m in $FAILED; do
+              echo "Marcando $m como rolled-back..."
+              npx prisma migrate resolve --rolled-back "$m"
+            done
+          else
+            echo "No hay migraciones fallidas"
+          fi
+
       - name: Ejecutar migraciones
         working-directory: ${{ env.DEPLOY_PATH }}/backend
         run: npm run prisma:migrate
