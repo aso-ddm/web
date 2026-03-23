@@ -176,31 +176,28 @@ export function RegistroPage() {
                 className="space-y-3"
               >
                 {(['individual', 'pareja', 'familiar'] as const).map((tipo) => (
-                  <div
+                  <label
                     key={tipo}
+                    htmlFor={`cuota-${tipo}`}
                     className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
                       tipoCuota === tipo
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary/50'
                     }`}
-                    onClick={() => setValue('tipo_cuota', tipo)}
                   >
                     <RadioGroupItem value={tipo} id={`cuota-${tipo}`} className="mt-0.5" />
                     <div className="flex-1">
-                      <Label
-                        htmlFor={`cuota-${tipo}`}
-                        className="font-display font-bold capitalize cursor-pointer text-base"
-                      >
+                      <span className="font-display font-bold capitalize text-base">
                         {tipo}{' '}
                         <span className="text-secondary font-bold">
                           — {cuotaInfo[tipo].precio}
                         </span>
-                      </Label>
+                      </span>
                       <p className="text-sm text-muted-foreground mt-0.5">
                         {cuotaInfo[tipo].descripcion}
                       </p>
                     </div>
-                  </div>
+                  </label>
                 ))}
               </RadioGroup>
               <FieldError message={errors.tipo_cuota?.message} />
