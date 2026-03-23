@@ -23,7 +23,6 @@ export interface Usuario {
   fecha_nacimiento?: string | null
   direccion?: string | null
   alias_telegram?: string | null
-  usuario_bgg?: string | null
   apodo?: string | null
   tipo_cuota: TipoCuota
   consentimiento_tiendas?: boolean
@@ -47,20 +46,57 @@ export interface MiembroAdicionalPayload {
   dni: string
   email: string
   password: string
-  confirmPassword: string
   tipo_relacion: TipoRelacion
 }
 
 export type RegisterPayload =
-  | { tipo_cuota: 'individual'; email: string; password: string; nombre: string; apellidos: string; dni: string; telefono?: string; fecha_nacimiento?: string; direccion?: string; alias_telegram?: string; usuario_bgg?: string; apodo?: string; consentimiento_tiendas: boolean }
-  | { tipo_cuota: 'conjunta'; email: string; password: string; nombre: string; apellidos: string; dni: string; telefono?: string; fecha_nacimiento?: string; direccion?: string; alias_telegram?: string; usuario_bgg?: string; apodo?: string; consentimiento_tiendas: boolean; miembros_adicionales: MiembroAdicionalPayload[] }
+  | {
+      tipo_cuota: 'individual'
+      email: string
+      password: string
+      nombre: string
+      apellidos: string
+      dni: string
+      telefono?: string
+      fecha_nacimiento?: string
+      direccion?: string
+      alias_telegram?: string
+      usuario_bgg?: string
+      apodo?: string
+      consentimiento_tiendas: boolean
+    }
+  | {
+      tipo_cuota: 'conjunta'
+      email: string
+      password: string
+      nombre: string
+      apellidos: string
+      dni: string
+      telefono?: string
+      fecha_nacimiento?: string
+      direccion?: string
+      alias_telegram?: string
+      usuario_bgg?: string
+      apodo?: string
+      consentimiento_tiendas: boolean
+      miembros_adicionales: MiembroAdicionalPayload[]
+    }
 
 export interface SolicitudGrupal {
   id: string
   estado: EstadoSolicitud
   created_at: string
-  titular: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & { apodo?: string | null; alias_telegram?: string | null; tipo_cuota: TipoCuota; created_at: string }
-  miembros: Array<Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & { tipo_relacion: TipoRelacion | null }>
+  titular: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & {
+    apodo?: string | null
+    alias_telegram?: string | null
+    tipo_cuota: TipoCuota
+    created_at: string
+  }
+  miembros: Array<
+    Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & {
+      tipo_relacion: TipoRelacion | null
+    }
+  >
 }
 
 export interface LoginResponse {

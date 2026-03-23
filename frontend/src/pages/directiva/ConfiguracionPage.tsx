@@ -23,12 +23,12 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     suffix: '€',
   },
   url_estatutos: {
-    label: 'Estatutos (PDF)',
-    description: 'Ruta relativa (/pdfs/estatutos.pdf) o URL absoluta del PDF de los estatutos',
+    label: 'Estatutos (enlace)',
+    description: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
   },
   url_reglamento_interno: {
-    label: 'Reglamento interno (PDF)',
-    description: 'Ruta relativa (/pdfs/reglamento.pdf) o URL absoluta del PDF del reglamento interno',
+    label: 'Reglamento interno (enlace)',
+    description: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
   },
 }
 
@@ -154,6 +154,12 @@ export function ConfiguracionPage() {
     retry: false,
   })
 
+  const { data: consentimientoData, isLoading: isConsentimientoLoading } = useQuery({
+    queryKey: ['config', 'texto_consentimiento_tiendas'],
+    queryFn: () => configuracionApi.getOne('texto_consentimiento_tiendas'),
+    retry: false,
+  })
+
   const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
   const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
 
@@ -227,6 +233,32 @@ export function ConfiguracionPage() {
                 initialValor={bienvenidaData?.data?.valor ?? ''}
                 label="Texto de bienvenida"
                 description="Mostrado al inicio del formulario de alta de nuevos socios"
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Consentimiento de datos — Tiendas colaboradoras
+            </CardTitle>
+            <CardDescription>
+              Texto del checkbox de consentimiento visible en el formulario de alta.
+              Actualízalo si cambian las tiendas o el porcentaje de descuento.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isConsentimientoLoading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : (
+              <TextAreaConfigField
+                key={consentimientoData?.data?.valor ?? 'empty-consentimiento'}
+                clave="texto_consentimiento_tiendas"
+                initialValor={consentimientoData?.data?.valor ?? ''}
+                label="Texto de consentimiento"
+                description="Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta"
               />
             )}
           </CardContent>

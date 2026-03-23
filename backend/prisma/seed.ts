@@ -97,13 +97,19 @@ Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o e
       clave: 'url_estatutos',
       valor: '',
       tipo: 'url',
-      descripcion: 'URL del PDF de los estatutos de la asociación (ruta relativa o URL absoluta)',
+      descripcion: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
     },
     {
       clave: 'url_reglamento_interno',
       valor: '',
       tipo: 'url',
-      descripcion: 'URL del PDF del reglamento interno de la asociación (ruta relativa o URL absoluta)',
+      descripcion: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
+    },
+    {
+      clave: 'texto_consentimiento_tiendas',
+      tipo: 'texto_largo',
+      descripcion: 'Texto del checkbox de consentimiento de datos con tiendas colaboradoras (visible en el formulario de alta)',
+      valor: 'Acepto que se compartan mis datos (nombre y apellidos) con las tiendas colaboradoras de la asociación (FreakMondo, Bazar de Iglesias, Dune) para poder beneficiarme del descuento del 10% en compras como socio de Dragón de Madera.',
     },
   ]
 

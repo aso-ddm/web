@@ -72,7 +72,6 @@ model Usuario {
   fecha_nacimiento        DateTime?
   direccion               String?
   alias_telegram          String?
-  usuario_bgg             String?
   apodo                   String?
   tipo_cuota              TipoCuota   @default(individual)
   consentimiento_tiendas  Boolean     @default(false)

@@ -217,7 +217,6 @@ export class AuthService {
         fecha_nacimiento: true,
         direccion: true,
         alias_telegram: true,
-        usuario_bgg: true,
         apodo: true,
         tipo_cuota: true,
         roles: true,

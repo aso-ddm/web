@@ -23,7 +23,6 @@ const perfilSchema = z.object({
   telefono: z.string().optional(),
   direccion: z.string().optional(),
   alias_telegram: z.string().optional(),
-  usuario_bgg: z.string().optional(),
   apodo: z.string().optional(),
 })
 type PerfilForm = z.infer<typeof perfilSchema>
@@ -58,7 +57,6 @@ export function PerfilPage() {
         telefono: usuario.telefono ?? '',
         direccion: usuario.direccion ?? '',
         alias_telegram: usuario.alias_telegram ?? '',
-        usuario_bgg: usuario.usuario_bgg ?? '',
         apodo: usuario.apodo ?? '',
       })
     }
@@ -190,16 +188,9 @@ export function PerfilPage() {
                 Contacto y comunidades
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="alias_telegram" className="font-display font-bold text-xs">Alias Telegram</Label>
-                  <Input id="alias_telegram" {...register('alias_telegram')} placeholder="@tuusuario" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="usuario_bgg" className="font-display font-bold text-xs">Usuario BGG</Label>
-                  <Input id="usuario_bgg" {...register('usuario_bgg')} placeholder="Usuario en BoardGameGeek" />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="alias_telegram" className="font-display font-bold text-xs">Alias Telegram</Label>
+                <Input id="alias_telegram" {...register('alias_telegram')} placeholder="@tuusuario" />
               </div>
 
               <div className="flex justify-end pt-2">
