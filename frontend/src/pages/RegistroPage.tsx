@@ -41,8 +41,8 @@ const miembroAdicionalSchema = z
     apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
     dni: dniSchema,
     email: z.string().email('Introduce un email válido'),
-    telefono: z.string().optional(),
-    fecha_nacimiento: z.string().optional(),
+    telefono: z.string().min(1, 'El teléfono es obligatorio'),
+    fecha_nacimiento: z.string().min(1, 'La fecha de nacimiento es obligatoria'),
     alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
     apodo: z.string().optional(),
     consentimiento_tiendas: z.boolean().default(false),
@@ -328,12 +328,14 @@ function MiembroForm({
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="font-display font-bold text-sm">Teléfono</Label>
+          <Label className="font-display font-bold text-sm">Teléfono <span className="text-destructive">*</span></Label>
           <Input type="tel" placeholder="600 000 000" {...register(`miembros_adicionales.${index}.telefono` as const)} />
+          <FieldError message={(err?.telefono as { message?: string } | undefined)?.message} />
         </div>
         <div className="space-y-1.5">
-          <Label className="font-display font-bold text-sm">Fecha de nacimiento</Label>
+          <Label className="font-display font-bold text-sm">Fecha de nacimiento <span className="text-destructive">*</span></Label>
           <Input type="date" {...register(`miembros_adicionales.${index}.fecha_nacimiento` as const)} />
+          <FieldError message={(err?.fecha_nacimiento as { message?: string } | undefined)?.message} />
         </div>
       </div>
 
