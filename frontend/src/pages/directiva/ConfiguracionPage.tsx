@@ -82,10 +82,6 @@ function ConfigField({ config }: { config: ConfigItem }) {
           Guardar
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Valor actual en BD: <strong>{config.valor}</strong>
-        {meta?.suffix && ` ${meta.suffix}`}
-      </p>
     </div>
   )
 }
@@ -198,12 +194,6 @@ export function ConfiguracionPage() {
               <Link className="h-4 w-4" />
               Documentos públicos
             </CardTitle>
-            <CardDescription>
-              URLs de los PDFs de estatutos y reglamento. Sube los archivos al servidor
-              en <code className="bg-muted px-1 rounded text-xs">/var/www/dragon-de-madera/pdfs/</code> y
-              configura aquí las rutas (ej: <code className="bg-muted px-1 rounded text-xs">/pdfs/estatutos.pdf</code>).
-              Los botones aparecerán en el formulario de alta solo si la URL está informada.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {isLoading ? (
