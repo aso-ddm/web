@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { calcularPrecio } from '@/lib/cuota'
+import { configuracionApi } from '@/services/api/configuracion'
 import type { SolicitudGrupal } from '@/types/api'
 
 function formatDate(dateStr?: string | null) {
@@ -16,8 +17,8 @@ function formatDate(dateStr?: string | null) {
   return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function tipoCuotaLabel(tipo: string) {
-  return { individual: 'Individual (15€/mes)', conjunta: 'Conjunta' }[tipo] ?? tipo
+function tipoCuotaLabel(tipo: string, precioIndividual: number) {
+  return { individual: `Individual (${precioIndividual}€/mes)`, conjunta: 'Conjunta' }[tipo] ?? tipo
 }
 
 function tipoRelacionLabel(tipo: string | null) {
@@ -28,7 +29,7 @@ function tipoRelacionLabel(tipo: string | null) {
 
 // ── Tarjeta solicitud individual ──────────────────────────────────────────────
 
-function AltaSolicitudCard({ socio }: { socio: SocioAdmin }) {
+function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; precioIndividual: number }) {
   const queryClient = useQueryClient()
   const invalidar = () => queryClient.invalidateQueries({ queryKey: ['pendientes'] })
 
@@ -55,7 +56,7 @@ function AltaSolicitudCard({ socio }: { socio: SocioAdmin }) {
           <p className="text-sm text-muted-foreground">{socio.email}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
             <span>DNI: {socio.dni}</span>
-            <span>Cuota: {tipoCuotaLabel(socio.tipo_cuota)}</span>
+            <span>Cuota: {tipoCuotaLabel(socio.tipo_cuota, precioIndividual)}</span>
             <span>Solicitud: {formatDate(socio.created_at)}</span>
           </div>
           {socio.alias_telegram && (
@@ -81,7 +82,7 @@ function AltaSolicitudCard({ socio }: { socio: SocioAdmin }) {
 
 // ── Tarjeta solicitud conjunta ────────────────────────────────────────────────
 
-function GrupoSolicitudCard({ grupo }: { grupo: SolicitudGrupal }) {
+function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grupo: SolicitudGrupal; precioIndividual: number; precioAdicional: number }) {
   const queryClient = useQueryClient()
   const invalidar = () => queryClient.invalidateQueries({ queryKey: ['pendientes'] })
 
@@ -97,7 +98,7 @@ function GrupoSolicitudCard({ grupo }: { grupo: SolicitudGrupal }) {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const precioTotal = calcularPrecio(grupo.miembros.length)
+  const precioTotal = calcularPrecio(grupo.miembros.length, precioIndividual, precioAdicional)
 
   return (
     <div className="py-4 border-b border-border last:border-0">
@@ -207,6 +208,22 @@ export function SolicitudesPage() {
     queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 100 }),
   })
 
+  const { data: configPrecioIndividual } = useQuery({
+    queryKey: ['config', 'precio_cuota_individual'],
+    queryFn: () => configuracionApi.getOne('precio_cuota_individual'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+  const { data: configPrecioAdicional } = useQuery({
+    queryKey: ['config', 'precio_cuota_adicional'],
+    queryFn: () => configuracionApi.getOne('precio_cuota_adicional'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+
+  const precioIndividual = Number(configPrecioIndividual?.data?.valor ?? 15)
+  const precioAdicional = Number(configPrecioAdicional?.data?.valor ?? 5)
+
   const { individuales = [], grupos = [] } = pendientesData?.data ?? {}
   const pendientesLlaves = (sociosData?.data ?? [] as SocioAdmin[]).filter(
     (s: SocioAdmin) => s.fecha_solicitud_llaves && !s.tiene_llaves,
@@ -245,7 +262,7 @@ export function SolicitudesPage() {
                 <p className="text-sm">No hay solicitudes individuales pendientes</p>
               </div>
             ) : (
-            individuales.map((s: SocioAdmin) => <AltaSolicitudCard key={s.id} socio={s} />)
+            individuales.map((s: SocioAdmin) => <AltaSolicitudCard key={s.id} socio={s} precioIndividual={precioIndividual} />)
             )}
           </CardContent>
         </Card>
@@ -267,7 +284,7 @@ export function SolicitudesPage() {
                 <p className="text-sm">No hay solicitudes conjuntas pendientes</p>
               </div>
             ) : (
-            grupos.map((g: SolicitudGrupal) => <GrupoSolicitudCard key={g.id} grupo={g} />)
+            grupos.map((g: SolicitudGrupal) => <GrupoSolicitudCard key={g.id} grupo={g} precioIndividual={precioIndividual} precioAdicional={precioAdicional} />)
             )}
           </CardContent>
         </Card>
