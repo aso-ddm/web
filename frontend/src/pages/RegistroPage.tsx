@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/SEOHead'
+import { PdfViewerDialog } from '@/components/organisms/PdfViewerDialog'
 import { authApi } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { SPACING } from '@/lib/constants'
@@ -114,41 +115,52 @@ function DocumentosCard({
   urlEstatutos?: string
   urlReglamento?: string
 }) {
+  const [pdfOpen, setPdfOpen] = useState<{ url: string; title: string } | null>(null)
+
   const docs = [
     { key: 'estatutos', label: 'Estatutos', url: urlEstatutos },
     { key: 'reglamento', label: 'Reglamento interno', url: urlReglamento },
   ]
 
   return (
-    <Card className="border-primary/40">
-      <CardHeader className="pb-2 pt-4 px-5">
-        <h3 className="font-display font-bold text-sm uppercase tracking-wide text-primary flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          Estatutos y Reglamento interno
-        </h3>
-      </CardHeader>
-      <CardContent className="px-5 pb-4">
-        <div className="flex flex-wrap gap-2">
-          {docs.map(({ key, label, url }) =>
-            url ? (
-              <Button key={key} variant="outline" size="sm" asChild
-                className="font-display font-bold gap-1.5 text-xs">
-                <a href={url} target="_blank" rel="noopener noreferrer">
+    <>
+      <Card className="border-primary/40">
+        <CardHeader className="pb-2 pt-4 px-5">
+          <h3 className="font-display font-bold text-sm uppercase tracking-wide text-primary flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Estatutos y Reglamento interno
+          </h3>
+        </CardHeader>
+        <CardContent className="px-5 pb-4">
+          <div className="flex flex-wrap gap-2">
+            {docs.map(({ key, label, url }) =>
+              url ? (
+                <Button key={key} variant="outline" size="sm"
+                  className="font-display font-bold gap-1.5 text-xs"
+                  onClick={() => setPdfOpen({ url, title: label })}>
                   <FileText className="h-3.5 w-3.5" />
                   Ver {label}
-                </a>
-              </Button>
-            ) : (
-              <Button key={key} variant="ghost" size="sm" disabled
-                className="font-display font-bold gap-1.5 text-xs text-muted-foreground">
-                <FileText className="h-3.5 w-3.5" />
-                {label} — próximamente disponible
-              </Button>
-            )
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                </Button>
+              ) : (
+                <Button key={key} variant="ghost" size="sm" disabled
+                  className="font-display font-bold gap-1.5 text-xs text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5" />
+                  {label} — próximamente disponible
+                </Button>
+              )
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      {pdfOpen && (
+        <PdfViewerDialog
+          url={pdfOpen.url}
+          title={pdfOpen.title}
+          open={!!pdfOpen}
+          onOpenChange={(open) => { if (!open) setPdfOpen(null) }}
+        />
+      )}
+    </>
   )
 }
 
