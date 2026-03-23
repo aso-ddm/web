@@ -61,7 +61,6 @@ export type RegisterPayload =
       fecha_nacimiento?: string
       direccion?: string
       alias_telegram?: string
-      usuario_bgg?: string
       apodo?: string
       consentimiento_tiendas: boolean
     }
@@ -76,7 +75,6 @@ export type RegisterPayload =
       fecha_nacimiento?: string
       direccion?: string
       alias_telegram?: string
-      usuario_bgg?: string
       apodo?: string
       consentimiento_tiendas: boolean
       miembros_adicionales: MiembroAdicionalPayload[]

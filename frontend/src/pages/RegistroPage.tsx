@@ -62,7 +62,6 @@ const camposTitular = {
   fecha_nacimiento: z.string().min(1, 'La fecha de nacimiento es obligatoria'),
   direccion: z.string().min(1, 'La dirección es obligatoria'),
   alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
-  usuario_bgg: z.string().optional(),
   apodo: z.string().optional(),
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
@@ -597,10 +596,6 @@ export function RegistroPage() {
                   <FieldError message={errMsg(errors.alias_telegram)} />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="usuario_bgg" className="font-display font-bold text-sm">Usuario BoardGameGeek</Label>
-                    <Input id="usuario_bgg" placeholder="Tu usuario en BGG" {...register('usuario_bgg')} />
-                  </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="apodo" className="font-display font-bold text-sm">Apodo <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span></Label>
                     <Input id="apodo" placeholder="Ej: Carly, El Mago..." {...register('apodo')} />

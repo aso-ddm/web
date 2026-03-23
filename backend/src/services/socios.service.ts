@@ -11,7 +11,6 @@ const SOCIO_PUBLIC_SELECT = {
   telefono: true,
   fecha_nacimiento: true,
   alias_telegram: true,
-  usuario_bgg: true,
   apodo: true,
   tipo_cuota: true,
   roles: true,
