@@ -88,10 +88,22 @@ Alias en telegram -> La asociación usa la aplicación Telegram para comunicarse
 https://www.youtube.com/watch?v=oz3WsDk7hTM&feature=youtu.be
 
 **ESTATUTOS Y REGLAMENTO INTERNO**
-En este formulario se ha presentado un resumen de la información relevante sobre el club, aquí tienes los enlaces para revisar los estatutos (https://drive.google.com/open?id=1fH9TtVtbQnvSQ1U7ADLpitaYkbKDgqlj) y el reglamento interno https://drive.google.com/file/d/10vatk-00LMMJt0wz-2phnqDjRMHWzvyR si quieres disponer de toda la información.
+En este formulario se ha presentado un resumen de la información relevante sobre el club. Puedes consultar los documentos oficiales con los botones que aparecen a continuación.
 
 **¿DESEAS SABER MÁS?**
 Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o escribiéndonos por Telegram a @dragondemadera_info`,
+    },
+    {
+      clave: 'url_estatutos',
+      valor: '',
+      tipo: 'url',
+      descripcion: 'URL del PDF de los estatutos de la asociación (ruta relativa o URL absoluta)',
+    },
+    {
+      clave: 'url_reglamento_interno',
+      valor: '',
+      tipo: 'url',
+      descripcion: 'URL del PDF del reglamento interno de la asociación (ruta relativa o URL absoluta)',
     },
   ]
 

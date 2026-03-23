@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Settings, FileText, Loader2, Save } from 'lucide-react'
+import { Settings, FileText, Link, Loader2, Save } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,14 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     label: 'Precio visita de pago',
     description: 'Importe en euros que se cobra a los no socios que ya superaron las visitas gratuitas',
     suffix: '€',
+  },
+  url_estatutos: {
+    label: 'Estatutos (PDF)',
+    description: 'Ruta relativa (/pdfs/estatutos.pdf) o URL absoluta del PDF de los estatutos',
+  },
+  url_reglamento_interno: {
+    label: 'Reglamento interno (PDF)',
+    description: 'Ruta relativa (/pdfs/reglamento.pdf) o URL absoluta del PDF del reglamento interno',
   },
 }
 
@@ -150,7 +158,8 @@ export function ConfiguracionPage() {
     retry: false,
   })
 
-  const configs = (data?.data ?? []).filter((c) => c.tipo !== 'texto_largo')
+  const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
+  const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
 
   return (
     <>
@@ -179,6 +188,30 @@ export function ConfiguracionPage() {
               <p className="text-sm text-muted-foreground">No hay parámetros de configuración disponibles.</p>
             ) : (
               configs.map((c) => <ConfigField key={c.clave} config={c} />)
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <Link className="h-4 w-4" />
+              Documentos públicos
+            </CardTitle>
+            <CardDescription>
+              URLs de los PDFs de estatutos y reglamento. Sube los archivos al servidor
+              en <code className="bg-muted px-1 rounded text-xs">/var/www/dragon-de-madera/pdfs/</code> y
+              configura aquí las rutas (ej: <code className="bg-muted px-1 rounded text-xs">/pdfs/estatutos.pdf</code>).
+              Los botones aparecerán en el formulario de alta solo si la URL está informada.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isLoading ? (
+              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
+            ) : urlConfigs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay documentos configurados en la base de datos.</p>
+            ) : (
+              urlConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
             )}
           </CardContent>
         </Card>

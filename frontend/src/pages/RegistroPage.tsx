@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/SEOHead'
+import { PdfViewerDialog } from '@/components/organisms/PdfViewerDialog'
 import { authApi } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { SPACING } from '@/lib/constants'
@@ -68,35 +69,82 @@ function renderInline(text: string): React.ReactNode {
   )
 }
 
-function BienvenidaCard({ texto }: { texto: string }) {
+function BienvenidaCard({
+  texto,
+  urlEstatutos,
+  urlReglamento,
+}: {
+  texto: string
+  urlEstatutos?: string
+  urlReglamento?: string
+}) {
+  const [pdfOpen, setPdfOpen] = useState<{ url: string; title: string } | null>(null)
+
   const lines = texto.split('\n')
   const nonEmptyIdx = lines.reduce<number[]>((acc, l, i) => (l.trim() ? [...acc, i] : acc), [])
   const titleIdx = nonEmptyIdx[0] ?? -1
   const subtitleIdx = nonEmptyIdx[1] ?? -1
 
+  const elements: React.ReactNode[] = []
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx]
+
+    if (!line.trim()) { elements.push(<div key={idx} className="h-2" />); continue }
+
+    if (idx === titleIdx) {
+      elements.push(<p key={idx} className="font-display font-bold text-lg text-primary">{line}</p>)
+      continue
+    }
+    if (idx === subtitleIdx) {
+      elements.push(<p key={idx} className="font-display font-bold text-base text-secondary mb-1">{line}</p>)
+      continue
+    }
+    if (/^\*\*[^*]+\*\*$/.test(line.trim())) {
+      elements.push(
+        <h4 key={idx} className="font-display font-bold text-xs uppercase tracking-wide text-primary mt-4 pt-3 border-t border-primary/20">
+          {line.replace(/\*\*/g, '')}
+        </h4>
+      )
+      if (/ESTATUTOS/i.test(line) && (urlEstatutos || urlReglamento)) {
+        elements.push(
+          <div key={`${idx}-pdfs`} className="flex flex-wrap gap-2 mt-2">
+            {urlEstatutos && (
+              <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs"
+                onClick={() => setPdfOpen({ url: urlEstatutos, title: 'Estatutos' })}>
+                <FileText className="h-3.5 w-3.5" />
+                Ver Estatutos
+              </Button>
+            )}
+            {urlReglamento && (
+              <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs"
+                onClick={() => setPdfOpen({ url: urlReglamento, title: 'Reglamento interno' })}>
+                <FileText className="h-3.5 w-3.5" />
+                Ver Reglamento interno
+              </Button>
+            )}
+          </div>
+        )
+      }
+      continue
+    }
+    elements.push(<p key={idx} className="text-sm text-foreground leading-relaxed">{renderInline(line)}</p>)
+  }
+
   return (
-    <Card className="border-primary/40 bg-primary/5">
-      <CardContent className="pt-5 pb-5 space-y-0.5">
-        {lines.map((line, idx) => {
-          if (!line.trim()) return <div key={idx} className="h-2" />
-
-          if (idx === titleIdx)
-            return <p key={idx} className="font-display font-bold text-lg text-primary">{line}</p>
-
-          if (idx === subtitleIdx)
-            return <p key={idx} className="font-display font-bold text-base text-secondary mb-1">{line}</p>
-
-          if (/^\*\*[^*]+\*\*$/.test(line.trim()))
-            return (
-              <h4 key={idx} className="font-display font-bold text-xs uppercase tracking-wide text-primary mt-4 pt-3 border-t border-primary/20">
-                {line.replace(/\*\*/g, '')}
-              </h4>
-            )
-
-          return <p key={idx} className="text-sm text-foreground leading-relaxed">{renderInline(line)}</p>
-        })}
-      </CardContent>
-    </Card>
+    <>
+      <Card className="border-primary/40 bg-primary/5">
+        <CardContent className="pt-5 pb-5 space-y-0.5">{elements}</CardContent>
+      </Card>
+      {pdfOpen && (
+        <PdfViewerDialog
+          url={pdfOpen.url}
+          title={pdfOpen.title}
+          open={!!pdfOpen}
+          onOpenChange={(open) => { if (!open) setPdfOpen(null) }}
+        />
+      )}
+    </>
   )
 }
 
@@ -142,6 +190,18 @@ export function RegistroPage() {
   const { data: configBienvenida, isPending: isBienvenidaLoading } = useQuery({
     queryKey: ['config', 'texto_bienvenida_alta'],
     queryFn: () => configuracionApi.getOne('texto_bienvenida_alta'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+  const { data: configEstatutos } = useQuery({
+    queryKey: ['config', 'url_estatutos'],
+    queryFn: () => configuracionApi.getOne('url_estatutos'),
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+  const { data: configReglamento } = useQuery({
+    queryKey: ['config', 'url_reglamento_interno'],
+    queryFn: () => configuracionApi.getOne('url_reglamento_interno'),
     retry: false,
     staleTime: 1000 * 60 * 10,
   })
@@ -226,7 +286,11 @@ export function RegistroPage() {
               </CardContent>
             </Card>
           ) : configBienvenida?.data?.valor ? (
-            <BienvenidaCard texto={configBienvenida.data.valor} />
+            <BienvenidaCard
+              texto={configBienvenida.data.valor}
+              urlEstatutos={configEstatutos?.data?.valor || undefined}
+              urlReglamento={configReglamento?.data?.valor || undefined}
+            />
           ) : null}
         </div>
 
