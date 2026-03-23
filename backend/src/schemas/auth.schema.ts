@@ -36,6 +36,7 @@ export const miembroAdicionalSchema = z
     telefono: z.string().optional(),
     fecha_nacimiento: z.string().datetime().optional().or(z.string().date().optional()),
     alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
+    apodo: z.string().optional(),
     consentimiento_tiendas: z.boolean().default(false),
     password: passwordSchema,
     confirmPassword: z.string(),

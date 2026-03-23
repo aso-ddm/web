@@ -44,6 +44,7 @@ const miembroAdicionalSchema = z
     telefono: z.string().optional(),
     fecha_nacimiento: z.string().optional(),
     alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
+    apodo: z.string().optional(),
     consentimiento_tiendas: z.boolean().default(false),
     password: passwordSchema,
     confirmPassword: z.string(),
@@ -340,6 +341,11 @@ function MiembroForm({
         <Label className="font-display font-bold text-sm">Alias de Telegram <span className="text-destructive">*</span></Label>
         <Input placeholder="@tuusuario" {...register(`miembros_adicionales.${index}.alias_telegram` as const)} />
         <FieldError message={(err?.alias_telegram as { message?: string } | undefined)?.message} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="font-display font-bold text-sm">Apodo <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span></Label>
+        <Input placeholder="Ej: Carly, El Mago..." {...register(`miembros_adicionales.${index}.apodo` as const)} />
       </div>
 
       <label className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/30 transition-colors">
@@ -665,7 +671,7 @@ export function RegistroPage() {
                     variant="outline"
                     className="w-full font-display font-bold gap-2 border-dashed"
                     disabled={fields.length >= 5}
-                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', alias_telegram: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
+                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', alias_telegram: '', apodo: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
                   >
                     <PlusCircle className="h-4 w-4" />
                     {fields.length >= 5 ? 'Máximo 5 miembros adicionales' : 'Añadir miembro'}
