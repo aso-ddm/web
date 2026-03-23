@@ -131,7 +131,10 @@ function DocumentosCard({
             Estatutos y Reglamento interno
           </h3>
         </CardHeader>
-        <CardContent className="px-5 pb-4">
+        <CardContent className="px-5 pb-4 space-y-3">
+          <p className="text-sm text-foreground">
+            Aquí tienes un resumen de la información relevante sobre el club, de obligada lectura.
+          </p>
           <div className="flex flex-wrap gap-2">
             {docs.map(({ key, label, url }) =>
               url ? (
