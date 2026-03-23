@@ -168,6 +168,7 @@ function LlavesSolicitudCard({ socio }: { socio: SocioAdmin }) {
     onSuccess: () => {
       toast.success(`Llaves aprobadas para ${socio.nombre} ${socio.apellidos}`)
       queryClient.invalidateQueries({ queryKey: ['socios-activos-llaves'] })
+      queryClient.invalidateQueries({ queryKey: ['socios-llaves'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
