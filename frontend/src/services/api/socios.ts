@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Usuario, Rol, EstadoSocio, PaginatedResponse } from '@/types/api'
+import type { Usuario, Rol, EstadoSocio, SolicitudGrupal, PaginatedResponse } from '@/types/api'
 
 export interface UpdateSocioPayload {
   nombre?: string
@@ -53,13 +53,16 @@ export const sociosApi = {
     )
   },
 
-  getPendientes: () => api.get<{ data: SocioAdmin[] }>('/socios/pendientes'),
+  getPendientes: () => api.get<{ data: { individuales: SocioAdmin[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
 
   getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 
   aprobar: (id: string) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, {}),
   rechazar: (id: string) => api.post<{ data: SocioAdmin }>(`/socios/${id}/rechazar`, {}),
   darDeBaja: (id: string) => api.post<{ data: SocioAdmin }>(`/socios/${id}/baja`, {}),
+
+  aprobarGrupo: (grupoId: string) => api.post(`/socios/grupos/${grupoId}/aprobar`, {}),
+  rechazarGrupo: (grupoId: string) => api.post(`/socios/grupos/${grupoId}/rechazar`, {}),
 
   updateRoles: (id: string, roles: Rol[]) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/roles`, { roles }),

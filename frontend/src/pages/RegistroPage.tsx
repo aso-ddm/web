@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, CheckCircle2, FileText } from 'lucide-react'
+import { Loader2, CheckCircle2, FileText, PlusCircle, Trash2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,46 +13,109 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/SEOHead'
 import { PdfViewerDialog } from '@/components/organisms/PdfViewerDialog'
 import { authApi } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
+import { calcularPrecio } from '@/lib/cuota'
 import { SPACING } from '@/lib/constants'
 
-const registroSchema = z
+// ── Schemas ───────────────────────────────────────────────────────────────────
+
+const passwordSchema = z
+  .string()
+  .min(8, 'Mínimo 8 caracteres')
+  .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
+  .regex(/[0-9]/, 'Debe contener al menos un número')
+
+const dniSchema = z
+  .string()
+  .min(9, 'El DNI debe tener 9 caracteres')
+  .max(9, 'El DNI debe tener 9 caracteres')
+  .regex(/^[0-9]{8}[A-Za-z]$/, 'Formato de DNI no válido (ej: 12345678A)')
+
+const miembroAdicionalSchema = z
   .object({
-    tipo_cuota: z.enum(['individual', 'pareja', 'familiar'], {
-      required_error: 'Selecciona un tipo de cuota',
-    }),
     nombre: z.string().min(1, 'El nombre es obligatorio'),
     apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
-    dni: z
-      .string()
-      .min(9, 'El DNI debe tener 9 caracteres')
-      .max(9, 'El DNI debe tener 9 caracteres')
-      .regex(/^[0-9]{8}[A-Za-z]$/, 'Formato de DNI no válido (ej: 12345678A)'),
+    dni: dniSchema,
     email: z.string().email('Introduce un email válido'),
-    telefono: z.string().optional(),
-    fecha_nacimiento: z.string().optional(),
-    direccion: z.string().optional(),
-    alias_telegram: z.string().optional(),
-    usuario_bgg: z.string().optional(),
-    apodo: z.string().optional(),
-    consentimiento_tiendas: z.boolean().default(false),
-    password: z
-      .string()
-      .min(8, 'Mínimo 8 caracteres')
-      .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-      .regex(/[0-9]/, 'Debe contener al menos un número'),
+    password: passwordSchema,
     confirmPassword: z.string(),
+    tipo_relacion: z.enum(['pareja', 'familiar_directo'], {
+      required_error: 'Selecciona el tipo de relación',
+    }),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((d) => d.password === d.confirmPassword, {
     message: 'Las contraseñas no coinciden',
     path: ['confirmPassword'],
   })
 
+const camposTitular = {
+  nombre: z.string().min(1, 'El nombre es obligatorio'),
+  apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
+  dni: dniSchema,
+  email: z.string().email('Introduce un email válido'),
+  telefono: z.string().optional(),
+  fecha_nacimiento: z.string().optional(),
+  direccion: z.string().optional(),
+  alias_telegram: z.string().optional(),
+  usuario_bgg: z.string().optional(),
+  apodo: z.string().optional(),
+  consentimiento_tiendas: z.boolean().default(false),
+  password: passwordSchema,
+  confirmPassword: z.string(),
+}
+
+const registroSchema = z.discriminatedUnion('tipo_cuota', [
+  z
+    .object({ tipo_cuota: z.literal('individual'), ...camposTitular })
+    .refine((d) => d.password === d.confirmPassword, {
+      message: 'Las contraseñas no coinciden',
+      path: ['confirmPassword'],
+    }),
+  z
+    .object({
+      tipo_cuota: z.literal('conjunta'),
+      ...camposTitular,
+      miembros_adicionales: z
+        .array(miembroAdicionalSchema)
+        .min(1, 'Debes añadir al menos un miembro')
+        .max(5, 'Máximo 5 miembros adicionales'),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+      message: 'Las contraseñas no coinciden',
+      path: ['confirmPassword'],
+    })
+    .superRefine((d, ctx) => {
+      // Unicidad de emails
+      const emails = [d.email, ...d.miembros_adicionales.map((m) => m.email)]
+      const emailsDuplicados = emails.filter((e, i) => emails.indexOf(e) !== i)
+      if (emailsDuplicados.length > 0) {
+        d.miembros_adicionales.forEach((m, i) => {
+          if (emailsDuplicados.includes(m.email)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Email duplicado en el grupo', path: [`miembros_adicionales`, i, 'email'] })
+          }
+        })
+      }
+      // Unicidad de DNIs
+      const dnis = [d.dni, ...d.miembros_adicionales.map((m) => m.dni)]
+      const dnisDuplicados = dnis.filter((e, i) => dnis.indexOf(e) !== i)
+      if (dnisDuplicados.length > 0) {
+        d.miembros_adicionales.forEach((m, i) => {
+          if (dnisDuplicados.includes(m.dni)) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'DNI duplicado en el grupo', path: [`miembros_adicionales`, i, 'dni'] })
+          }
+        })
+      }
+    }),
+])
+
 type RegistroForm = z.infer<typeof registroSchema>
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function renderInline(text: string): React.ReactNode {
   const parts = text.split(/(https?:\/\/[^\s)]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g)
@@ -69,60 +132,26 @@ function renderInline(text: string): React.ReactNode {
   )
 }
 
-function BienvenidaCard({
-  texto,
-  urlEstatutos,
-  urlReglamento,
-}: {
-  texto: string
-  urlEstatutos?: string
-  urlReglamento?: string
-}) {
+function BienvenidaCard({ texto, urlEstatutos, urlReglamento }: { texto: string; urlEstatutos?: string; urlReglamento?: string }) {
   const [pdfOpen, setPdfOpen] = useState<{ url: string; title: string } | null>(null)
-
   const lines = texto.split('\n')
   const nonEmptyIdx = lines.reduce<number[]>((acc, l, i) => (l.trim() ? [...acc, i] : acc), [])
   const titleIdx = nonEmptyIdx[0] ?? -1
   const subtitleIdx = nonEmptyIdx[1] ?? -1
-
   const elements: React.ReactNode[] = []
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx]
-
     if (!line.trim()) { elements.push(<div key={idx} className="h-2" />); continue }
-
-    if (idx === titleIdx) {
-      elements.push(<p key={idx} className="font-display font-bold text-lg text-primary">{line}</p>)
-      continue
-    }
-    if (idx === subtitleIdx) {
-      elements.push(<p key={idx} className="font-display font-bold text-base text-secondary mb-1">{line}</p>)
-      continue
-    }
+    if (idx === titleIdx) { elements.push(<p key={idx} className="font-display font-bold text-lg text-primary">{line}</p>); continue }
+    if (idx === subtitleIdx) { elements.push(<p key={idx} className="font-display font-bold text-base text-secondary mb-1">{line}</p>); continue }
     if (/^\*\*[^*]+\*\*$/.test(line.trim())) {
-      elements.push(
-        <h4 key={idx} className="font-display font-bold text-xs uppercase tracking-wide text-primary mt-4 pt-3 border-t border-primary/20">
-          {line.replace(/\*\*/g, '')}
-        </h4>
-      )
+      elements.push(<h4 key={idx} className="font-display font-bold text-xs uppercase tracking-wide text-primary mt-4 pt-3 border-t border-primary/20">{line.replace(/\*\*/g, '')}</h4>)
       if (/ESTATUTOS/i.test(line) && (urlEstatutos || urlReglamento)) {
         elements.push(
           <div key={`${idx}-pdfs`} className="flex flex-wrap gap-2 mt-2">
-            {urlEstatutos && (
-              <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs"
-                onClick={() => setPdfOpen({ url: urlEstatutos, title: 'Estatutos' })}>
-                <FileText className="h-3.5 w-3.5" />
-                Ver Estatutos
-              </Button>
-            )}
-            {urlReglamento && (
-              <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs"
-                onClick={() => setPdfOpen({ url: urlReglamento, title: 'Reglamento interno' })}>
-                <FileText className="h-3.5 w-3.5" />
-                Ver Reglamento interno
-              </Button>
-            )}
+            {urlEstatutos && <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs" onClick={() => setPdfOpen({ url: urlEstatutos, title: 'Estatutos' })}><FileText className="h-3.5 w-3.5" />Ver Estatutos</Button>}
+            {urlReglamento && <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs" onClick={() => setPdfOpen({ url: urlReglamento, title: 'Reglamento interno' })}><FileText className="h-3.5 w-3.5" />Ver Reglamento interno</Button>}
           </div>
         )
       }
@@ -136,30 +165,121 @@ function BienvenidaCard({
       <Card className="border-primary/40 bg-primary/5">
         <CardContent className="pt-5 pb-5 space-y-0.5">{elements}</CardContent>
       </Card>
-      {pdfOpen && (
-        <PdfViewerDialog
-          url={pdfOpen.url}
-          title={pdfOpen.title}
-          open={!!pdfOpen}
-          onOpenChange={(open) => { if (!open) setPdfOpen(null) }}
-        />
-      )}
+      {pdfOpen && <PdfViewerDialog url={pdfOpen.url} title={pdfOpen.title} open={!!pdfOpen} onOpenChange={(open) => { if (!open) setPdfOpen(null) }} />}
     </>
   )
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="font-display font-bold text-lg text-primary mb-4 flex items-center gap-2">
-      {children}
-    </h3>
-  )
+  return <h3 className="font-display font-bold text-lg text-primary mb-4 flex items-center gap-2">{children}</h3>
 }
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
   return <p className="text-xs text-destructive mt-1">{message}</p>
 }
+
+// ── Formulario de miembro adicional ──────────────────────────────────────────
+
+type AnyErrors = Record<string, unknown>
+
+function MiembroForm({
+  index,
+  register,
+  errors,
+  setValue,
+  watch,
+  onRemove,
+}: {
+  index: number
+  register: ReturnType<typeof useForm<RegistroForm>>['register']
+  errors: AnyErrors
+  setValue: ReturnType<typeof useForm<RegistroForm>>['setValue']
+  watch: ReturnType<typeof useForm<RegistroForm>>['watch']
+  onRemove: () => void
+}) {
+  const miembrosErrors = (errors as { miembros_adicionales?: AnyErrors[] }).miembros_adicionales
+  const err = miembrosErrors?.[index] as AnyErrors | undefined
+  const tipoRelacion = (watch as (name: string) => string)(`miembros_adicionales.${index}.tipo_relacion`)
+
+  return (
+    <div className="rounded-xl border border-border p-4 space-y-4 relative">
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-display font-bold text-sm text-primary">Miembro {index + 1}</p>
+        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={onRemove} aria-label="Eliminar miembro">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Tipo de relación */}
+      <div className="space-y-1.5">
+        <Label className="font-display font-bold">Tipo de relación <span className="text-destructive">*</span></Label>
+        <Select
+          value={tipoRelacion}
+          onValueChange={(v) => (setValue as (name: string, value: string) => void)(`miembros_adicionales.${index}.tipo_relacion`, v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecciona el tipo de relación" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pareja">Pareja</SelectItem>
+            <SelectItem value="familiar_directo">Familiar directo</SelectItem>
+          </SelectContent>
+        </Select>
+        <FieldError message={(err?.tipo_relacion as { message?: string } | undefined)?.message} />
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold">Nombre <span className="text-destructive">*</span></Label>
+          <Input placeholder="Juan" {...register(`miembros_adicionales.${index}.nombre` as const)} />
+          <FieldError message={(err?.nombre as { message?: string } | undefined)?.message} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold">Apellidos <span className="text-destructive">*</span></Label>
+          <Input placeholder="García López" {...register(`miembros_adicionales.${index}.apellidos` as const)} />
+          <FieldError message={(err?.apellidos as { message?: string } | undefined)?.message} />
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold">DNI <span className="text-destructive">*</span></Label>
+          <Input
+            placeholder="12345678A"
+            maxLength={9}
+            {...register(`miembros_adicionales.${index}.dni` as const)}
+            onChange={(e) => {
+              e.target.value = e.target.value.toUpperCase()
+              register(`miembros_adicionales.${index}.dni` as const).onChange(e)
+            }}
+          />
+          <FieldError message={(err?.dni as { message?: string } | undefined)?.message} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold">Email <span className="text-destructive">*</span></Label>
+          <Input type="email" placeholder="email@ejemplo.com" {...register(`miembros_adicionales.${index}.email` as const)} />
+          <FieldError message={(err?.email as { message?: string } | undefined)?.message} />
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold">Contraseña <span className="text-destructive">*</span></Label>
+          <Input type="password" autoComplete="new-password" placeholder="Mín. 8 caracteres" {...register(`miembros_adicionales.${index}.password` as const)} />
+          <FieldError message={(err?.password as { message?: string } | undefined)?.message} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold">Confirmar contraseña <span className="text-destructive">*</span></Label>
+          <Input type="password" autoComplete="new-password" placeholder="Repite la contraseña" {...register(`miembros_adicionales.${index}.confirmPassword` as const)} />
+          <FieldError message={(err?.confirmPassword as { message?: string } | undefined)?.message} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export function RegistroPage() {
   const [submitted, setSubmitted] = useState(false)
@@ -169,6 +289,7 @@ export function RegistroPage() {
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
@@ -178,14 +299,13 @@ export function RegistroPage() {
     },
   })
 
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'miembros_adicionales' as never,
+  })
+
   const tipoCuota = watch('tipo_cuota')
   const consentimientoTiendas = watch('consentimiento_tiendas')
-
-  const cuotaInfo = {
-    individual: { precio: '15€/mes', descripcion: 'Para un socio' },
-    pareja: { precio: '20€/mes', descripcion: 'Para dos socios (la pareja puede registrarse después)' },
-    familiar: { precio: 'A definir', descripcion: 'Pareja + hijos (contactar con directiva)' },
-  }
 
   const { data: configBienvenida, isPending: isBienvenidaLoading } = useQuery({
     queryKey: ['config', 'texto_bienvenida_alta'],
@@ -208,17 +328,13 @@ export function RegistroPage() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { confirmPassword, ...payload } = data
-      return authApi.register({
-        ...payload,
-        fecha_nacimiento: payload.fecha_nacimiento || undefined,
-        telefono: payload.telefono || undefined,
-        direccion: payload.direccion || undefined,
-        alias_telegram: payload.alias_telegram || undefined,
-        usuario_bgg: payload.usuario_bgg || undefined,
-        apodo: payload.apodo || undefined,
-      })
+      const { confirmPassword, ...rest } = data as RegistroForm & { confirmPassword: string }
+      void confirmPassword
+      if (rest.tipo_cuota === 'conjunta') {
+        const miembros = rest.miembros_adicionales.map(({ confirmPassword: _cp, ...m }) => m)
+        return authApi.register({ ...rest, miembros_adicionales: miembros })
+      }
+      return authApi.register(rest)
     },
     onSuccess: () => setSubmitted(true),
     onError: (err: Error) => toast.error(err.message),
@@ -230,9 +346,7 @@ export function RegistroPage() {
         <div className="w-full max-w-md text-center space-y-6">
           <CheckCircle2 className="h-20 w-20 text-primary mx-auto" />
           <div>
-            <h1 className="font-display font-bold text-3xl text-primary mb-3">
-              ¡Solicitud enviada!
-            </h1>
+            <h1 className="font-display font-bold text-3xl text-primary mb-3">¡Solicitud enviada!</h1>
             <p className="text-lg text-foreground leading-relaxed">
               La directiva revisará tu solicitud y recibirás un email cuando sea aprobada.
             </p>
@@ -247,9 +361,7 @@ export function RegistroPage() {
             </ol>
           </div>
           <Link to="/" className="inline-block">
-            <Button variant="outline" className="font-display font-bold">
-              ← Volver a la web
-            </Button>
+            <Button variant="outline" className="font-display font-bold">← Volver a la web</Button>
           </Link>
         </div>
       </div>
@@ -267,21 +379,19 @@ export function RegistroPage() {
             <DragonIcon className="h-12 w-12 fill-primary transition-transform group-hover:scale-105" />
             <DragonTextLogo className="h-8 w-40 fill-primary" />
           </Link>
-          <h1 className="font-display font-bold text-3xl sm:text-4xl text-primary text-center">
-            Solicitud de alta
-          </h1>
+          <h1 className="font-display font-bold text-3xl sm:text-4xl text-primary text-center">Solicitud de alta</h1>
           <p className="text-muted-foreground text-center mt-2 max-w-sm">
             Rellena el formulario y la directiva aprobará tu solicitud
           </p>
         </div>
 
-        {/* ── TEXTO DE BIENVENIDA ───────────────────────────────────── */}
+        {/* Texto de bienvenida */}
         <div className={`${SPACING.maxWidthForm} mb-6`}>
           {isBienvenidaLoading ? (
             <Card className="border-primary/40">
               <CardContent className="pt-5 pb-5 space-y-3">
                 {[80, 40, 100, 60, 90, 70].map((w, i) => (
-                  <div key={i} className={`h-3 bg-muted animate-pulse rounded`} style={{ width: `${w}%` }} />
+                  <div key={i} className="h-3 bg-muted animate-pulse rounded" style={{ width: `${w}%` }} />
                 ))}
               </CardContent>
             </Card>
@@ -294,10 +404,8 @@ export function RegistroPage() {
           ) : null}
         </div>
 
-        <form
-          onSubmit={handleSubmit((data) => mutate(data))}
-          className={`${SPACING.maxWidthForm} space-y-6`}
-        >
+        <form onSubmit={handleSubmit((data) => mutate(data))} className={`${SPACING.maxWidthForm} space-y-6`}>
+
           {/* ── TIPO DE CUOTA ─────────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
@@ -309,153 +417,97 @@ export function RegistroPage() {
                 onValueChange={(v) => setValue('tipo_cuota', v as RegistroForm['tipo_cuota'])}
                 className="space-y-3"
               >
-                {(['individual', 'pareja', 'familiar'] as const).map((tipo) => (
+                {([
+                  { tipo: 'individual', precio: '15€/mes', descripcion: 'Para un socio' },
+                  { tipo: 'conjunta', precio: 'desde 20€/mes', descripcion: 'Para parejas o familiares directos mayores de edad (15€ titular + 5€ por cada miembro adicional)' },
+                ] as const).map(({ tipo, precio, descripcion }) => (
                   <label
                     key={tipo}
                     htmlFor={`cuota-${tipo}`}
                     className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
-                      tipoCuota === tipo
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                      tipoCuota === tipo ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                     }`}
                   >
                     <RadioGroupItem value={tipo} id={`cuota-${tipo}`} className="mt-0.5" />
                     <div className="flex-1">
                       <span className="font-display font-bold capitalize text-base">
-                        {tipo}{' '}
-                        <span className="text-secondary font-bold">
-                          — {cuotaInfo[tipo].precio}
-                        </span>
+                        {tipo === 'individual' ? 'Individual' : 'Conjunta'}{' '}
+                        <span className="text-secondary font-bold">— {precio}</span>
                       </span>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {cuotaInfo[tipo].descripcion}
-                      </p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{descripcion}</p>
                     </div>
                   </label>
                 ))}
               </RadioGroup>
-              <FieldError message={errors.tipo_cuota?.message} />
+              {'tipo_cuota' in errors && <FieldError message={(errors as { tipo_cuota?: { message?: string } }).tipo_cuota?.message} />}
             </CardContent>
           </Card>
 
-          {/* ── DATOS PERSONALES ─────────────────────────────────────── */}
+          {/* ── DATOS PERSONALES (titular) ────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
-              <SectionTitle>Datos personales</SectionTitle>
+              <SectionTitle>Datos personales{tipoCuota === 'conjunta' ? ' — Titular' : ''}</SectionTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="nombre" className="font-display font-bold">
-                    Nombre <span className="text-destructive">*</span>
-                  </Label>
+                  <Label htmlFor="nombre" className="font-display font-bold">Nombre <span className="text-destructive">*</span></Label>
                   <Input id="nombre" placeholder="Juan" {...register('nombre')} />
                   <FieldError message={errors.nombre?.message} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="apellidos" className="font-display font-bold">
-                    Apellidos <span className="text-destructive">*</span>
-                  </Label>
+                  <Label htmlFor="apellidos" className="font-display font-bold">Apellidos <span className="text-destructive">*</span></Label>
                   <Input id="apellidos" placeholder="García López" {...register('apellidos')} />
                   <FieldError message={errors.apellidos?.message} />
                 </div>
               </div>
-
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="dni" className="font-display font-bold">
-                    DNI <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="dni"
-                    placeholder="12345678A"
-                    maxLength={9}
-                    {...register('dni')}
-                    onChange={(e) => {
-                      e.target.value = e.target.value.toUpperCase()
-                      register('dni').onChange(e)
-                    }}
-                  />
+                  <Label htmlFor="dni" className="font-display font-bold">DNI <span className="text-destructive">*</span></Label>
+                  <Input id="dni" placeholder="12345678A" maxLength={9} {...register('dni')} onChange={(e) => { e.target.value = e.target.value.toUpperCase(); register('dni').onChange(e) }} />
                   <FieldError message={errors.dni?.message} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="fecha_nacimiento" className="font-display font-bold">
-                    Fecha de nacimiento
-                  </Label>
+                  <Label htmlFor="fecha_nacimiento" className="font-display font-bold">Fecha de nacimiento</Label>
                   <Input id="fecha_nacimiento" type="date" {...register('fecha_nacimiento')} />
                 </div>
               </div>
-
               <div className="space-y-1.5">
-                <Label htmlFor="telefono" className="font-display font-bold">
-                  Teléfono
-                </Label>
+                <Label htmlFor="telefono" className="font-display font-bold">Teléfono</Label>
                 <Input id="telefono" type="tel" placeholder="600 000 000" {...register('telefono')} />
               </div>
-
               <div className="space-y-1.5">
-                <Label htmlFor="direccion" className="font-display font-bold">
-                  Dirección
-                </Label>
+                <Label htmlFor="direccion" className="font-display font-bold">Dirección</Label>
                 <Input id="direccion" placeholder="Calle, número, ciudad" {...register('direccion')} />
               </div>
             </CardContent>
           </Card>
 
-          {/* ── CUENTA ───────────────────────────────────────────────── */}
+          {/* ── CUENTA (titular) ─────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
-              <SectionTitle>Cuenta de acceso</SectionTitle>
-              <CardDescription>
-                Con estas credenciales podrás acceder al área de socios
-              </CardDescription>
+              <SectionTitle>Cuenta de acceso{tipoCuota === 'conjunta' ? ' — Titular' : ''}</SectionTitle>
+              <CardDescription>Con estas credenciales podrás acceder al área de socios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="font-display font-bold">
-                  Email <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="tu@email.com"
-                  {...register('email')}
-                />
+                <Label htmlFor="email" className="font-display font-bold">Email <span className="text-destructive">*</span></Label>
+                <Input id="email" type="email" autoComplete="email" placeholder="tu@email.com" {...register('email')} />
                 <FieldError message={errors.email?.message} />
               </div>
-
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="password" className="font-display font-bold">
-                    Contraseña <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Mín. 8 caracteres"
-                    {...register('password')}
-                  />
+                  <Label htmlFor="password" className="font-display font-bold">Contraseña <span className="text-destructive">*</span></Label>
+                  <Input id="password" type="password" autoComplete="new-password" placeholder="Mín. 8 caracteres" {...register('password')} />
                   <FieldError message={errors.password?.message} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword" className="font-display font-bold">
-                    Confirmar contraseña <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Repite la contraseña"
-                    {...register('confirmPassword')}
-                  />
+                  <Label htmlFor="confirmPassword" className="font-display font-bold">Confirmar contraseña <span className="text-destructive">*</span></Label>
+                  <Input id="confirmPassword" type="password" autoComplete="new-password" placeholder="Repite la contraseña" {...register('confirmPassword')} />
                   <FieldError message={errors.confirmPassword?.message} />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Mínimo 8 caracteres, una mayúscula y un número.
-              </p>
+              <p className="text-xs text-muted-foreground">Mínimo 8 caracteres, una mayúscula y un número.</p>
             </CardContent>
           </Card>
 
@@ -468,26 +520,64 @@ export function RegistroPage() {
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="alias_telegram" className="font-display font-bold">
-                    Alias de Telegram
-                  </Label>
+                  <Label htmlFor="alias_telegram" className="font-display font-bold">Alias de Telegram</Label>
                   <Input id="alias_telegram" placeholder="@tuusuario" {...register('alias_telegram')} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="usuario_bgg" className="font-display font-bold">
-                    Usuario BoardGameGeek
-                  </Label>
+                  <Label htmlFor="usuario_bgg" className="font-display font-bold">Usuario BoardGameGeek</Label>
                   <Input id="usuario_bgg" placeholder="Tu usuario en BGG" {...register('usuario_bgg')} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="apodo" className="font-display font-bold">
-                  Apodo <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span>
-                </Label>
+                <Label htmlFor="apodo" className="font-display font-bold">Apodo <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span></Label>
                 <Input id="apodo" placeholder="Ej: Carly, El Mago..." {...register('apodo')} />
               </div>
             </CardContent>
           </Card>
+
+          {/* ── MIEMBROS ADICIONALES (solo cuota conjunta) ────────────── */}
+          {tipoCuota === 'conjunta' && (
+            <Card className="border-secondary/40">
+              <CardHeader className="pb-3">
+                <SectionTitle>
+                  <Users className="h-5 w-5" />
+                  Miembros adicionales
+                </SectionTitle>
+                <CardDescription>
+                  Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad).
+                  Precio total: <span className="font-bold text-secondary">{calcularPrecio(fields.length)}€/mes</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {'miembros_adicionales' in errors && (errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message && (
+                  <FieldError message={(errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message} />
+                )}
+
+                {fields.map((field, index) => (
+                  <MiembroForm
+                    key={field.id}
+                    index={index}
+                    register={register}
+                    errors={errors}
+                    setValue={setValue}
+                    watch={watch}
+                    onRemove={() => remove(index)}
+                  />
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full font-display font-bold gap-2 border-dashed"
+                  disabled={fields.length >= 5}
+                  onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  {fields.length >= 5 ? 'Máximo 5 miembros adicionales' : 'Añadir miembro'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* ── LEGAL ────────────────────────────────────────────────── */}
           <Card>
@@ -502,47 +592,32 @@ export function RegistroPage() {
                   onCheckedChange={(v) => setValue('consentimiento_tiendas', Boolean(v))}
                   className="mt-0.5"
                 />
-                <Label
-                  htmlFor="consentimiento_tiendas"
-                  className="text-sm leading-relaxed cursor-pointer"
-                >
+                <Label htmlFor="consentimiento_tiendas" className="text-sm leading-relaxed cursor-pointer">
                   Acepto que se compartan mis datos con las tiendas colaboradoras{' '}
                   <span className="font-bold">(FreakMondo, Bazar de Iglesias, Dune)</span>{' '}
-                  para obtener el{' '}
-                  <span className="text-secondary font-bold">10% de descuento</span>.
+                  para obtener el <span className="text-secondary font-bold">10% de descuento</span>.
                 </Label>
               </div>
               <Separator className="my-4" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Al enviar esta solicitud aceptas la normativa interna de la asociación Dragón de
-                Madera. Tus datos serán tratados conforme al RGPD y solo se usarán para la gestión
-                de la asociación.
+                Al enviar esta solicitud aceptas la normativa interna de la asociación Dragón de Madera.
+                Tus datos serán tratados conforme al RGPD y solo se usarán para la gestión de la asociación.
               </p>
             </CardContent>
           </Card>
 
           {/* ── SUBMIT ───────────────────────────────────────────────── */}
           <div className="pb-8">
-            <Button
-              type="submit"
-              disabled={isPending}
-              className={`w-full font-display font-bold text-lg ${SPACING.ctaButton}`}
-            >
+            <Button type="submit" disabled={isPending} className={`w-full font-display font-bold text-lg ${SPACING.ctaButton}`}>
               {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Enviando solicitud...
-                </>
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Enviando solicitud...</>
               ) : (
                 'Enviar solicitud de alta'
               )}
             </Button>
-
             <p className="text-center text-sm text-muted-foreground mt-4">
               ¿Ya eres socio?{' '}
-              <Link to="/login" className="text-secondary font-display font-bold hover:underline">
-                Accede aquí
-              </Link>
+              <Link to="/login" className="text-secondary font-display font-bold hover:underline">Accede aquí</Link>
             </p>
           </div>
         </form>

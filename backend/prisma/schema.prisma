@@ -29,14 +29,18 @@ enum EstadoSocio {
 
 enum TipoCuota {
   individual
-  pareja
-  familiar
+  conjunta
 }
 
 enum TipoRelacion {
   pareja
-  hijo
-  padre
+  familiar_directo
+}
+
+enum EstadoSolicitud {
+  pendiente
+  aprobada
+  rechazada
 }
 
 enum EstadoJuego {
@@ -91,6 +95,11 @@ model Usuario {
   socios_llaves_aprobadas Usuario[] @relation("AproboLlaves")
   baja_por                Usuario?  @relation("DioBaja",      fields: [baja_por_id],             references: [id])
   socios_dados_baja       Usuario[] @relation("DioBaja")
+
+  // Cuota conjunta
+  solicitud_grupal_id String?
+  solicitud_grupal    SolicitudGrupal? @relation("MiembrosGrupo", fields: [solicitud_grupal_id], references: [id])
+  grupo_como_titular  SolicitudGrupal? @relation("TitularGrupo")
 
   // Relaciones de cuota (pareja / familia)
   relaciones_como_principal    RelacionSocio[] @relation("SocioPrincipal")
@@ -193,6 +202,17 @@ model Visita {
 
   @@index([nombre_completo])
   @@index([fecha_visita])
+}
+
+model SolicitudGrupal {
+  id         String          @id @default(uuid())
+  titular_id String          @unique
+  estado     EstadoSolicitud @default(pendiente)
+  created_at DateTime        @default(now())
+  updated_at DateTime        @updatedAt
+
+  titular  Usuario   @relation("TitularGrupo",  fields: [titular_id], references: [id])
+  miembros Usuario[] @relation("MiembrosGrupo")
 }
 
 model Configuracion {

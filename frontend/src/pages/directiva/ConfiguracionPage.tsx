@@ -189,7 +189,7 @@ export function ConfiguracionPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader>
             <CardTitle className="font-display text-base text-primary flex items-center gap-2">
               <Link className="h-4 w-4" />
               Documentos públicos

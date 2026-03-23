@@ -65,10 +65,131 @@ export class SociosService {
   }
 
   async getPendientes() {
-    return this.prisma.usuario.findMany({
-      where: { estado: EstadoSocio.pendiente },
-      select: SOCIO_PUBLIC_SELECT,
-      orderBy: { created_at: 'asc' },
+    const [individuales, grupos] = await Promise.all([
+      this.prisma.usuario.findMany({
+        where: { estado: EstadoSocio.pendiente, solicitud_grupal_id: null },
+        select: SOCIO_PUBLIC_SELECT,
+        orderBy: { created_at: 'asc' },
+      }),
+      this.prisma.solicitudGrupal.findMany({
+        where: { estado: 'pendiente' },
+        orderBy: { created_at: 'asc' },
+        include: {
+          titular: {
+            select: {
+              id: true,
+              nombre: true,
+              apellidos: true,
+              dni: true,
+              email: true,
+              apodo: true,
+              alias_telegram: true,
+              tipo_cuota: true,
+              created_at: true,
+            },
+          },
+          miembros: {
+            select: {
+              id: true,
+              nombre: true,
+              apellidos: true,
+              dni: true,
+              email: true,
+              relaciones_como_relacionado: {
+                select: { tipo_relacion: true, socio_principal_id: true },
+              },
+            },
+          },
+        },
+      }),
+    ])
+
+    const gruposConTipoRelacion = grupos.map((grupo) => ({
+      ...grupo,
+      miembros: grupo.miembros.map((miembro) => {
+        const relacion = miembro.relaciones_como_relacionado.find(
+          (r) => r.socio_principal_id === grupo.titular_id,
+        )
+        const { relaciones_como_relacionado: _, ...miembroSinRelaciones } = miembro
+        return {
+          ...miembroSinRelaciones,
+          tipo_relacion: relacion?.tipo_relacion ?? null,
+        }
+      }),
+    }))
+
+    return { individuales, grupos: gruposConTipoRelacion }
+  }
+
+  async aprobarGrupo(grupoId: string, aprobadoPorId: string) {
+    const grupo = await this.prisma.solicitudGrupal.findUnique({
+      where: { id: grupoId },
+      include: { miembros: true },
+    })
+    if (!grupo) throw new Error('Solicitud grupal no encontrada')
+    if (grupo.estado !== 'pendiente') {
+      throw new Error('La solicitud grupal no está en estado pendiente')
+    }
+    for (const u of grupo.miembros) {
+      if (u.estado !== EstadoSocio.pendiente) {
+        throw new Error(`El usuario ${u.nombre} no está en estado pendiente`)
+      }
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.usuario.updateMany({
+        where: { solicitud_grupal_id: grupoId },
+        data: {
+          estado: EstadoSocio.activo,
+          fecha_alta: new Date(),
+          aprobado_por_id: aprobadoPorId,
+        },
+      }),
+      this.prisma.solicitudGrupal.update({
+        where: { id: grupoId },
+        data: { estado: 'aprobada' },
+      }),
+    ])
+
+    return this.prisma.solicitudGrupal.findUnique({
+      where: { id: grupoId },
+      include: { miembros: true },
+    })
+  }
+
+  async rechazarGrupo(grupoId: string, bajaPorId: string) {
+    const grupo = await this.prisma.solicitudGrupal.findUnique({
+      where: { id: grupoId },
+      include: { miembros: true },
+    })
+    if (!grupo) throw new Error('Solicitud grupal no encontrada')
+    if (grupo.estado !== 'pendiente') {
+      throw new Error('La solicitud grupal no está en estado pendiente')
+    }
+    for (const u of grupo.miembros) {
+      if (u.estado !== EstadoSocio.pendiente) {
+        throw new Error(`El usuario ${u.nombre} no está en estado pendiente`)
+      }
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.usuario.updateMany({
+        where: { solicitud_grupal_id: grupoId },
+        data: {
+          estado: EstadoSocio.baja,
+          fecha_baja: new Date(),
+          baja_por_id: bajaPorId,
+        },
+      }),
+      this.prisma.solicitudGrupal.update({
+        where: { id: grupoId },
+        data: { estado: 'rechazada' },
+      }),
+    ])
+
+    return this.prisma.solicitudGrupal.findUnique({
+      where: { id: grupoId },
+      include: { miembros: true },
     })
   }
 

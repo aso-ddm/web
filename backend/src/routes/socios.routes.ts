@@ -181,6 +181,35 @@ const sociosRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: message })
     }
   })
+  // POST /api/socios/grupos/:grupoId/aprobar — directiva aprueba solicitud grupal
+  fastify.post('/grupos/:grupoId/aprobar', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA),
+  }, async (request, reply) => {
+    const { grupoId } = request.params as { grupoId: string }
+    try {
+      const resultado = await sociosService.aprobarGrupo(grupoId, request.user.id)
+      return reply.send({ message: 'Solicitud grupal aprobada correctamente', data: resultado })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      const status = message.includes('no encontrada') ? 404 : 400
+      return reply.status(status).send({ error: message })
+    }
+  })
+
+  // POST /api/socios/grupos/:grupoId/rechazar — directiva rechaza solicitud grupal
+  fastify.post('/grupos/:grupoId/rechazar', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA),
+  }, async (request, reply) => {
+    const { grupoId } = request.params as { grupoId: string }
+    try {
+      const resultado = await sociosService.rechazarGrupo(grupoId, request.user.id)
+      return reply.send({ message: 'Solicitud grupal rechazada', data: resultado })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      const status = message.includes('no encontrada') ? 404 : 400
+      return reply.status(status).send({ error: message })
+    }
+  })
 }
 
 export default sociosRoutes
