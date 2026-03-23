@@ -173,7 +173,7 @@ jobs:
       - name: Reiniciar backend con PM2
         run: |
           if pm2 describe dragon-backend > /dev/null 2>&1; then
-            pm2 reload dragon-backend
+            pm2 restart dragon-backend --update-env
           else
             pm2 start "$DEPLOY_PATH/backend/dist/index.js" \
               --name dragon-backend \
@@ -191,7 +191,7 @@ jobs:
             cp -r "$DEPLOY_PATH/backend/dist.backup" "$DEPLOY_PATH/backend/dist"
             cp "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package.json" 2>/dev/null || true
             npm ci --prefix "$DEPLOY_PATH/backend"
-            pm2 reload dragon-backend
+            pm2 restart dragon-backend --update-env
             exit 1
           fi
           echo "OK: backend responde con 200"

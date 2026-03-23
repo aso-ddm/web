@@ -1,3 +1,5 @@
+-- prisma-migrate-no-transaction
+
 -- 1. Crear enum EstadoSolicitud
 CREATE TYPE "EstadoSolicitud" AS ENUM ('pendiente', 'aprobada', 'rechazada');
 
@@ -34,6 +36,10 @@ ALTER TABLE "Usuario"
 -- 7. Añadir valor 'conjunta' al enum TipoCuota existente
 ALTER TYPE "TipoCuota" ADD VALUE IF NOT EXISTS 'conjunta';
 
+-- COMMIT implícito necesario antes de usar el nuevo valor del enum
+COMMIT;
+BEGIN;
+
 -- 8. Migrar datos: pareja y familiar → conjunta
 UPDATE "Usuario"
     SET "tipo_cuota" = 'conjunta'
@@ -49,6 +55,9 @@ DROP TYPE "TipoCuota_old";
 
 -- 10. Añadir valor 'familiar_directo' al enum TipoRelacion existente
 ALTER TYPE "TipoRelacion" ADD VALUE IF NOT EXISTS 'familiar_directo';
+
+COMMIT;
+BEGIN;
 
 -- 11. Recrear enum TipoRelacion con solo 'pareja' y 'familiar_directo'
 ALTER TYPE "TipoRelacion" RENAME TO "TipoRelacion_old";
