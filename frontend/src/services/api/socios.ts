@@ -38,7 +38,7 @@ export const sociosApi = {
   update: (id: string, payload: UpdateSocioPayload) =>
     api.put<{ data: Usuario }>(`/socios/${id}`, payload),
   solicitarLlaves: (id: string) =>
-    api.post<{ data: Usuario }>(`/socios/${id}/solicitar-llaves`, {}),
+    api.action<{ data: Usuario }>(`/socios/${id}/solicitar-llaves`),
 
   // Directiva — gestión
   getAll: (params: GetSociosParams = {}) => {
@@ -56,16 +56,16 @@ export const sociosApi = {
 
   getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 
-  aprobar: (id: string) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, {}),
-  rechazar: (id: string) => api.post<{ data: SocioAdmin }>(`/socios/${id}/rechazar`, {}),
-  darDeBaja: (id: string) => api.post<{ data: SocioAdmin }>(`/socios/${id}/baja`, {}),
+  aprobar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar`),
+  rechazar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/rechazar`),
+  darDeBaja: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/baja`),
 
-  aprobarGrupo: (grupoId: string) => api.post(`/socios/grupos/${grupoId}/aprobar`, {}),
-  rechazarGrupo: (grupoId: string) => api.post(`/socios/grupos/${grupoId}/rechazar`, {}),
+  aprobarGrupo: (grupoId: string) => api.action(`/socios/grupos/${grupoId}/aprobar`),
+  rechazarGrupo: (grupoId: string) => api.action(`/socios/grupos/${grupoId}/rechazar`),
 
   updateRoles: (id: string, roles: Rol[]) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/roles`, { roles }),
 
   aprobarLlaves: (id: string) =>
-    api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar-llaves`, {}),
+    api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar-llaves`),
 }

@@ -8,9 +8,10 @@ async function request<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = useAuthStore.getState().token
+  const hasBody = options.body !== undefined
 
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }
@@ -33,6 +34,7 @@ async function request<T>(
     throw new Error(errorData.error || `Error ${response.status}`)
   }
 
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
@@ -40,6 +42,8 @@ export const api = {
   get: <T>(endpoint: string) => request<T>(endpoint),
   post: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+  action: <T>(endpoint: string) =>
+    request<T>(endpoint, { method: 'POST' }),
   put: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),

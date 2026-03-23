@@ -21,10 +21,10 @@ export const prestamosApi = {
     return api.get<PaginatedResponse<Prestamo>>(`/prestamos?${q.toString()}`)
   },
 
-  aprobar: (id: string) => api.post<{ data: Prestamo }>(`/prestamos/${id}/aprobar`, {}),
-  activar: (id: string) => api.post<{ data: Prestamo }>(`/prestamos/${id}/activar`, {}),
+  aprobar: (id: string) => api.action<{ data: Prestamo }>(`/prestamos/${id}/aprobar`),
+  activar: (id: string) => api.action<{ data: Prestamo }>(`/prestamos/${id}/activar`),
   rechazar: (id: string, motivo?: string) =>
     api.post<{ data: Prestamo }>(`/prestamos/${id}/rechazar`, { motivo }),
   confirmarDevolucion: (id: string) =>
-    api.post<{ data: Prestamo }>(`/prestamos/${id}/devolucion`, {}),
+    api.action<{ data: Prestamo }>(`/prestamos/${id}/devolucion`),
 }
