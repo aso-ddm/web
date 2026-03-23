@@ -268,7 +268,9 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
       </AlertDialog>
     </>
   )
-} {
+}
+
+export function GestionSociosPage() {
   const [search, setSearch] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoSocio | 'todos'>('activo')
   const [page, setPage] = useState(1)
