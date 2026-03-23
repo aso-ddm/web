@@ -69,17 +69,7 @@ function renderInline(text: string): React.ReactNode {
   )
 }
 
-function BienvenidaCard({
-  texto,
-  urlEstatutos,
-  urlReglamento,
-}: {
-  texto: string
-  urlEstatutos?: string
-  urlReglamento?: string
-}) {
-  const [pdfOpen, setPdfOpen] = useState<{ url: string; title: string } | null>(null)
-
+function BienvenidaCard({ texto }: { texto: string }) {
   const lines = texto.split('\n')
   const nonEmptyIdx = lines.reduce<number[]>((acc, l, i) => (l.trim() ? [...acc, i] : acc), [])
   const titleIdx = nonEmptyIdx[0] ?? -1
@@ -106,35 +96,70 @@ function BienvenidaCard({
           {line.replace(/\*\*/g, '')}
         </h4>
       )
-      if (/ESTATUTOS/i.test(line) && (urlEstatutos || urlReglamento)) {
-        elements.push(
-          <div key={`${idx}-pdfs`} className="flex flex-wrap gap-2 mt-2">
-            {urlEstatutos && (
-              <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs"
-                onClick={() => setPdfOpen({ url: urlEstatutos, title: 'Estatutos' })}>
-                <FileText className="h-3.5 w-3.5" />
-                Ver Estatutos
-              </Button>
-            )}
-            {urlReglamento && (
-              <Button variant="outline" size="sm" className="font-display font-bold gap-1.5 text-xs"
-                onClick={() => setPdfOpen({ url: urlReglamento, title: 'Reglamento interno' })}>
-                <FileText className="h-3.5 w-3.5" />
-                Ver Reglamento interno
-              </Button>
-            )}
-          </div>
-        )
-      }
       continue
     }
     elements.push(<p key={idx} className="text-sm text-foreground leading-relaxed">{renderInline(line)}</p>)
   }
 
   return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardContent className="pt-5 pb-5 space-y-0.5">{elements}</CardContent>
+    </Card>
+  )
+}
+
+function DocumentosCard({
+  urlEstatutos,
+  urlReglamento,
+}: {
+  urlEstatutos?: string
+  urlReglamento?: string
+}) {
+  const [pdfOpen, setPdfOpen] = useState<{ url: string; title: string } | null>(null)
+
+  const docs = [
+    { key: 'estatutos', label: 'Estatutos', url: urlEstatutos },
+    { key: 'reglamento', label: 'Reglamento interno', url: urlReglamento },
+  ]
+
+  return (
     <>
-      <Card className="border-primary/40 bg-primary/5">
-        <CardContent className="pt-5 pb-5 space-y-0.5">{elements}</CardContent>
+      <Card className="border-primary/40">
+        <CardHeader className="pb-2 pt-4 px-5">
+          <h3 className="font-display font-bold text-sm uppercase tracking-wide text-primary flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Estatutos y Reglamento interno
+          </h3>
+        </CardHeader>
+        <CardContent className="px-5 pb-4">
+          <div className="flex flex-wrap gap-2">
+            {docs.map(({ key, label, url }) =>
+              url ? (
+                <Button
+                  key={key}
+                  variant="outline"
+                  size="sm"
+                  className="font-display font-bold gap-1.5 text-xs"
+                  onClick={() => setPdfOpen({ url, title: label })}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Ver {label}
+                </Button>
+              ) : (
+                <Button
+                  key={key}
+                  variant="ghost"
+                  size="sm"
+                  disabled
+                  className="font-display font-bold gap-1.5 text-xs text-muted-foreground"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  {label} — próximamente disponible
+                </Button>
+              )
+            )}
+          </div>
+        </CardContent>
       </Card>
       {pdfOpen && (
         <PdfViewerDialog
@@ -286,12 +311,16 @@ export function RegistroPage() {
               </CardContent>
             </Card>
           ) : configBienvenida?.data?.valor ? (
-            <BienvenidaCard
-              texto={configBienvenida.data.valor}
-              urlEstatutos={configEstatutos?.data?.valor || undefined}
-              urlReglamento={configReglamento?.data?.valor || undefined}
-            />
+            <BienvenidaCard texto={configBienvenida.data.valor} />
           ) : null}
+        </div>
+
+        {/* ── DOCUMENTOS PÚBLICOS ───────────────────────────────────── */}
+        <div className={`${SPACING.maxWidthForm} mb-6`}>
+          <DocumentosCard
+            urlEstatutos={configEstatutos?.data?.valor || undefined}
+            urlReglamento={configReglamento?.data?.valor || undefined}
+          />
         </div>
 
         <form
