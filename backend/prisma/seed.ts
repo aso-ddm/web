@@ -97,13 +97,13 @@ Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o e
       clave: 'url_estatutos',
       valor: '',
       tipo: 'url',
-      descripcion: 'URL del PDF de los estatutos de la asociación (ruta relativa o URL absoluta)',
+      descripcion: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
     },
     {
       clave: 'url_reglamento_interno',
       valor: '',
       tipo: 'url',
-      descripcion: 'URL del PDF del reglamento interno de la asociación (ruta relativa o URL absoluta)',
+      descripcion: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
     },
   ]
 

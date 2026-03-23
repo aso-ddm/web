@@ -23,12 +23,12 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     suffix: '€',
   },
   url_estatutos: {
-    label: 'Estatutos (PDF)',
-    description: 'Ruta relativa (/pdfs/estatutos.pdf) o URL absoluta del PDF de los estatutos',
+    label: 'Estatutos (enlace)',
+    description: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
   },
   url_reglamento_interno: {
-    label: 'Reglamento interno (PDF)',
-    description: 'Ruta relativa (/pdfs/reglamento.pdf) o URL absoluta del PDF del reglamento interno',
+    label: 'Reglamento interno (enlace)',
+    description: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
   },
 }
 
