@@ -22,7 +22,7 @@ const titularFields = {
   apodo: z.string().optional(),
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
-  confirmPassword: z.string(),
+  confirmPassword: z.string().optional(),
 }
 
 // ─── Miembro adicional ───────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export const miembroAdicionalSchema = z
     apodo: z.string().optional(),
     consentimiento_tiendas: z.boolean().default(false),
     password: passwordSchema,
-    confirmPassword: z.string(),
+    confirmPassword: z.string().optional(),
     tipo_relacion: z.enum(['pareja', 'familiar_directo']),
   })
   .superRefine((d, ctx) => {
