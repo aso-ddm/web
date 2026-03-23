@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Settings, FileText, Link, Loader2, Save } from 'lucide-react'
@@ -109,10 +109,22 @@ function TextAreaConfigField({
 }) {
   const queryClient = useQueryClient()
   const [valor, setValor] = useState(initialValor)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [])
 
   useEffect(() => {
     setValor(initialValor)
   }, [initialValor])
+
+  useEffect(() => {
+    autoResize()
+  }, [valor, autoResize])
 
   const { mutate: guardar, isPending } = useMutation({
     mutationFn: () => configuracionApi.update(clave, valor),
@@ -131,10 +143,11 @@ function TextAreaConfigField({
       <Label className="font-display font-bold text-sm">{label}</Label>
       <p className="text-xs text-muted-foreground">{description}</p>
       <Textarea
+        ref={textareaRef}
         value={valor}
         onChange={(e) => setValor(e.target.value)}
-        className="min-h-96 font-mono text-xs resize-y"
-        placeholder="Escribe aquí el texto de bienvenida..."
+        className="font-mono text-xs resize-none overflow-hidden"
+        placeholder="Escribe aquí el texto..."
       />
       <p className="text-xs text-muted-foreground">
         Usa <code className="bg-muted px-1 rounded">**SECCIÓN**</code> para cabeceras y escribe las URLs completas para que sean clicables.
@@ -173,6 +186,14 @@ export function ConfiguracionPage() {
   const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
   const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
 
+  const configsCuota = ['precio_cuota_individual', 'precio_cuota_adicional']
+    .map((clave) => configs.find((c) => c.clave === clave))
+    .filter(Boolean) as typeof configs
+
+  const configsVisitas = ['visitas_gratuitas', 'precio_visita_pago']
+    .map((clave) => configs.find((c) => c.clave === clave))
+    .filter(Boolean) as typeof configs
+
   return (
     <>
       <SEOHead title="Configuración" description="Configuración del sistema" path="/directiva/configuracion" noindex />
@@ -187,19 +208,36 @@ export function ConfiguracionPage() {
           <CardHeader className="pb-3">
             <CardTitle className="font-display text-base text-primary flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Parámetros del sistema
+              Configuración de cuotas
             </CardTitle>
             <CardDescription>
-              Estos valores afectan al comportamiento del sistema para todos los socios
+              Precios mensuales aplicados a los socios
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {isLoading ? (
               [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
-            ) : configs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay parámetros de configuración disponibles.</p>
             ) : (
-              configs.map((c) => <ConfigField key={c.clave} config={c} />)
+              configsCuota.map((c) => <ConfigField key={c.clave} config={c} />)
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Configuración de visitas
+            </CardTitle>
+            <CardDescription>
+              Parámetros para el control de visitas de no socios
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isLoading ? (
+              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
+            ) : (
+              configsVisitas.map((c) => <ConfigField key={c.clave} config={c} />)
             )}
           </CardContent>
         </Card>

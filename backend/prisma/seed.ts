@@ -67,7 +67,7 @@ async function main() {
     },
     {
       clave: 'precio_visita_pago',
-      valor: '2',
+      valor: '4',
       tipo: 'numero',
       descripcion: 'Importe en euros que se cobra a los no socios que ya superaron las visitas gratuitas',
     },
