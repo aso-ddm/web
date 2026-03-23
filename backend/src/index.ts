@@ -2,6 +2,7 @@ import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
+import multipart from '@fastify/multipart'
 
 import prismaPlugin from './plugins/prisma.plugin.js'
 import authenticatePlugin from './plugins/authenticate.plugin.js'
@@ -20,6 +21,13 @@ const app = Fastify({
 })
 
 // ── Plugins externos ──────────────────────────────────────────────────────────
+await app.register(multipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+    files: 1,
+  },
+})
+
 await app.register(cors, {
   origin: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL || 'https://dragondemadera.com'

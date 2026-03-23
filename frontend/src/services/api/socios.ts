@@ -19,6 +19,7 @@ export type SocioAdmin = Usuario & {
   direccion?: string | null
   fecha_baja?: string | null
   created_at: string
+  comprobante_transferencia?: string | null
   aprobado_por?: { id: string; nombre: string; apellidos: string } | null
   aprobado_llaves_por?: { id: string; nombre: string; apellidos: string } | null
   baja_por?: { id: string; nombre: string; apellidos: string } | null

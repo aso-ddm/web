@@ -7,14 +7,14 @@ const SALT_ROUNDS = 12
 export class AuthService {
   constructor(private prisma: PrismaClient) {}
 
-  async register(data: RegisterInput) {
+  async register(data: RegisterInput, comprobanteFilename: string) {
     if (data.tipo_cuota === 'conjunta') {
-      return this.registerConjunta(data)
+      return this.registerConjunta(data, comprobanteFilename)
     }
-    return this.registerIndividual(data)
+    return this.registerIndividual(data, comprobanteFilename)
   }
 
-  private async registerIndividual(data: Extract<RegisterInput, { tipo_cuota: 'individual' }>) {
+  private async registerIndividual(data: Extract<RegisterInput, { tipo_cuota: 'individual' }>, comprobanteFilename: string) {
     const existing = await this.prisma.usuario.findUnique({
       where: { email: data.email },
     })
@@ -37,6 +37,7 @@ export class AuthService {
       data: {
         ...rest,
         password_hash,
+        comprobante_transferencia: comprobanteFilename,
         roles: [Rol.socio_basico],
         estado: 'pendiente',
         fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
@@ -55,7 +56,7 @@ export class AuthService {
     return usuario
   }
 
-  private async registerConjunta(data: Extract<RegisterInput, { tipo_cuota: 'conjunta' }>) {
+  private async registerConjunta(data: Extract<RegisterInput, { tipo_cuota: 'conjunta' }>, comprobanteFilename: string) {
     // Pre-validación de unicidad (antes de abrir transacción)
     const todosEmails = [data.email, ...data.miembros_adicionales.map((m) => m.email)]
     const todosDnis = [data.dni, ...data.miembros_adicionales.map((m) => m.dni)]
@@ -106,6 +107,7 @@ export class AuthService {
         data: {
           ...restoTitular,
           password_hash: password_hash_titular,
+          comprobante_transferencia: comprobanteFilename,
           roles: [Rol.socio_basico],
           estado: 'pendiente',
           fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,

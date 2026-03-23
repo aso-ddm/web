@@ -94,6 +94,7 @@ export interface SolicitudGrupal {
     alias_telegram?: string | null
     tipo_cuota: TipoCuota
     created_at: string
+    comprobante_transferencia?: string | null
   }
   miembros: Array<
     Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & {

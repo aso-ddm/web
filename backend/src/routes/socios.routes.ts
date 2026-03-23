@@ -1,4 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
+import fs from 'node:fs'
+import path from 'node:path'
 import { SociosService } from '../services/socios.service.js'
 import {
   updateSocioSchema,
@@ -6,6 +8,8 @@ import {
   filtrosSociosSchema,
 } from '../schemas/socio.schema.js'
 import { requireRoles, ROLES } from '../plugins/authenticate.plugin.js'
+
+const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads/transferencias')
 
 const sociosRoutes: FastifyPluginAsync = async (fastify) => {
   const sociosService = new SociosService(fastify.prisma)
@@ -223,6 +227,39 @@ const sociosRoutes: FastifyPluginAsync = async (fastify) => {
       const status = message.includes('no encontrada') ? 404 : 400
       return reply.status(status).send({ error: message })
     }
+  })
+  // GET /api/socios/:id/comprobante — directiva descarga el comprobante de transferencia
+  fastify.get('/:id/comprobante', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_VOCALES),
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const socio = await fastify.prisma.usuario.findUnique({
+      where: { id },
+      select: { comprobante_transferencia: true, nombre: true, apellidos: true },
+    })
+    if (!socio) {
+      return reply.status(404).send({ error: 'Socio no encontrado' })
+    }
+    if (!socio.comprobante_transferencia) {
+      return reply.status(404).send({ error: 'Este socio no tiene comprobante adjunto' })
+    }
+    const filePath = path.join(UPLOADS_DIR, socio.comprobante_transferencia)
+    if (!fs.existsSync(filePath)) {
+      return reply.status(404).send({ error: 'Archivo no encontrado en el servidor' })
+    }
+    const ext = path.extname(socio.comprobante_transferencia).toLowerCase()
+    const mimeTypes: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+    }
+    const contentType = mimeTypes[ext] ?? 'application/octet-stream'
+    const nombreArchivo = `comprobante_${socio.nombre}_${socio.apellidos}${ext}`.replace(/\s+/g, '_')
+    reply.header('Content-Type', contentType)
+    reply.header('Content-Disposition', `inline; filename="${nombreArchivo}"`)
+    return reply.send(fs.createReadStream(filePath))
   })
 }
 

@@ -74,9 +74,10 @@ model Usuario {
   alias_telegram          String?
   apodo                   String?
   tipo_cuota              TipoCuota   @default(individual)
-  consentimiento_tiendas  Boolean     @default(false)
-  roles                   Rol[]
-  estado                  EstadoSocio @default(pendiente)
+  consentimiento_tiendas      Boolean     @default(false)
+  comprobante_transferencia   String?
+  roles                       Rol[]
+  estado                      EstadoSocio @default(pendiente)
   fecha_alta              DateTime?
   fecha_baja              DateTime?
   tiene_llaves            Boolean     @default(false)

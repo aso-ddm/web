@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { CheckCircle2, XCircle, Key, User, Users, Loader2 } from 'lucide-react'
+import { CheckCircle2, XCircle, Key, User, Users, Loader2, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,26 @@ import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { calcularPrecio } from '@/lib/cuota'
 import { configuracionApi } from '@/services/api/configuracion'
+import { useAuthStore } from '@/store/authStore'
 import type { SolicitudGrupal } from '@/types/api'
+
+// Abre el comprobante en una nueva pestaña autenticado
+async function abrirComprobante(socioId: string) {
+  const token = useAuthStore.getState().token
+  try {
+    const res = await fetch(`/api/socios/${socioId}/comprobante`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) { toast.error('No se pudo cargar el comprobante'); return }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    // Liberar la URL después de un momento
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch {
+    toast.error('Error al obtener el comprobante')
+  }
+}
 
 function formatDate(dateStr?: string | null) {
   if (!dateStr) return '—'
@@ -65,15 +84,30 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
             </div>
           )}
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button size="sm" onClick={() => aprobar()} disabled={aprobando || rechazando} className="font-display font-bold gap-1 h-9">
-            {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-            Aprobar
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => rechazar()} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
-            {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-            Rechazar
-          </Button>
+        <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => aprobar()} disabled={aprobando || rechazando} className="font-display font-bold gap-1 h-9">
+              {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+              Aprobar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => rechazar()} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
+              {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+              Rechazar
+            </Button>
+          </div>
+          {socio.comprobante_transferencia ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="font-display h-8 gap-1.5 text-xs text-secondary hover:text-secondary hover:bg-secondary/10"
+              onClick={() => abrirComprobante(socio.id)}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Ver comprobante
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Sin comprobante</span>
+          )}
         </div>
       </div>
     </div>
@@ -143,15 +177,30 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
         </div>
 
         {/* Acciones */}
-        <div className="flex gap-2 flex-shrink-0">
-          <Button size="sm" onClick={() => aprobar()} disabled={aprobando || rechazando} className="font-display font-bold gap-1 h-9">
-            {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-            Aprobar
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => rechazar()} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
-            {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
-            Rechazar
-          </Button>
+        <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => aprobar()} disabled={aprobando || rechazando} className="font-display font-bold gap-1 h-9">
+              {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+              Aprobar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => rechazar()} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
+              {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+              Rechazar
+            </Button>
+          </div>
+          {grupo.titular.comprobante_transferencia ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="font-display h-8 gap-1.5 text-xs text-secondary hover:text-secondary hover:bg-secondary/10"
+              onClick={() => abrirComprobante(grupo.titular.id)}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Ver comprobante
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Sin comprobante</span>
+          )}
         </div>
       </div>
     </div>

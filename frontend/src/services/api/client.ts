@@ -9,9 +9,11 @@ async function request<T>(
 ): Promise<T> {
   const token = useAuthStore.getState().token
   const hasBody = options.body !== undefined
+  const isFormData = options.body instanceof FormData
 
   const headers: HeadersInit = {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    // No establecer Content-Type para FormData — el navegador lo pone con el boundary correcto
+    ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   }
@@ -42,6 +44,8 @@ export const api = {
   get: <T>(endpoint: string) => request<T>(endpoint),
   post: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+  postForm: <T>(endpoint: string, formData: FormData) =>
+    request<T>(endpoint, { method: 'POST', body: formData }),
   action: <T>(endpoint: string) =>
     request<T>(endpoint, { method: 'POST' }),
   put: <T>(endpoint: string, body: unknown) =>

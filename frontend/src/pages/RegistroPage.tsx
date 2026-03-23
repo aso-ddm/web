@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Loader2, CheckCircle2, FileText, ArrowRight, PlusCircle, Trash2, Users } from 'lucide-react'
+import { Loader2, CheckCircle2, FileText, ArrowRight, PlusCircle, Trash2, Users, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -381,6 +381,9 @@ function MiembroForm({
 
 export function RegistroPage() {
   const [submitted, setSubmitted] = useState(false)
+  const [comprobante, setComprobante] = useState<File | null>(null)
+  const [comprobanteError, setComprobanteError] = useState<string | undefined>()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
@@ -437,19 +440,47 @@ export function RegistroPage() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
+      if (!comprobante) throw new Error('Debes adjuntar el comprobante de transferencia')
+
       if (data.tipo_cuota === 'conjunta') {
         const { confirmPassword: _cp, miembros_adicionales, ...titular } = data as Extract<RegistroForm, { tipo_cuota: 'conjunta' }>
         void _cp
         const miembros = miembros_adicionales.map(({ confirmPassword: _m, ...m }) => { void _m; return m })
-        return authApi.register({ ...titular, miembros_adicionales: miembros })
+        return authApi.register({ ...titular, miembros_adicionales: miembros }, comprobante)
       }
       const { confirmPassword: _cp, ...payload } = data as Extract<RegistroForm, { tipo_cuota: 'individual' }>
       void _cp
-      return authApi.register(payload)
+      return authApi.register(payload, comprobante)
     },
     onSuccess: () => setSubmitted(true),
     onError: (err: Error) => toast.error(err.message),
   })
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setComprobanteError(undefined)
+    if (!file) { setComprobante(null); return }
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setComprobanteError('Formato no permitido. Usa PDF, JPG o PNG.')
+      setComprobante(null)
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setComprobanteError('El archivo no puede superar los 10 MB.')
+      setComprobante(null)
+      return
+    }
+    setComprobante(file)
+  }
+
+  function handleSubmitWithComprobanteCheck(data: RegistroForm) {
+    if (!comprobante) {
+      setComprobanteError('Debes adjuntar el comprobante de transferencia')
+      return
+    }
+    mutate(data)
+  }
 
   if (submitted) {
     return (
@@ -532,7 +563,7 @@ export function RegistroPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <form onSubmit={handleSubmit((data: RegistroForm) => mutate(data))} className="space-y-4">
+          <form onSubmit={handleSubmit(handleSubmitWithComprobanteCheck)} className="space-y-4">
 
             {/* 1. Tipo de cuota */}
             <FormSection number={1} title="Tipo de cuota">
@@ -682,8 +713,74 @@ export function RegistroPage() {
               </FormSection>
             )}
 
+            {/* Comprobante de transferencia */}
+            <FormSection
+              number={tipoCuota === 'conjunta' ? 6 : 5}
+              title="Comprobante de transferencia"
+              description="Para formalizar el alta, realiza una transferencia del importe de tu cuota (parte proporcional del mes en curso + un mes completo en concepto de matrícula) y adjunta el justificante aquí."
+            >
+              <div className="space-y-4">
+                <div
+                  className={`relative rounded-lg border-2 border-dashed transition-colors ${
+                    comprobante
+                      ? 'border-primary/50 bg-primary/5'
+                      : comprobanteError
+                      ? 'border-destructive/50 bg-destructive/5'
+                      : 'border-border hover:border-primary/40 hover:bg-muted/30'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    aria-label="Subir comprobante de transferencia"
+                  />
+                  <div className="px-6 py-8 flex flex-col items-center text-center gap-3 pointer-events-none">
+                    {comprobante ? (
+                      <>
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-display font-bold text-sm text-primary truncate max-w-xs">{comprobante.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{(comprobante.size / 1024).toFixed(0)} KB</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <Upload className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-display font-bold text-sm">Haz clic para adjuntar el comprobante</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">PDF, JPG o PNG · máx. 10 MB</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {comprobante && (
+                  <button
+                    type="button"
+                    onClick={() => { setComprobante(null); setComprobanteError(undefined); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Eliminar archivo y seleccionar otro
+                  </button>
+                )}
+
+                {comprobanteError && (
+                  <p className="text-xs text-destructive">{comprobanteError}</p>
+                )}
+              </div>
+            </FormSection>
+
             {/* Consentimientos */}
-            <FormSection number={tipoCuota === 'conjunta' ? 6 : 5} title="Consentimientos">
+            <FormSection number={tipoCuota === 'conjunta' ? 7 : 6} title="Consentimientos">
               <div className="space-y-4">
                 <label htmlFor="consentimiento_tiendas" className="flex items-start gap-3 rounded-lg border border-border p-4 cursor-pointer hover:bg-muted/30 transition-colors">
                   <Checkbox
