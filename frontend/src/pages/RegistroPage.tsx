@@ -438,7 +438,7 @@ export function RegistroPage() {
       if (data.tipo_cuota === 'conjunta') {
         const { confirmPassword: _cp, miembros_adicionales, ...titular } = data as Extract<RegistroForm, { tipo_cuota: 'conjunta' }>
         void _cp
-        const miembros = miembros_adicionales.map(({ confirmPassword: _m, ...m }: { confirmPassword: string; nombre: string; apellidos: string; dni: string; email: string; password: string; tipo_relacion: 'pareja' | 'familiar_directo' }) => { void _m; return m })
+        const miembros = miembros_adicionales.map(({ confirmPassword: _m, ...m }) => { void _m; return m })
         return authApi.register({ ...titular, miembros_adicionales: miembros })
       }
       const { confirmPassword: _cp, ...payload } = data as Extract<RegistroForm, { tipo_cuota: 'individual' }>
