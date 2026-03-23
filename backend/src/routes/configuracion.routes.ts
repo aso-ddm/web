@@ -18,6 +18,17 @@ const configuracionRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.send({ data: configs })
   })
 
+  // GET /api/config/:clave — valor individual (público)
+  fastify.get('/:clave', async (request, reply) => {
+    const { clave } = request.params as { clave: string }
+    try {
+      const config = await configService.getByKey(clave)
+      return reply.send({ data: config })
+    } catch {
+      return reply.status(404).send({ error: `Configuración '${clave}' no encontrada` })
+    }
+  })
+
   // PUT /api/config/:clave — actualizar valor (directiva)
   fastify.put('/:clave', {
     preHandler: requireRoles(...ROLES.DIRECTIVA),

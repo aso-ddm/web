@@ -19,8 +19,7 @@ async function main() {
 
   if (existing) {
     console.log(`✓ Usuario admin ya existe (${email}) — no se modifica`)
-    return
-  }
+  } else {
 
   const password_hash = await bcrypt.hash('DragonAdmin2026!', 12)
 
@@ -39,11 +38,12 @@ async function main() {
     },
   })
 
-  console.log(`✓ Usuario admin creado:`)
-  console.log(`  ID:    ${admin.id}`)
-  console.log(`  Email: ${admin.email}`)
-  console.log(`  Roles: ${admin.roles.join(', ')}`)
-  console.log(`  ⚠️  Cambia la contraseña tras el primer login`)
+    console.log(`✓ Usuario admin creado:`)
+    console.log(`  ID:    ${admin.id}`)
+    console.log(`  Email: ${admin.email}`)
+    console.log(`  Roles: ${admin.roles.join(', ')}`)
+    console.log(`  ⚠️  Cambia la contraseña tras el primer login`)
+  }
 
   // ── Configuración inicial ──────────────────────────────────────────────
   const configsIniciales = [
