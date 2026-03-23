@@ -23,39 +23,39 @@ export function HomePage() {
             <div className={`grid lg:grid-cols-2 ${SPACING.contentGap} items-center`}>
               <div className={SPACING.itemsGap}>
                 <h2
-                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-balance font-display text-foreground ${SPACING.marginBottomMd}`}
+                  className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-balance font-display text-foreground ${SPACING.marginBottomMd} anim-fade-in-up`}
                 >
                   {texts.home.hero.heading}
                 </h2>
 
-                <p className={`text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-foreground tracking-wide ${SPACING.marginBottomXs}`}>
+                <p className={`text-xl sm:text-2xl md:text-3xl leading-tight text-pretty text-foreground tracking-wide ${SPACING.marginBottomXs} anim-fade-in-up anim-delay-75`}>
                   {texts.home.hero.subtitle}
                 </p>
-                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginBottomXs}`}>
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginBottomXs} anim-fade-in-up anim-delay-150`}>
                   {texts.home.hero.description}
                 </p>
 
-                <ul className={SPACING.spaceYSm}>
+                <ul className={`${SPACING.spaceYSm} anim-fade-in-up anim-delay-250`}>
                   {texts.home.hero.features.map((feature, i) => (
                     <FeatureItem key={i} text={feature} />
                   ))}
                 </ul>
 
-                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginTopXs} ${SPACING.marginBottomMd}`}>
+                <p className={`text-base sm:text-lg md:text-xl leading-relaxed text-foreground tracking-wide ${SPACING.marginTopXs} ${SPACING.marginBottomMd} anim-fade-in-up anim-delay-350`}>
                   {texts.home.hero.callToAction}
                 </p>
 
-                <div className="text-center">
+                <div className="text-center anim-fade-in-up anim-delay-450">
                   <WhatsAppButton />
                 </div>
               </div>
 
-              <div className="relative mt-8 lg:mt-0">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-muted">
+              <div className="relative mt-8 lg:mt-0 anim-slide-in-right anim-delay-150">
+                <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-muted shadow-xl ring-1 ring-border">
                   <img
                     src={images.home.hero.community}
                     alt={texts.home.hero.imageAlt}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                   />
                 </div>
               </div>
@@ -116,12 +116,13 @@ export function HomePage() {
             <SectionHeading>{texts.home.instagram.title}</SectionHeading>
             <div className={`grid grid-cols-2 md:grid-cols-3 ${SPACING.gapSm}`}>
               {images.home.instagram.map((imgSrc, i) => (
-                <div key={i} className="aspect-[3/4] rounded-xl overflow-hidden bg-muted">
+                <div key={i} className="group aspect-[3/4] rounded-xl overflow-hidden bg-muted relative shadow-sm">
                   <img
                     src={imgSrc}
                     alt={`${texts.home.instagram.imageAlt} ${i + 1}`}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-primary/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
               ))}
             </div>

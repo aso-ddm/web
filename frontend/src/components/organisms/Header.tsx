@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,11 +16,20 @@ import { useScrollNavigation } from '@/hooks/useScrollNavigation'
 import { navigationItems, memberAreaItem } from '@/config/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { SPACING } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 
 export function Header() {
   const { handleNavigation } = useScrollNavigation()
   const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore()
   const navigate = useNavigate()
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 30)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
@@ -34,7 +44,14 @@ export function Header() {
   const areaPath = isAuthenticated ? getRedirectPath() : memberAreaItem.to
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border backdrop-blur-sm bg-background/95">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-300",
+        scrolled
+          ? "border-b border-border bg-background/96 backdrop-blur-md shadow-sm"
+          : "border-b border-transparent bg-background/60 backdrop-blur-sm"
+      )}
+    >
       <div className={SPACING.container}>
         <div className="flex h-20 sm:h-24 md:h-28 items-center justify-between">
           <Link to="/" onClick={handleLogoClick} className={`flex items-center ${SPACING.gapSm}`}>

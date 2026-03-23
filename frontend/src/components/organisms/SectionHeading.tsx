@@ -9,14 +9,22 @@ interface SectionHeadingProps {
 
 export function SectionHeading({ children, className, centered = true }: SectionHeadingProps) {
   return (
-    <h2
-      className={cn(
-        `text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold ${SPACING.headingMargin} text-balance font-display px-4`,
-        centered && 'text-center',
-        className
-      )}
-    >
-      {children}
-    </h2>
+    <div className={cn(SPACING.headingMargin, centered && 'text-center')}>
+      <h2
+        className={cn(
+          `text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-balance font-display px-4 mb-3`,
+          className
+        )}
+      >
+        {children}
+      </h2>
+      {/* Accent line */}
+      <div
+        className={cn(
+          'h-[3px] w-14 rounded-full bg-current opacity-25',
+          centered && 'mx-auto'
+        )}
+      />
+    </div>
   )
 }
