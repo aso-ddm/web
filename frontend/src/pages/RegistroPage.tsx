@@ -47,9 +47,10 @@ const miembroAdicionalSchema = z
       required_error: 'Selecciona el tipo de relación',
     }),
   })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: 'Las contraseñas no coinciden',
-    path: ['confirmPassword'],
+  .superRefine((d: { password: string; confirmPassword: string }, ctx: z.RefinementCtx) => {
+    if (d.password !== d.confirmPassword) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
+    }
   })
 
 const camposTitular = {
@@ -68,12 +69,13 @@ const camposTitular = {
   confirmPassword: z.string(),
 }
 
-const registroSchema = z.discriminatedUnion('tipo_cuota', [
+const registroSchema = z.union([
   z
     .object({ tipo_cuota: z.literal('individual'), ...camposTitular })
-    .refine((d) => d.password === d.confirmPassword, {
-      message: 'Las contraseñas no coinciden',
-      path: ['confirmPassword'],
+    .superRefine((d: { password: string; confirmPassword: string }, ctx: z.RefinementCtx) => {
+      if (d.password !== d.confirmPassword) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
+      }
     }),
   z
     .object({
@@ -84,18 +86,17 @@ const registroSchema = z.discriminatedUnion('tipo_cuota', [
         .min(1, 'Debes añadir al menos un miembro')
         .max(5, 'Máximo 5 miembros adicionales'),
     })
-    .refine((d) => d.password === d.confirmPassword, {
-      message: 'Las contraseñas no coinciden',
-      path: ['confirmPassword'],
-    })
-    .superRefine((d, ctx) => {
+    .superRefine((d: { password: string; confirmPassword: string; email: string; dni: string; miembros_adicionales: Array<{ email: string; dni: string }> }, ctx: z.RefinementCtx) => {
+      if (d.password !== d.confirmPassword) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
+      }
       // Unicidad de emails
       const emails = [d.email, ...d.miembros_adicionales.map((m) => m.email)]
       const emailsDuplicados = emails.filter((e, i) => emails.indexOf(e) !== i)
       if (emailsDuplicados.length > 0) {
         d.miembros_adicionales.forEach((m, i) => {
           if (emailsDuplicados.includes(m.email)) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Email duplicado en el grupo', path: [`miembros_adicionales`, i, 'email'] })
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Email duplicado en el grupo', path: ['miembros_adicionales', i, 'email'] })
           }
         })
       }
@@ -105,7 +106,7 @@ const registroSchema = z.discriminatedUnion('tipo_cuota', [
       if (dnisDuplicados.length > 0) {
         d.miembros_adicionales.forEach((m, i) => {
           if (dnisDuplicados.includes(m.dni)) {
-            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'DNI duplicado en el grupo', path: [`miembros_adicionales`, i, 'dni'] })
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'DNI duplicado en el grupo', path: ['miembros_adicionales', i, 'dni'] })
           }
         })
       }
@@ -113,6 +114,16 @@ const registroSchema = z.discriminatedUnion('tipo_cuota', [
 ])
 
 type RegistroForm = z.infer<typeof registroSchema>
+
+// Helper para extraer mensaje de error de react-hook-form (compatible con discriminatedUnion)
+function errMsg(err: unknown): string | undefined {
+  if (!err) return undefined
+  if (typeof err === 'string') return err
+  if (typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    return (err as { message: string }).message
+  }
+  return undefined
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -272,7 +283,7 @@ function MiembroForm({
 
       <div className="space-y-1.5">
         <Label className="font-display font-bold text-sm">Tipo de relación <span className="text-destructive">*</span></Label>
-        <Select value={tipoRelacion} onValueChange={(v) => (setValue as (name: string, value: string) => void)(`miembros_adicionales.${index}.tipo_relacion`, v)}>
+        <Select value={tipoRelacion} onValueChange={(v: string) => (setValue as (name: string, value: string) => void)(`miembros_adicionales.${index}.tipo_relacion`, v)}>
           <SelectTrigger><SelectValue placeholder="Selecciona el tipo de relación" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="pareja">Pareja</SelectItem>
@@ -298,7 +309,7 @@ function MiembroForm({
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label className="font-display font-bold text-sm">DNI <span className="text-destructive">*</span></Label>
-          <Input placeholder="12345678A" maxLength={9} {...register(`miembros_adicionales.${index}.dni` as const)} onChange={(e) => { e.target.value = e.target.value.toUpperCase(); register(`miembros_adicionales.${index}.dni` as const).onChange(e) }} />
+          <Input placeholder="12345678A" maxLength={9} {...register(`miembros_adicionales.${index}.dni` as const)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.toUpperCase(); register(`miembros_adicionales.${index}.dni` as const).onChange(e) }} />
           <FieldError message={(err?.dni as { message?: string } | undefined)?.message} />
         </div>
         <div className="space-y-1.5">
@@ -339,7 +350,7 @@ export function RegistroPage() {
     name: 'miembros_adicionales' as never,
   })
 
-  const tipoCuota = watch('tipo_cuota')
+  const tipoCuota = watch('tipo_cuota') as 'individual' | 'conjunta'
   const consentimientoTiendas = watch('consentimiento_tiendas')
 
   const { data: configBienvenida, isPending: isBienvenidaLoading } = useQuery({
@@ -369,14 +380,15 @@ export function RegistroPage() {
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { confirmPassword, ...rest } = data as RegistroForm & { confirmPassword: string }
-      void confirmPassword
-      if (rest.tipo_cuota === 'conjunta') {
-        const miembros = rest.miembros_adicionales.map(({ confirmPassword: _cp, ...m }) => m)
-        return authApi.register({ ...rest, miembros_adicionales: miembros })
+      if (data.tipo_cuota === 'conjunta') {
+        const { confirmPassword: _cp, miembros_adicionales, ...titular } = data as Extract<RegistroForm, { tipo_cuota: 'conjunta' }>
+        void _cp
+        const miembros = miembros_adicionales.map(({ confirmPassword: _m, ...m }: { confirmPassword: string; nombre: string; apellidos: string; dni: string; email: string; password: string; tipo_relacion: 'pareja' | 'familiar_directo' }) => { void _m; return m })
+        return authApi.register({ ...titular, miembros_adicionales: miembros })
       }
-      return authApi.register(rest)
+      const { confirmPassword: _cp, ...payload } = data as Extract<RegistroForm, { tipo_cuota: 'individual' }>
+      void _cp
+      return authApi.register(payload)
     },
     onSuccess: () => setSubmitted(true),
     onError: (err: Error) => toast.error(err.message),
@@ -463,13 +475,13 @@ export function RegistroPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
+          <form onSubmit={handleSubmit((data: RegistroForm) => mutate(data))} className="space-y-4">
 
             {/* 1. Tipo de cuota */}
             <FormSection number={1} title="Tipo de cuota">
               <RadioGroup
                 value={tipoCuota}
-                onValueChange={(v) => setValue('tipo_cuota', v as RegistroForm['tipo_cuota'])}
+                onValueChange={(v: string) => setValue('tipo_cuota', v as RegistroForm['tipo_cuota'])}
                 className="space-y-2.5"
               >
                 {([
@@ -504,35 +516,35 @@ export function RegistroPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="nombre" className="font-display font-bold text-sm">Nombre <span className="text-destructive">*</span></Label>
                     <Input id="nombre" placeholder="Juan" {...register('nombre')} />
-                    <FieldError message={errors.nombre?.message} />
+                    <FieldError message={errMsg(errors.nombre)} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="apellidos" className="font-display font-bold text-sm">Apellidos <span className="text-destructive">*</span></Label>
                     <Input id="apellidos" placeholder="García López" {...register('apellidos')} />
-                    <FieldError message={errors.apellidos?.message} />
+                    <FieldError message={errMsg(errors.apellidos)} />
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="dni" className="font-display font-bold text-sm">DNI <span className="text-destructive">*</span></Label>
-                    <Input id="dni" placeholder="12345678A" maxLength={9} {...register('dni')} onChange={(e) => { e.target.value = e.target.value.toUpperCase(); register('dni').onChange(e) }} />
-                    <FieldError message={errors.dni?.message} />
+                    <Input id="dni" placeholder="12345678A" maxLength={9} {...register('dni')} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.toUpperCase(); register('dni').onChange(e) }} />
+                    <FieldError message={errMsg(errors.dni)} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="fecha_nacimiento" className="font-display font-bold text-sm">Fecha de nacimiento <span className="text-destructive">*</span></Label>
                     <Input id="fecha_nacimiento" type="date" {...register('fecha_nacimiento')} />
-                    <FieldError message={errors.fecha_nacimiento?.message} />
+                    <FieldError message={errMsg(errors.fecha_nacimiento)} />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="telefono" className="font-display font-bold text-sm">Teléfono <span className="text-destructive">*</span></Label>
                   <Input id="telefono" type="tel" placeholder="600 000 000" {...register('telefono')} />
-                  <FieldError message={errors.telefono?.message} />
+                  <FieldError message={errMsg(errors.telefono)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="direccion" className="font-display font-bold text-sm">Dirección <span className="text-destructive">*</span></Label>
                   <Input id="direccion" placeholder="Calle, número, ciudad" {...register('direccion')} />
-                  <FieldError message={errors.direccion?.message} />
+                  <FieldError message={errMsg(errors.direccion)} />
                 </div>
               </div>
             </FormSection>
@@ -543,18 +555,18 @@ export function RegistroPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="font-display font-bold text-sm">Email <span className="text-destructive">*</span></Label>
                   <Input id="email" type="email" autoComplete="email" placeholder="tu@email.com" {...register('email')} />
-                  <FieldError message={errors.email?.message} />
+                  <FieldError message={errMsg(errors.email)} />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="password" className="font-display font-bold text-sm">Contraseña <span className="text-destructive">*</span></Label>
                     <Input id="password" type="password" autoComplete="new-password" placeholder="Mín. 8 caracteres" {...register('password')} />
-                    <FieldError message={errors.password?.message} />
+                    <FieldError message={errMsg(errors.password)} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="confirmPassword" className="font-display font-bold text-sm">Confirmar contraseña <span className="text-destructive">*</span></Label>
                     <Input id="confirmPassword" type="password" autoComplete="new-password" placeholder="Repite la contraseña" {...register('confirmPassword')} />
-                    <FieldError message={errors.confirmPassword?.message} />
+                    <FieldError message={errMsg(errors.confirmPassword)} />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Mínimo 8 caracteres, una mayúscula y un número.</p>
@@ -567,7 +579,7 @@ export function RegistroPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="alias_telegram" className="font-display font-bold text-sm">Alias de Telegram <span className="text-destructive">*</span></Label>
                   <Input id="alias_telegram" placeholder="@tuusuario" {...register('alias_telegram')} />
-                  <FieldError message={errors.alias_telegram?.message} />
+                  <FieldError message={errMsg(errors.alias_telegram)} />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -590,7 +602,7 @@ export function RegistroPage() {
                     <FieldError message={(errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message} />
                   )}
 
-                  {fields.map((field, index) => (
+                  {fields.map((field: { id: string }, index: number) => (
                     <MiembroForm
                       key={field.id}
                       index={index}

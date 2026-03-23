@@ -37,9 +37,14 @@ export const miembroAdicionalSchema = z
     confirmPassword: z.string(),
     tipo_relacion: z.enum(['pareja', 'familiar_directo']),
   })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: 'Las contraseñas no coinciden',
-    path: ['confirmPassword'],
+  .superRefine((d, ctx) => {
+    if (d.password !== d.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Las contraseñas no coinciden',
+        path: ['confirmPassword'],
+      })
+    }
   })
 
 export type MiembroAdicionalInput = z.infer<typeof miembroAdicionalSchema>
@@ -53,9 +58,14 @@ export const registerSchema = z.discriminatedUnion('tipo_cuota', [
       tipo_cuota: z.literal('individual'),
       ...titularFields,
     })
-    .refine((d) => d.password === d.confirmPassword, {
-      message: 'Las contraseñas no coinciden',
-      path: ['confirmPassword'],
+    .superRefine((d, ctx) => {
+      if (d.password !== d.confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Las contraseñas no coinciden',
+          path: ['confirmPassword'],
+        })
+      }
     }),
 
   // Rama conjunta
@@ -65,9 +75,14 @@ export const registerSchema = z.discriminatedUnion('tipo_cuota', [
       ...titularFields,
       miembros_adicionales: z.array(miembroAdicionalSchema).min(1).max(5),
     })
-    .refine((d) => d.password === d.confirmPassword, {
-      message: 'Las contraseñas no coinciden',
-      path: ['confirmPassword'],
+    .superRefine((d, ctx) => {
+      if (d.password !== d.confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Las contraseñas no coinciden',
+          path: ['confirmPassword'],
+        })
+      }
     }),
 ])
 
