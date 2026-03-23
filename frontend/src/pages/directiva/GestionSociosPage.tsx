@@ -349,16 +349,18 @@ export function GestionSociosPage() {
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           {socioSeleccionado && (
             <>
-              <SheetHeader className="mb-4">
+              <SheetHeader>
                 <SheetTitle className="font-display text-primary">
                   {socioSeleccionado.nombre} {socioSeleccionado.apellidos}
                 </SheetTitle>
                 <SheetDescription>{socioSeleccionado.email}</SheetDescription>
               </SheetHeader>
-              <SocioDetalle
-                socio={socioSeleccionado}
-                onClose={() => setSocioSeleccionado(null)}
-              />
+              <div className="px-4 pb-6">
+                <SocioDetalle
+                  socio={socioSeleccionado}
+                  onClose={() => setSocioSeleccionado(null)}
+                />
+              </div>
             </>
           )}
         </SheetContent>
