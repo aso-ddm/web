@@ -33,9 +33,9 @@ const registroSchema = z
       .max(9, 'El DNI debe tener 9 caracteres')
       .regex(/^[0-9]{8}[A-Za-z]$/, 'Formato de DNI no válido (ej: 12345678A)'),
     email: z.string().email('Introduce un email válido'),
-    telefono: z.string().optional(),
-    fecha_nacimiento: z.string().optional(),
-    direccion: z.string().optional(),
+    telefono: z.string().min(1, 'El teléfono es obligatorio'),
+    fecha_nacimiento: z.string().min(1, 'La fecha de nacimiento es obligatoria'),
+    direccion: z.string().min(1, 'La dirección es obligatoria'),
     alias_telegram: z.string().optional(),
     usuario_bgg: z.string().optional(),
     apodo: z.string().optional(),
@@ -231,9 +231,9 @@ export function RegistroPage() {
       const { confirmPassword, ...payload } = data
       return authApi.register({
         ...payload,
-        fecha_nacimiento: payload.fecha_nacimiento || undefined,
-        telefono: payload.telefono || undefined,
-        direccion: payload.direccion || undefined,
+        fecha_nacimiento: payload.fecha_nacimiento,
+        telefono: payload.telefono,
+        direccion: payload.direccion,
         alias_telegram: payload.alias_telegram || undefined,
         usuario_bgg: payload.usuario_bgg || undefined,
         apodo: payload.apodo || undefined,
@@ -403,24 +403,27 @@ export function RegistroPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="fecha_nacimiento" className="font-display font-bold">
-                    Fecha de nacimiento
+                    Fecha de nacimiento <span className="text-destructive">*</span>
                   </Label>
                   <Input id="fecha_nacimiento" type="date" {...register('fecha_nacimiento')} />
+                  <FieldError message={errors.fecha_nacimiento?.message} />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="telefono" className="font-display font-bold">
-                  Teléfono
+                  Teléfono <span className="text-destructive">*</span>
                 </Label>
                 <Input id="telefono" type="tel" placeholder="600 000 000" {...register('telefono')} />
+                <FieldError message={errors.telefono?.message} />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="direccion" className="font-display font-bold">
-                  Dirección
+                  Dirección <span className="text-destructive">*</span>
                 </Label>
                 <Input id="direccion" placeholder="Calle, número, ciudad" {...register('direccion')} />
+                <FieldError message={errors.direccion?.message} />
               </div>
             </CardContent>
           </Card>
