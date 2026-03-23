@@ -181,6 +181,20 @@ const sociosRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(400).send({ error: message })
     }
   })
+  // POST /api/socios/:id/devolver-llaves — directiva registra devolución de llaves
+  fastify.post('/:id/devolver-llaves', {
+    preHandler: requireRoles(...ROLES.DIRECTIVA),
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    try {
+      const socio = await sociosService.devolverLlaves(id, request.user.id)
+      return reply.send({ message: 'Llave devuelta correctamente', data: socio })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error'
+      return reply.status(400).send({ error: message })
+    }
+  })
+
   // POST /api/socios/grupos/:grupoId/aprobar — directiva aprueba solicitud grupal
   fastify.post('/grupos/:grupoId/aprobar', {
     preHandler: requireRoles(...ROLES.DIRECTIVA),

@@ -68,4 +68,7 @@ export const sociosApi = {
 
   aprobarLlaves: (id: string) =>
     api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar-llaves`),
+
+  devolverLlaves: (id: string) =>
+    api.action<{ data: SocioAdmin }>(`/socios/${id}/devolver-llaves`),
 }

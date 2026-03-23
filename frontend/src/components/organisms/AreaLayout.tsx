@@ -42,6 +42,7 @@ function useSidebarItems(): NavEntry[] {
       { type: 'section', label: 'Directiva' },
       { type: 'item', label: 'Gestión socios', to: '/directiva/socios',       icon: <Users        className="h-4 w-4" /> },
       { type: 'item', label: 'Solicitudes',    to: '/directiva/solicitudes',  icon: <ClipboardList className="h-4 w-4" /> },
+      { type: 'item', label: 'Llaves',         to: '/directiva/llaves',       icon: <Key           className="h-4 w-4" /> },
     )
   }
 

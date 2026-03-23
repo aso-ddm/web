@@ -26,6 +26,7 @@ import { GestionPrestamosPage } from '@/pages/ludoteca/GestionPrestamosPage'
 import { SolicitudesPage } from '@/pages/directiva/SolicitudesPage'
 import { GestionSociosPage } from '@/pages/directiva/GestionSociosPage'
 import { ConfiguracionPage } from '@/pages/directiva/ConfiguracionPage'
+import { LlavesPage } from '@/pages/directiva/LlavesPage'
 
 // Visitas — Sprint 6
 import { RegistroVisitaPage } from '@/pages/area/RegistroVisitaPage'
@@ -74,6 +75,7 @@ export function AppRoutes() {
           <Route path="/directiva" element={<Navigate to="/directiva/solicitudes" replace />} />
           <Route path="/directiva/socios" element={<GestionSociosPage />} />
           <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
+          <Route path="/directiva/llaves" element={<LlavesPage />} />
           <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
         </Route>
       </Route>

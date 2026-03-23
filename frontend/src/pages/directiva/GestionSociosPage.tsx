@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, Users, ChevronRight, Loader2, UserX, Shield } from 'lucide-react'
+import { Search, Users, ChevronRight, Loader2, UserX, Shield, Key, CheckCircle2, Clock } from 'lucide-react'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
+import { getEstadoLlaves } from '@/lib/llaves'
 import type { Rol, EstadoSocio } from '@/types/api'
 
 const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
@@ -54,6 +55,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
   const queryClient = useQueryClient()
   const [rolesEditados, setRolesEditados] = useState<Rol[]>(socio.roles)
   const [confirmBaja, setConfirmBaja] = useState(false)
+  const [confirmDevolucion, setConfirmDevolucion] = useState(false)
 
   const invalidar = () => {
     queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
@@ -65,6 +67,14 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
     onSuccess: () => { toast.success(`${socio.nombre} dado de baja`); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const { mutate: devolverLlaves, isPending: devolviendo } = useMutation({
+    mutationFn: () => sociosApi.devolverLlaves(socio.id),
+    onSuccess: () => { toast.success('Llave devuelta correctamente'); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const estadoLlaves = getEstadoLlaves(socio)
 
   const { mutate: guardarRoles, isPending: guardandoRoles } = useMutation({
     mutationFn: () => sociosApi.updateRoles(socio.id, rolesEditados),
@@ -115,15 +125,48 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
               <p className="font-medium">{socio.alias_telegram}</p>
             </div>
           )}
-          <div>
-            <p className="text-xs text-muted-foreground font-display">Llaves</p>
-            <p className="font-medium">{socio.tiene_llaves ? 'Sí' : 'No'}</p>
-          </div>
           {socio.aprobado_por && (
             <div>
               <p className="text-xs text-muted-foreground font-display">Aprobado por</p>
               <p className="font-medium text-xs">{socio.aprobado_por.nombre} {socio.aprobado_por.apellidos}</p>
             </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Llaves */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Key className="h-4 w-4 text-primary" />
+            <p className="font-display font-bold text-sm">Llaves del club</p>
+          </div>
+          {estadoLlaves.tipo === 'titular' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-display font-bold text-emerald-700">Tiene llaves</p>
+                  <p className="text-xs text-emerald-600">Desde {formatDate(socio.fecha_aprobacion_llaves)}{estadoLlaves.aprobadoPor ? ` · Aprobado por ${estadoLlaves.aprobadoPor}` : ''}</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setConfirmDevolucion(true)} disabled={devolviendo} className="font-display gap-2 text-amber-700 border-amber-300 hover:bg-amber-50">
+                <Key className="h-3.5 w-3.5" />
+                Registrar devolución
+              </Button>
+            </div>
+          )}
+          {estadoLlaves.tipo === 'pendiente' && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+              <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-display font-bold text-amber-700">Solicitud pendiente</p>
+                <p className="text-xs text-amber-600">Solicitadas el {formatDate(socio.fecha_solicitud_llaves)} · Ver en Solicitudes</p>
+              </div>
+            </div>
+          )}
+          {estadoLlaves.tipo === 'sin_llave' && (
+            <p className="text-sm text-muted-foreground">Sin llaves asignadas</p>
           )}
         </div>
 
@@ -204,11 +247,28 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={confirmDevolucion} onOpenChange={setConfirmDevolucion}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-primary">
+              ¿Registrar devolución de llaves?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Se marcará que {socio.nombre} {socio.apellidos} ha devuelto las llaves del club.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => devolverLlaves()} disabled={devolviendo} className="font-display font-bold">
+              {devolviendo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmar devolución'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
-}
-
-export function GestionSociosPage() {
+} {
   const [search, setSearch] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoSocio | 'todos'>('activo')
   const [page, setPage] = useState(1)

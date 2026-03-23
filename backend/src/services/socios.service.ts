@@ -345,4 +345,23 @@ export class SociosService {
       select: SOCIO_PUBLIC_SELECT,
     })
   }
+
+  async devolverLlaves(socioId: string, adminId: string) {
+    const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
+    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio.tiene_llaves) {
+      throw new Error('El socio no tiene ninguna llave asignada')
+    }
+
+    return this.prisma.usuario.update({
+      where: { id: socioId },
+      data: {
+        tiene_llaves: false,
+        fecha_solicitud_llaves: null,
+        fecha_aprobacion_llaves: null,
+        aprobado_llaves_por_id: null,
+      },
+      select: SOCIO_PUBLIC_SELECT,
+    })
+  }
 }
