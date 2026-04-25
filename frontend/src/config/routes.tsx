@@ -10,6 +10,7 @@ export function AppRoutes() {
       <Route path="/" element={<HomePage />} />
       <Route path="/club" element={<ClubPage />} />
       <Route path="/socio" element={<SocioPage />} />
+      <Route path="/contacto" element={<HomePage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
