@@ -8,9 +8,9 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/conocenos" element={<HomePage />} />
       <Route path="/club" element={<ClubPage />} />
       <Route path="/socio" element={<SocioPage />} />
-      <Route path="/contacto" element={<HomePage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
