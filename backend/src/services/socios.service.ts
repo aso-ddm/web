@@ -354,7 +354,7 @@ export class SociosService {
     })
   }
 
-  async devolverLlaves(socioId: string, adminId: string) {
+  async devolverLlaves(socioId: string, _adminId: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
     if (!socio) throw new Error('Socio no encontrado')
     if (!socio.tiene_llaves) {

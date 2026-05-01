@@ -5,16 +5,24 @@
 ### Fase 1 — COMPLETADA
 La **Fase 1** es la web pública estática de Dragón de Madera (presentación del club, información para socios, ludoteca pública). Está **completamente desarrollada** y vive en `frontend/`. No requiere backend.
 
-### Fase 2 — EN INICIO / BASE DE DESARROLLO
-La **Fase 2** consiste en añadir las **áreas de gestión para socios**: registro, login, gestión de préstamos, ludoteca con inventario, panel de administración, etc.
+### Fase 2 — EN DESARROLLO ACTIVO
+La **Fase 2** añade las **áreas de gestión para socios**: registro, login, gestión de préstamos, ludoteca con inventario, panel de administración, etc.
 
-> ⚠️ **La Fase 2 está actualmente en proceso de toma de requisitos.** Lo que hay ahora (esqueleto de backend, schema de Prisma, estructura del monorepo) es una **base técnica de desarrollo** cuyo objetivo principal es tener el servidor correctamente configurado y validado antes de empezar el desarrollo real.
+**Backend — DESARROLLADO:** Lógica de negocio completa para las 6 entidades principales:
+- `auth`: registro individual y grupal (transacción atómica), login JWT, perfil propio
+- `socios`: CRUD, aprobación/rechazo (individual y grupal), roles, ciclo de vida, llaves
+- `juegos`: catálogo con filtros y paginación
+- `préstamos`: flujo completo (solicitud → aprobación → activación → devolución)
+- `visitas`: registro con visitas gratuitas configurables y cobro automático
+- `configuración`: parámetros de negocio ajustables por directiva
 
-### Backend — SIN DESARROLLAR
-El backend (Fastify + Prisma) está en estado de **esqueleto inicial**. El schema de Prisma es un borrador sujeto a cambios conforme avance la toma de requisitos. No hay lógica de negocio implementada aún.
+**Frontend — DESARROLLADO:** Todas las páginas de Fase 2 implementadas:
+- Área de socios: Dashboard, Perfil, Préstamos, Registro de visita
+- Área de ludoteca: Gestión de juegos, Gestión de préstamos
+- Área de directiva: Solicitudes, Gestión de socios, Llaves, Configuración
+- Auth: Login, Registro (individual + conjunta), rutas protegidas por rol
 
-### Objetivo inmediato
-Terminar de configurar la infraestructura del servidor (Nginx, PM2, CI/CD con GitHub Actions self-hosted runner) para tener un entorno funcional listo cuando arranque el desarrollo real de la Fase 2.
+**Infraestructura — CONFIGURADA:** Nginx, PM2, CI/CD con GitHub Actions self-hosted runner operativos, con health checks y rollback automático.
 
 ---
 
