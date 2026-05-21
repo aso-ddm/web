@@ -38,8 +38,8 @@ app.use(errorHandler)
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT) || 3001
-app.listen(port, '127.0.0.1', () => {
-  console.log(`Backend escuchando en http://127.0.0.1:${port}`)
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Backend escuchando en http://0.0.0.0:${port}`)
 })
 
 export default app
