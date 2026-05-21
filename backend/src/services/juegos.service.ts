@@ -1,25 +1,23 @@
 import { PrismaClient } from '@prisma/client'
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 
+const propietarioSelect = { select: { id: true, nombre: true, apellidos: true } }
+
 export class JuegosService {
   constructor(private prisma: PrismaClient) {}
 
   async getAll(filtros: FiltrosJuegosInput) {
-    const { page, limit, search, estado, categoria } = filtros
+    const { page, limit, search, estado } = filtros
     const skip = (page - 1) * limit
 
     const where = {
       ...(estado ? { estado } : {}),
-      ...(categoria
-        ? { categoria: { contains: categoria, mode: 'insensitive' as const } }
-        : {}),
       ...(search
         ? {
             OR: [
-              { titulo: { contains: search, mode: 'insensitive' as const } },
-              { autor: { contains: search, mode: 'insensitive' as const } },
-              { editorial: { contains: search, mode: 'insensitive' as const } },
-              { categoria: { contains: search, mode: 'insensitive' as const } },
+              { nombre: { contains: search, mode: 'insensitive' as const } },
+              { localizacion: { contains: search, mode: 'insensitive' as const } },
+              { notas: { contains: search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -30,7 +28,8 @@ export class JuegosService {
         where,
         skip,
         take: limit,
-        orderBy: { titulo: 'asc' },
+        orderBy: { nombre: 'asc' },
+        include: { propietario: propietarioSelect },
       }),
       this.prisma.juego.count({ where }),
     ])
@@ -39,19 +38,29 @@ export class JuegosService {
   }
 
   async getById(id: string) {
-    const juego = await this.prisma.juego.findUnique({ where: { id } })
+    const juego = await this.prisma.juego.findUnique({
+      where: { id },
+      include: { propietario: propietarioSelect },
+    })
     if (!juego) throw new Error('Juego no encontrado')
     return juego
   }
 
   async crear(data: CrearJuegoInput) {
-    return this.prisma.juego.create({ data })
+    return this.prisma.juego.create({
+      data,
+      include: { propietario: propietarioSelect },
+    })
   }
 
   async update(id: string, data: UpdateJuegoInput) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
     if (!juego) throw new Error('Juego no encontrado')
-    return this.prisma.juego.update({ where: { id }, data })
+    return this.prisma.juego.update({
+      where: { id },
+      data,
+      include: { propietario: propietarioSelect },
+    })
   }
 
   async delete(id: string) {

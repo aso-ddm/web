@@ -13,7 +13,7 @@ export class PrestamosService {
         where: { socio_id: socioId },
         include: {
           juego: {
-            select: { id: true, titulo: true, foto_url: true, categoria: true },
+            select: { id: true, nombre: true },
           },
         },
         orderBy: { fecha_solicitud: 'desc' },
@@ -29,7 +29,7 @@ export class PrestamosService {
   async solicitar(socioId: string, input: SolicitarPrestamoInput) {
     const juego = await this.prisma.juego.findUnique({ where: { id: input.juego_id } })
     if (!juego) throw new Error('Juego no encontrado')
-    if (juego.estado !== 'disponible') throw new Error('El juego no está disponible para préstamo')
+    if (juego.estado !== 'en_estanteria') throw new Error('El juego no está disponible para préstamo')
 
     const prestamoExistente = await this.prisma.prestamo.findFirst({
       where: {
@@ -50,7 +50,7 @@ export class PrestamosService {
         estado: EstadoPrestamo.pendiente,
       },
       include: {
-        juego: { select: { id: true, titulo: true } },
+        juego: { select: { id: true, nombre: true } },
       },
     })
   }
@@ -70,7 +70,7 @@ export class PrestamosService {
       this.prisma.prestamo.findMany({
         where,
         include: {
-          juego: { select: { id: true, titulo: true, categoria: true } },
+          juego: { select: { id: true, nombre: true } },
           socio: { select: { id: true, nombre: true, apellidos: true, email: true, apodo: true } },
         },
         orderBy: { fecha_solicitud: 'desc' },
@@ -116,7 +116,7 @@ export class PrestamosService {
       })
       await tx.juego.update({
         where: { id: prestamo.juego_id },
-        data: { estado: 'prestado' },
+        data: { estado: 'prestado' as const },
       })
       return updated
     })
@@ -151,7 +151,7 @@ export class PrestamosService {
       })
       await tx.juego.update({
         where: { id: prestamo.juego_id },
-        data: { estado: 'disponible' },
+        data: { estado: 'en_estanteria' as const },
       })
       return updated
     })

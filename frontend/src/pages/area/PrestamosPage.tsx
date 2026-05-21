@@ -32,7 +32,7 @@ function formatDate(dateStr?: string | null) {
 }
 
 function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => void }) {
-  const disponible = juego.estado === 'disponible'
+  const disponible = juego.estado === 'en_estanteria'
   return (
     <button
       onClick={() => disponible && onSelect(juego)}
@@ -45,8 +45,7 @@ function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => 
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-sm truncate">{juego.titulo}</p>
-          {juego.autor && <p className="text-xs text-muted-foreground truncate">{juego.autor}</p>}
+          <p className="font-display font-bold text-sm truncate">{juego.nombre}</p>
           {(juego.num_jugadores_min || juego.num_jugadores_max) && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {juego.num_jugadores_min}
@@ -61,7 +60,7 @@ function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => 
           variant={disponible ? 'default' : 'secondary'}
           className="text-xs flex-shrink-0"
         >
-          {disponible ? 'Disponible' : juego.estado === 'prestado' ? 'Prestado' : 'No disponible'}
+          {disponible ? 'En estantería' : juego.estado === 'prestado' ? 'Prestado' : 'No disponible'}
         </Badge>
       </div>
     </button>
@@ -83,7 +82,7 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
   const { mutate: solicitar, isPending } = useMutation({
     mutationFn: () => prestamosApi.solicitar(juegoSeleccionado!.id, notas || undefined),
     onSuccess: () => {
-      toast.success(`Préstamo de "${juegoSeleccionado?.titulo}" solicitado correctamente`)
+      toast.success(`Préstamo de "${juegoSeleccionado?.nombre}" solicitado correctamente`)
       queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
       handleClose()
     },
@@ -142,10 +141,7 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
             <div className="p-3 rounded-lg border border-primary/30 bg-accent/20">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-display font-bold">{juegoSeleccionado.titulo}</p>
-                  {juegoSeleccionado.autor && (
-                    <p className="text-sm text-muted-foreground">{juegoSeleccionado.autor}</p>
-                  )}
+                  <p className="font-display font-bold">{juegoSeleccionado.nombre}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -323,11 +319,8 @@ function PrestamosList({
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-display font-bold text-sm truncate">
-                  {p.juego?.titulo ?? 'Juego desconocido'}
+                  {p.juego?.nombre ?? 'Juego desconocido'}
                 </p>
-                {p.juego?.categoria && (
-                  <p className="text-xs text-muted-foreground">{p.juego.categoria}</p>
-                )}
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                   <span>Solicitado: {formatDate(p.fecha_solicitud)}</span>
                   {p.fecha_prestamo && <span>Prestado: {formatDate(p.fecha_prestamo)}</span>}

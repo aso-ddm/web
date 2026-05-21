@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, Library, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Library, Search, MapPin } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
@@ -12,38 +12,34 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
 import { juegosApi } from '@/services/api/juegos'
+import { sociosApi } from '@/services/api/socios'
 import { api } from '@/services/api/client'
 import type { Juego, EstadoJuego } from '@/types/api'
 
 const juegoSchema = z.object({
-  titulo: z.string().min(1, 'El título es obligatorio'),
-  autor: z.string().optional(),
-  editorial: z.string().optional(),
-  anio_publicacion: z.coerce.number().int().min(1900).max(2100).optional().or(z.literal('')),
+  nombre: z.string().min(1, 'El nombre es obligatorio'),
+  localizacion: z.string().optional(),
   num_jugadores_min: z.coerce.number().int().positive().optional().or(z.literal('')),
   num_jugadores_max: z.coerce.number().int().positive().optional().or(z.literal('')),
-  duracion_minutos: z.coerce.number().int().positive().optional().or(z.literal('')),
-  edad_recomendada: z.coerce.number().int().positive().optional().or(z.literal('')),
-  categoria: z.string().optional(),
-  propietario: z.string().optional(),
-  foto_url: z.string().url('URL no válida').optional().or(z.literal('')),
-  bgg_id: z.string().optional(),
+  notas: z.string().optional(),
+  propietario_id: z.string().uuid().optional().or(z.literal('')),
 })
 type JuegoForm = z.infer<typeof juegoSchema>
 
 const estadoConfig: Record<EstadoJuego, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  disponible: { label: 'Disponible', variant: 'default' },
+  en_estanteria: { label: 'En estantería', variant: 'default' },
   prestado: { label: 'Prestado', variant: 'secondary' },
-  mantenimiento: { label: 'Mantenimiento', variant: 'destructive' },
+  retirado: { label: 'Retirado', variant: 'destructive' },
 }
 
 function JuegoFormDialog({
@@ -56,29 +52,31 @@ function JuegoFormDialog({
   const queryClient = useQueryClient()
   const isEdit = !!juego
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<JuegoForm>({
+  const { data: sociosData } = useQuery({
+    queryKey: ['socios-activos'],
+    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 200 }),
+    enabled: open,
+  })
+  const socios = sociosData?.data ?? []
+
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<JuegoForm>({
     resolver: zodResolver(juegoSchema),
     defaultValues: juego
       ? {
-          titulo: juego.titulo,
-          autor: juego.autor ?? '',
-          editorial: juego.editorial ?? '',
-          anio_publicacion: juego.anio_publicacion ?? '',
+          nombre: juego.nombre,
+          localizacion: juego.localizacion ?? '',
           num_jugadores_min: juego.num_jugadores_min ?? '',
           num_jugadores_max: juego.num_jugadores_max ?? '',
-          duracion_minutos: juego.duracion_minutos ?? '',
-          edad_recomendada: juego.edad_recomendada ?? '',
-          categoria: juego.categoria ?? '',
-          propietario: juego.propietario ?? '',
-          foto_url: juego.foto_url ?? '',
-          bgg_id: juego.bgg_id ?? '',
+          notas: juego.notas ?? '',
+          propietario_id: juego.propietario_id ?? '',
         }
       : {},
   })
 
+  const propietarioId = watch('propietario_id')
+
   const { mutate, isPending } = useMutation({
     mutationFn: (data: JuegoForm) => {
-      // Limpiar campos vacíos
       const clean = Object.fromEntries(
         Object.entries(data).filter(([, v]) => v !== '' && v !== undefined),
       )
@@ -100,7 +98,7 @@ function JuegoFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-primary">
             {isEdit ? 'Editar juego' : 'Añadir juego al catálogo'}
@@ -108,67 +106,54 @@ function JuegoFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4 py-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="titulo" className="font-display font-bold text-xs">Título *</Label>
-              <Input id="titulo" {...register('titulo')} className={errors.titulo ? 'border-destructive' : ''} />
-              {errors.titulo && <p className="text-xs text-destructive">{errors.titulo.message}</p>}
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="nombre" className="font-display font-bold text-xs">Nombre *</Label>
+            <Input id="nombre" {...register('nombre')} className={errors.nombre ? 'border-destructive' : ''} />
+            {errors.nombre && <p className="text-xs text-destructive">{errors.nombre.message}</p>}
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="autor" className="font-display font-bold text-xs">Autor / Diseñador</Label>
-              <Input id="autor" {...register('autor')} />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="localizacion" className="font-display font-bold text-xs">Estantería / Localización</Label>
+            <Input id="localizacion" {...register('localizacion')} placeholder="Ej: A3, Estante superior..." />
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="editorial" className="font-display font-bold text-xs">Editorial</Label>
-              <Input id="editorial" {...register('editorial')} />
+          <div className="space-y-1.5">
+            <Label className="font-display font-bold text-xs">Nº jugadores</Label>
+            <div className="flex items-center gap-2">
+              <Input type="number" {...register('num_jugadores_min')} placeholder="Mín" />
+              <span className="text-muted-foreground">—</span>
+              <Input type="number" {...register('num_jugadores_max')} placeholder="Máx" />
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="categoria" className="font-display font-bold text-xs">Categoría</Label>
-              <Input id="categoria" {...register('categoria')} placeholder="Estrategia, Familiar, Party..." />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="font-display font-bold text-xs">Propietario</Label>
+            <Select
+              value={propietarioId ?? ''}
+              onValueChange={(v) => setValue('propietario_id', v === 'club' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Club (por defecto)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="club">Club (sin propietario específico)</SelectItem>
+                {socios.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.nombre} {s.apellidos}{s.apodo ? ` (${s.apodo})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="anio_publicacion" className="font-display font-bold text-xs">Año de publicación</Label>
-              <Input id="anio_publicacion" type="number" {...register('anio_publicacion')} placeholder="2023" />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="font-display font-bold text-xs">Nº jugadores</Label>
-              <div className="flex items-center gap-2">
-                <Input type="number" {...register('num_jugadores_min')} placeholder="Mín" />
-                <span className="text-muted-foreground">—</span>
-                <Input type="number" {...register('num_jugadores_max')} placeholder="Máx" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="duracion_minutos" className="font-display font-bold text-xs">Duración (min)</Label>
-              <Input id="duracion_minutos" type="number" {...register('duracion_minutos')} placeholder="60" />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="edad_recomendada" className="font-display font-bold text-xs">Edad recomendada</Label>
-              <Input id="edad_recomendada" type="number" {...register('edad_recomendada')} placeholder="12" />
-            </div>
-
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="propietario" className="font-display font-bold text-xs">Propietario</Label>
-              <Input id="propietario" {...register('propietario')} placeholder="Club / Nombre del socio donante" />
-            </div>
-
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label htmlFor="foto_url" className="font-display font-bold text-xs">URL de imagen</Label>
-              <Input id="foto_url" {...register('foto_url')} placeholder="https://..." />
-              {errors.foto_url && <p className="text-xs text-destructive">{errors.foto_url.message}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="bgg_id" className="font-display font-bold text-xs">ID en BoardGameGeek</Label>
-              <Input id="bgg_id" {...register('bgg_id')} placeholder="123456" />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="notas" className="font-display font-bold text-xs">Notas</Label>
+            <Textarea
+              id="notas"
+              {...register('notas')}
+              placeholder="Estado del juego, piezas faltantes, observaciones..."
+              rows={3}
+            />
           </div>
 
           <DialogFooter>
@@ -247,7 +232,7 @@ export function GestionJuegosPage() {
           <div className="relative flex-1 min-w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por título, autor..."
+              placeholder="Buscar por nombre, estantería..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -262,14 +247,14 @@ export function GestionJuegosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los estados</SelectItem>
-              <SelectItem value="disponible">Disponible</SelectItem>
+              <SelectItem value="en_estanteria">En estantería</SelectItem>
               <SelectItem value="prestado">Prestado</SelectItem>
-              <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+              <SelectItem value="retirado">Retirado</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Tabla / Lista */}
+        {/* Lista */}
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
@@ -294,27 +279,27 @@ export function GestionJuegosPage() {
                   return (
                     <div key={juego.id} className="flex items-center gap-4 px-4 py-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-display font-bold text-sm">{juego.titulo}</p>
-                          {juego.categoria && (
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {juego.categoria}
+                        <p className="font-display font-bold text-sm">{juego.nombre}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {juego.localizacion && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />{juego.localizacion}
                             </span>
                           )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {[juego.autor, juego.editorial].filter(Boolean).join(' · ')}
                           {(juego.num_jugadores_min || juego.num_jugadores_max) && (
-                            <span>
-                              {' · '}
+                            <span className="text-xs text-muted-foreground">
                               {juego.num_jugadores_min}
                               {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
                                 ? `–${juego.num_jugadores_max}`
-                                : ''}{' '}
-                              j.
+                                : ''}{' '}j.
                             </span>
                           )}
-                        </p>
+                          {juego.propietario && (
+                            <span className="text-xs text-muted-foreground">
+                              {juego.propietario.nombre} {juego.propietario.apellidos}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -322,7 +307,7 @@ export function GestionJuegosPage() {
                           value={juego.estado}
                           onValueChange={(v) => cambiarEstado({ id: juego.id, estado: v as EstadoJuego })}
                         >
-                          <SelectTrigger className="h-8 w-36 text-xs">
+                          <SelectTrigger className="h-8 w-40 text-xs">
                             <SelectValue>
                               <Badge variant={cfg.variant} className="font-display text-xs">
                                 {cfg.label}
@@ -330,9 +315,9 @@ export function GestionJuegosPage() {
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="disponible">Disponible</SelectItem>
+                            <SelectItem value="en_estanteria">En estantería</SelectItem>
                             <SelectItem value="prestado">Prestado</SelectItem>
-                            <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+                            <SelectItem value="retirado">Retirado</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -363,19 +348,17 @@ export function GestionJuegosPage() {
         </Card>
       </div>
 
-      {/* Dialog crear/editar */}
       <JuegoFormDialog
         open={dialogOpen}
         juego={editando}
         onClose={() => { setDialogOpen(false); setEditando(undefined) }}
       />
 
-      {/* Confirm eliminar */}
       <AlertDialog open={!!eliminando} onOpenChange={(v) => !v && setEliminando(undefined)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-primary">
-              ¿Eliminar «{eliminando?.titulo}»?
+              ¿Eliminar «{eliminando?.nombre}»?
             </AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción es irreversible. El juego se eliminará del catálogo permanentemente.

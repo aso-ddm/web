@@ -111,23 +111,18 @@ export interface LoginResponse {
 }
 
 // ── Juego ─────────────────────────────────────────────────────────────────────
-export type EstadoJuego = 'disponible' | 'prestado' | 'mantenimiento'
+export type EstadoJuego = 'en_estanteria' | 'prestado' | 'retirado'
 
 export interface Juego {
   id: string
-  titulo: string
-  autor?: string | null
-  editorial?: string | null
-  anio_publicacion?: number | null
+  nombre: string
+  localizacion?: string | null
   num_jugadores_min?: number | null
   num_jugadores_max?: number | null
-  duracion_minutos?: number | null
-  edad_recomendada?: number | null
-  categoria?: string | null
+  notas?: string | null
   estado: EstadoJuego
-  propietario?: string | null
-  foto_url?: string | null
-  bgg_id?: string | null
+  propietario_id?: string | null
+  propietario?: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> | null
 }
 
 // ── Préstamo ──────────────────────────────────────────────────────────────────
@@ -144,7 +139,7 @@ export interface Prestamo {
   fecha_devolucion?: string | null
   motivo_rechazo?: string | null
   notas?: string | null
-  juego?: Pick<Juego, 'id' | 'titulo' | 'foto_url' | 'categoria'>
+  juego?: Pick<Juego, 'id' | 'nombre'>
   socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }
 }
 

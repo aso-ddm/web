@@ -17,7 +17,18 @@
       "Bash(docker version *)",
       "Bash(docker build *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(Select-Object Name, FullName)",
+      "Bash(pnpm prisma:generate *)",
+      "Bash(npx prisma *)",
+      "Bash(psql -U postgres -c \"\\\\du\")",
+      "Bash(psql -U dragonuser -d dragondb -c \"\\\\conninfo\")",
+      "Bash(/c/Program Files/PostgreSQL/14/bin/psql.exe *)",
+      "Bash(\"/c/Program Files/PostgreSQL/14/bin/psql.exe\" -U postgres -l)",
+      "Bash(PGPASSWORD=\"DragonTest_2026\" /c/Program Files/PostgreSQL/14/bin/psql.exe *)",
+      "Bash(/c/Program Files/PostgreSQL/14/bin/pg_ctl.exe reload *)",
+      "PowerShell(Restart-Service *)",
+      "Bash(PGPASSWORD=\"\" /c/Program Files/PostgreSQL/14/bin/psql.exe *)"
     ]
   }
 }

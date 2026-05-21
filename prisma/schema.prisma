@@ -45,9 +45,9 @@ enum EstadoSolicitud {
 }
 
 enum EstadoJuego {
-  disponible
+  en_estanteria
   prestado
-  mantenimiento
+  retirado
 }
 
 enum EstadoPrestamo {
@@ -111,6 +111,9 @@ model Usuario {
   prestamos_aprobados    Prestamo[]  @relation("AproboPrestamoRel")
   prestamos_devolucion   Prestamo[]  @relation("ConfirmoDevolucionRel")
 
+  // Juegos en propiedad
+  juegos_en_propiedad    Juego[]     @relation("PropietarioJuego")
+
   // Visitas registradas por este socio
   visitas_registradas    Visita[]
 
@@ -139,26 +142,21 @@ model RelacionSocio {
 
 model Juego {
   id                 String      @id @default(uuid())
-  titulo             String
-  autor              String?
-  editorial          String?
-  anio_publicacion   Int?
+  nombre             String
+  localizacion       String?
   num_jugadores_min  Int?
   num_jugadores_max  Int?
-  duracion_minutos   Int?
-  edad_recomendada   Int?
-  categoria          String?
-  estado             EstadoJuego @default(disponible)
-  propietario        String?
-  foto_url           String?
-  bgg_id             String?
+  notas              String?
+  estado             EstadoJuego @default(en_estanteria)
+  propietario_id     String?
 
-  prestamos Prestamo[]
+  propietario Usuario?   @relation("PropietarioJuego", fields: [propietario_id], references: [id], onDelete: SetNull)
+  prestamos   Prestamo[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  @@index([titulo])
+  @@index([nombre])
   @@index([estado])
 }
 

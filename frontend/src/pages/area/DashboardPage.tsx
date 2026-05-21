@@ -274,7 +274,7 @@ export function DashboardPage() {
                       <span className="flex-shrink-0">{prestamoEstadoIcon[p.estado]}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-display font-bold truncate">
-                          {p.juego?.titulo ?? 'Juego desconocido'}
+                          {p.juego?.nombre ?? 'Juego desconocido'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDate(p.fecha_solicitud)}

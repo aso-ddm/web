@@ -46,7 +46,7 @@ function RechazarDialog({ prestamo, onClose }: { prestamo: Prestamo; onClose: ()
         <DialogHeader>
           <DialogTitle className="font-display text-primary">Rechazar préstamo</DialogTitle>
           <DialogDescription>
-            <strong>{nombreSocio(prestamo)}</strong> — <em>{prestamo.juego?.titulo}</em>
+            <strong>{nombreSocio(prestamo)}</strong> — <em>{prestamo.juego?.nombre}</em>
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5 py-2">
@@ -179,7 +179,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
       <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-display font-bold text-sm">{prestamo.juego?.titulo ?? '—'}</p>
+            <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}</p>
             <Badge variant={cfg.variant} className="font-display text-xs">{cfg.label}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
