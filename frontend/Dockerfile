@@ -1,18 +1,14 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
-WORKDIR /app
+WORKDIR /app/frontend
 
-RUN npm install -g pnpm
+COPY frontend/package.json ./
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY backend/package.json ./backend/
-COPY frontend/package.json ./frontend/
+RUN npm install
 
-RUN pnpm install --frozen-lockfile
+COPY frontend/ ./
 
-COPY frontend ./frontend/
-
-RUN cd frontend && pnpm run build
+RUN npm run build
 
 # ── Production stage ───────────────────────────────────────────────────────────
 FROM nginx:alpine AS production

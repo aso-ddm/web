@@ -10,7 +10,12 @@
       "Bash(Get-ChildItem *)",
       "Bash(git remote *)",
       "Bash(git checkout *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(pnpm install *)",
+      "Bash(docker info *)",
+      "Bash(docker login *)",
+      "Bash(docker version *)",
+      "Bash(docker build *)"
     ]
   }
 }
