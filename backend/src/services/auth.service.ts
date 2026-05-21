@@ -1,6 +1,6 @@
 import { PrismaClient, Rol } from '@prisma/client'
 import bcrypt from 'bcrypt'
-import { RegisterInput, LoginInput } from '../schemas/auth.schema.js'
+import { RegisterInput, LoginInput } from '../schemas/auth.schema'
 
 const SALT_ROUNDS = 12
 

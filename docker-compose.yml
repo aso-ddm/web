@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dragón de Madera — docker-compose.yml
+# Para despliegue en VPS Ionos con proxy_network externo.
+#
+# IPs asignadas en proxy_network (rango .110-.112):
+#   .110 → dragondemadera_db
+#   .111 → dragondemadera_backend
+#   .112 → dragondemadera_frontend
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  dragondemadera_db:
+    container_name: dragondemadera_db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dragondemadera}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dragondemadera}
+      POSTGRES_DB: ${POSTGRES_DB:-dragondb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dragondemadera}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      proxy_network:
+        ipv4_address: 192.168.1.110
+
+  dragondemadera_backend:
+    container_name: dragondemadera_backend
+    image: asoddm/dragondemadera-backend:latest
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dragondemadera}:${POSTGRES_PASSWORD:-dragondemadera}@dragondemadera_db:5432/${POSTGRES_DB:-dragondb}
+      NODE_ENV: production
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-https://dragondemadera.com}
+    depends_on:
+      dragondemadera_db:
+        condition: service_healthy
+    networks:
+      proxy_network:
+        ipv4_address: 192.168.1.111
+        aliases:
+          - backend
+
+  dragondemadera_frontend:
+    container_name: dragondemadera_frontend
+    image: asoddm/dragondemadera-frontend:latest
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      - dragondemadera_backend
+    networks:
+      proxy_network:
+        ipv4_address: 192.168.1.112
+
+volumes:
+  postgres_data:
+
+networks:
+  proxy_network:
+    external: true

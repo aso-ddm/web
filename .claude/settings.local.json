@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(Measure-Object -Line)",
+      "Bash(xargs wc *)",
+      "Bash(npm install *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(git remote *)",
+      "Bash(git checkout *)",
+      "Bash(git push *)"
+    ]
+  }
+}

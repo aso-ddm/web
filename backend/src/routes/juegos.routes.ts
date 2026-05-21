@@ -1,77 +1,71 @@
-import { FastifyPluginAsync } from 'fastify'
-import { JuegosService } from '../services/juegos.service.js'
-import { crearJuegoSchema, updateJuegoSchema, filtrosJuegosSchema } from '../schemas/juego.schema.js'
-import { requireRoles, ROLES } from '../plugins/authenticate.plugin.js'
+import { Router } from 'express'
+import { JuegosService } from '../services/juegos.service'
+import { crearJuegoSchema, updateJuegoSchema, filtrosJuegosSchema } from '../schemas/juego.schema'
+import { requireRoles, ROLES } from '../middleware/auth'
+import { prisma } from '../lib/prisma'
 
-const juegosRoutes: FastifyPluginAsync = async (fastify) => {
-  const juegosService = new JuegosService(fastify.prisma)
+const router = Router()
+const juegosService = new JuegosService(prisma)
 
-  // GET /api/juegos — catálogo público con filtros
-  fastify.get('/', async (request, reply) => {
-    const parsed = filtrosJuegosSchema.safeParse(request.query)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Parámetros inválidos', details: parsed.error.flatten().fieldErrors })
-    }
-    const result = await juegosService.getAll(parsed.data)
-    return reply.send(result)
-  })
+// GET /api/juegos — catálogo público con filtros
+router.get('/', async (req, res) => {
+  const parsed = filtrosJuegosSchema.safeParse(req.query)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Parámetros inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  const result = await juegosService.getAll(parsed.data)
+  res.json(result)
+})
 
-  // GET /api/juegos/:id — detalle público
-  fastify.get('/:id', async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      const juego = await juegosService.getById(id)
-      return reply.send({ data: juego })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
+// GET /api/juegos/:id — detalle público
+router.get('/:id', async (req, res) => {
+  try {
+    const juego = await juegosService.getById(req.params.id)
+    res.json({ data: juego })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
 
-  // POST /api/juegos — crear juego (ludotecario / directiva)
-  fastify.post('/', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
-  }, async (request, reply) => {
-    const parsed = crearJuegoSchema.safeParse(request.body)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
-    }
-    const juego = await juegosService.crear(parsed.data)
-    return reply.status(201).send({ data: juego })
-  })
+// POST /api/juegos — crear (ludotecario / directiva)
+router.post('/', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+  const parsed = crearJuegoSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  const juego = await juegosService.crear(parsed.data)
+  res.status(201).json({ data: juego })
+})
 
-  // PUT /api/juegos/:id — actualizar juego (ludotecario / directiva)
-  fastify.put('/:id', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    const parsed = updateJuegoSchema.safeParse(request.body)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
-    }
-    try {
-      const juego = await juegosService.update(id, parsed.data)
-      return reply.send({ data: juego })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
+// PUT /api/juegos/:id — actualizar (ludotecario / directiva)
+router.put('/:id', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+  const parsed = updateJuegoSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  try {
+    const juego = await juegosService.update(req.params.id, parsed.data)
+    res.json({ data: juego })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
 
-  // DELETE /api/juegos/:id — eliminar (solo directiva)
-  fastify.delete('/:id', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      await juegosService.delete(id)
-      return reply.status(204).send()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      const status = message.includes('no encontrado') ? 404 : 409
-      return reply.status(status).send({ error: message })
-    }
-  })
-}
+// DELETE /api/juegos/:id — eliminar (solo directiva)
+router.delete('/:id', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  try {
+    await juegosService.delete(req.params.id)
+    res.status(204).send()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    const status = message.includes('no encontrado') ? 404 : 409
+    res.status(status).json({ error: message })
+  }
+})
 
-export default juegosRoutes
+export default router

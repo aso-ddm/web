@@ -1,5 +1,5 @@
 import { PrismaClient, EstadoPrestamo } from '@prisma/client'
-import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema.js'
+import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema'
 
 export class PrestamosService {
   constructor(private prisma: PrismaClient) {}

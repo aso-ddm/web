@@ -1,0 +1,228 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Rol {
+  presidente
+  secretario
+  tesorero
+  vocal
+  ludotecario
+  socio_basico
+}
+
+enum EstadoSocio {
+  pendiente
+  activo
+  inactivo
+  baja
+}
+
+enum TipoCuota {
+  individual
+  conjunta
+}
+
+enum TipoRelacion {
+  pareja
+  familiar_directo
+}
+
+enum EstadoSolicitud {
+  pendiente
+  aprobada
+  rechazada
+}
+
+enum EstadoJuego {
+  disponible
+  prestado
+  mantenimiento
+}
+
+enum EstadoPrestamo {
+  pendiente
+  aprobado
+  rechazado
+  activo
+  devuelto
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+model Usuario {
+  id                      String      @id @default(uuid())
+  email                   String      @unique
+  password_hash           String
+  nombre                  String
+  apellidos               String
+  dni                     String      @unique
+  telefono                String?
+  fecha_nacimiento        DateTime?
+  direccion               String?
+  alias_telegram          String?
+  apodo                   String?
+  tipo_cuota              TipoCuota   @default(individual)
+  consentimiento_tiendas      Boolean     @default(false)
+  comprobante_transferencia   String?
+  roles                       Rol[]
+  estado                      EstadoSocio @default(pendiente)
+  fecha_alta              DateTime?
+  fecha_baja              DateTime?
+  tiene_llaves            Boolean     @default(false)
+  fecha_solicitud_llaves  DateTime?
+  fecha_aprobacion_llaves DateTime?
+
+  // Trazabilidad — quién aprobó el alta, las llaves, quién dio de baja
+  aprobado_por_id        String?
+  aprobado_llaves_por_id String?
+  baja_por_id            String?
+
+  aprobado_por            Usuario?  @relation("AproboAlta",   fields: [aprobado_por_id],        references: [id])
+  socios_aprobados        Usuario[] @relation("AproboAlta")
+  aprobado_llaves_por     Usuario?  @relation("AproboLlaves", fields: [aprobado_llaves_por_id],  references: [id])
+  socios_llaves_aprobadas Usuario[] @relation("AproboLlaves")
+  baja_por                Usuario?  @relation("DioBaja",      fields: [baja_por_id],             references: [id])
+  socios_dados_baja       Usuario[] @relation("DioBaja")
+
+  // Cuota conjunta
+  solicitud_grupal_id String?
+  solicitud_grupal    SolicitudGrupal? @relation("MiembrosGrupo", fields: [solicitud_grupal_id], references: [id])
+  grupo_como_titular  SolicitudGrupal? @relation("TitularGrupo")
+
+  // Relaciones de cuota (pareja / familia)
+  relaciones_como_principal    RelacionSocio[] @relation("SocioPrincipal")
+  relaciones_como_relacionado  RelacionSocio[] @relation("SocioRelacionado")
+
+  // Préstamos
+  prestamos              Prestamo[]  @relation("SocioPrestamo")
+  prestamos_aprobados    Prestamo[]  @relation("AproboPrestamoRel")
+  prestamos_devolucion   Prestamo[]  @relation("ConfirmoDevolucionRel")
+
+  // Visitas registradas por este socio
+  visitas_registradas    Visita[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([email])
+  @@index([estado])
+  @@index([dni])
+}
+
+model RelacionSocio {
+  id                   String       @id @default(uuid())
+  socio_principal_id   String
+  socio_relacionado_id String
+  tipo_relacion        TipoRelacion
+  activa               Boolean      @default(true)
+  fecha_inicio         DateTime     @default(now())
+  fecha_fin            DateTime?
+
+  socio_principal    Usuario @relation("SocioPrincipal",   fields: [socio_principal_id],   references: [id], onDelete: Cascade)
+  socio_relacionado  Usuario @relation("SocioRelacionado", fields: [socio_relacionado_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+}
+
+model Juego {
+  id                 String      @id @default(uuid())
+  titulo             String
+  autor              String?
+  editorial          String?
+  anio_publicacion   Int?
+  num_jugadores_min  Int?
+  num_jugadores_max  Int?
+  duracion_minutos   Int?
+  edad_recomendada   Int?
+  categoria          String?
+  estado             EstadoJuego @default(disponible)
+  propietario        String?
+  foto_url           String?
+  bgg_id             String?
+
+  prestamos Prestamo[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([titulo])
+  @@index([estado])
+}
+
+model Prestamo {
+  id                      String         @id @default(uuid())
+  juego_id                String
+  socio_id                String
+  usuario_aprobo_id       String?
+  usuario_confirmo_dev_id String?
+  fecha_solicitud         DateTime       @default(now())
+  fecha_aprobacion        DateTime?
+  fecha_prestamo          DateTime?
+  fecha_devolucion        DateTime?
+  estado                  EstadoPrestamo @default(pendiente)
+  motivo_rechazo          String?
+  notas                   String?
+
+  juego                        Juego    @relation(fields: [juego_id],                 references: [id])
+  socio                        Usuario  @relation("SocioPrestamo",         fields: [socio_id],                  references: [id])
+  usuario_aprobo               Usuario? @relation("AproboPrestamoRel",     fields: [usuario_aprobo_id],         references: [id])
+  usuario_confirmo_devolucion  Usuario? @relation("ConfirmoDevolucionRel", fields: [usuario_confirmo_dev_id],   references: [id])
+
+  created_at DateTime @default(now())
+
+  @@index([juego_id])
+  @@index([socio_id])
+  @@index([estado])
+}
+
+model Visita {
+  id                String   @id @default(uuid())
+  nombre_completo   String
+  fecha_visita      DateTime
+  numero_visita     Int
+  es_pago           Boolean  @default(false)
+  importe           Decimal? @db.Decimal(10, 2)
+  socio_registro_id String
+
+  socio_registro Usuario @relation(fields: [socio_registro_id], references: [id])
+
+  created_at DateTime @default(now())
+
+  @@index([nombre_completo])
+  @@index([fecha_visita])
+}
+
+model SolicitudGrupal {
+  id         String          @id @default(uuid())
+  titular_id String          @unique
+  estado     EstadoSolicitud @default(pendiente)
+  created_at DateTime        @default(now())
+  updated_at DateTime        @updatedAt
+
+  titular  Usuario   @relation("TitularGrupo",  fields: [titular_id], references: [id])
+  miembros Usuario[] @relation("MiembrosGrupo")
+}
+
+model Configuracion {
+  id          String  @id @default(uuid())
+  clave       String  @unique
+  valor       String
+  tipo        String  // 'numero' | 'texto' | 'boolean'
+  descripcion String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}

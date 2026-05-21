@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { AuthService } from '../services/auth.service.js'
-import { createPrismaMock } from './helpers/prisma.mock.js'
+import { AuthService } from '../services/auth.service'
+import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
 
 const { mockHash, mockCompare } = vi.hoisted(() => ({

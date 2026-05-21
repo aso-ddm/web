@@ -1,266 +1,239 @@
-import { FastifyPluginAsync } from 'fastify'
+import { Router } from 'express'
 import fs from 'node:fs'
 import path from 'node:path'
-import { SociosService } from '../services/socios.service.js'
+import { SociosService } from '../services/socios.service'
 import {
   updateSocioSchema,
   updateRolesSchema,
   filtrosSociosSchema,
-} from '../schemas/socio.schema.js'
-import { requireRoles, ROLES } from '../plugins/authenticate.plugin.js'
+} from '../schemas/socio.schema'
+import { authenticate, requireRoles, ROLES } from '../middleware/auth'
+import { prisma } from '../lib/prisma'
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads/transferencias')
 
-const sociosRoutes: FastifyPluginAsync = async (fastify) => {
-  const sociosService = new SociosService(fastify.prisma)
+const router = Router()
+const sociosService = new SociosService(prisma)
 
-  // GET /api/socios — listado con filtros (directiva + vocales)
-  fastify.get('/', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_VOCALES),
-  }, async (request, reply) => {
-    const parsed = filtrosSociosSchema.safeParse(request.query)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Parámetros inválidos', details: parsed.error.flatten().fieldErrors })
-    }
-    const result = await sociosService.getAll(parsed.data)
-    return reply.send(result)
+// GET /api/socios — listado con filtros (directiva + vocales)
+router.get('/', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
+  const parsed = filtrosSociosSchema.safeParse(req.query)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Parámetros inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  const result = await sociosService.getAll(parsed.data)
+  res.json(result)
+})
+
+// GET /api/socios/pendientes — solo directiva
+router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA), async (_req, res) => {
+  const pendientes = await sociosService.getPendientes()
+  res.json({ data: pendientes })
+})
+
+// GET /api/socios/me — perfil propio
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const socio = await sociosService.getById(req.user.id)
+    res.json({ data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
+
+// GET /api/socios/:id/comprobante — directiva descarga comprobante
+router.get('/:id/comprobante', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
+  const { id } = req.params
+  const socio = await prisma.usuario.findUnique({
+    where: { id },
+    select: { comprobante_transferencia: true, nombre: true, apellidos: true },
   })
+  if (!socio) {
+    res.status(404).json({ error: 'Socio no encontrado' })
+    return
+  }
+  if (!socio.comprobante_transferencia) {
+    res.status(404).json({ error: 'Este socio no tiene comprobante adjunto' })
+    return
+  }
+  const filePath = path.join(UPLOADS_DIR, socio.comprobante_transferencia)
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: 'Archivo no encontrado en el servidor' })
+    return
+  }
+  const ext = path.extname(socio.comprobante_transferencia).toLowerCase()
+  const mimeTypes: Record<string, string> = {
+    '.pdf': 'application/pdf',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+  }
+  const contentType = mimeTypes[ext] ?? 'application/octet-stream'
+  const nombreArchivo = `comprobante_${socio.nombre}_${socio.apellidos}${ext}`.replace(/\s+/g, '_')
+  res.setHeader('Content-Type', contentType)
+  res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`)
+  fs.createReadStream(filePath).pipe(res)
+})
 
-  // GET /api/socios/pendientes — solo directiva
-  fastify.get('/pendientes', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (_request, reply) => {
-    const pendientes = await sociosService.getPendientes()
-    return reply.send({ data: pendientes })
-  })
+// GET /api/socios/:id — ver socio (directiva ve cualquiera; socio solo el suyo)
+router.get('/:id', authenticate, async (req, res) => {
+  const { id } = req.params
+  const isDirectivaOVocal = ROLES.DIRECTIVA_Y_VOCALES.some(r => req.user.roles.includes(r))
+  if (!isDirectivaOVocal && req.user.id !== id) {
+    res.status(403).json({ error: 'No tienes permisos para ver este perfil' })
+    return
+  }
+  try {
+    const socio = await sociosService.getById(id)
+    res.json({ data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
 
-  // GET /api/socios/me — perfil propio (cualquier socio autenticado)
-  fastify.get('/me', {
-    preHandler: fastify.authenticate,
-  }, async (request, reply) => {
-    try {
-      const socio = await sociosService.getById(request.user.id)
-      return reply.send({ data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
+// PUT /api/socios/:id — editar socio
+router.put('/:id', authenticate, async (req, res) => {
+  const { id } = req.params
+  const isDirectiva = ROLES.DIRECTIVA.some(r => req.user.roles.includes(r))
+  if (!isDirectiva && req.user.id !== id) {
+    res.status(403).json({ error: 'No puedes editar este perfil' })
+    return
+  }
+  const parsed = updateSocioSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  try {
+    const socio = await sociosService.update(id, parsed.data)
+    res.json({ data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
 
-  // GET /api/socios/:id — directiva ve cualquiera; socio solo puede ver el suyo
-  fastify.get('/:id', {
-    preHandler: fastify.authenticate,
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    const isDirectivaOVocal = ROLES.DIRECTIVA_Y_VOCALES.some(r => request.user.roles.includes(r))
+// PUT /api/socios/:id/roles — solo directiva
+router.put('/:id/roles', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  const parsed = updateRolesSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  try {
+    const socio = await sociosService.updateRoles(id, parsed.data.roles)
+    res.json({ data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
 
-    if (!isDirectivaOVocal && request.user.id !== id) {
-      return reply.status(403).send({ error: 'No tienes permisos para ver este perfil' })
-    }
+// POST /api/socios/:id/aprobar
+router.post('/:id/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  try {
+    const socio = await sociosService.aprobar(id, req.user.id)
+    res.json({ message: 'Socio aprobado correctamente', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
 
-    try {
-      const socio = await sociosService.getById(id)
-      return reply.send({ data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
+// POST /api/socios/:id/rechazar
+router.post('/:id/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  try {
+    const socio = await sociosService.rechazar(id, req.user.id)
+    res.json({ message: 'Solicitud rechazada', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
 
-  // PUT /api/socios/:id — directiva puede editar cualquiera; socio solo el suyo
-  fastify.put('/:id', {
-    preHandler: fastify.authenticate,
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    const isDirectiva = ROLES.DIRECTIVA.some(r => request.user.roles.includes(r))
+// POST /api/socios/:id/baja
+router.post('/:id/baja', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  try {
+    const socio = await sociosService.darDeBaja(id, req.user.id)
+    res.json({ message: 'Socio dado de baja correctamente', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
 
-    if (!isDirectiva && request.user.id !== id) {
-      return reply.status(403).send({ error: 'No puedes editar este perfil' })
-    }
+// POST /api/socios/:id/solicitar-llaves
+router.post('/:id/solicitar-llaves', authenticate, async (req, res) => {
+  const { id } = req.params
+  if (req.user.id !== id) {
+    res.status(403).json({ error: 'Solo puedes solicitar llaves para tu propia cuenta' })
+    return
+  }
+  try {
+    const socio = await sociosService.solicitarLlaves(id)
+    res.json({ message: 'Solicitud de llaves enviada', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
 
-    const parsed = updateSocioSchema.safeParse(request.body)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
-    }
+// POST /api/socios/:id/aprobar-llaves
+router.post('/:id/aprobar-llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  try {
+    const socio = await sociosService.aprobarLlaves(id, req.user.id)
+    res.json({ message: 'Llaves aprobadas correctamente', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
 
-    try {
-      const socio = await sociosService.update(id, parsed.data)
-      return reply.send({ data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
+// POST /api/socios/:id/devolver-llaves
+router.post('/:id/devolver-llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  try {
+    const socio = await sociosService.devolverLlaves(id, req.user.id)
+    res.json({ message: 'Llave devuelta correctamente', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
 
-  // PUT /api/socios/:id/roles — solo directiva
-  fastify.put('/:id/roles', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    const parsed = updateRolesSchema.safeParse(request.body)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
-    }
+// POST /api/socios/grupos/:grupoId/aprobar
+router.post('/grupos/:grupoId/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { grupoId } = req.params
+  try {
+    const resultado = await sociosService.aprobarGrupo(grupoId, req.user.id)
+    res.json({ message: 'Solicitud grupal aprobada correctamente', data: resultado })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    const status = message.includes('no encontrada') ? 404 : 400
+    res.status(status).json({ error: message })
+  }
+})
 
-    try {
-      const socio = await sociosService.updateRoles(id, parsed.data.roles)
-      return reply.send({ data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
+// POST /api/socios/grupos/:grupoId/rechazar
+router.post('/grupos/:grupoId/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { grupoId } = req.params
+  try {
+    const resultado = await sociosService.rechazarGrupo(grupoId, req.user.id)
+    res.json({ message: 'Solicitud grupal rechazada', data: resultado })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    const status = message.includes('no encontrada') ? 404 : 400
+    res.status(status).json({ error: message })
+  }
+})
 
-  // POST /api/socios/:id/aprobar — directiva aprueba solicitud de alta
-  fastify.post('/:id/aprobar', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      const socio = await sociosService.aprobar(id, request.user.id)
-      return reply.send({ message: 'Socio aprobado correctamente', data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(400).send({ error: message })
-    }
-  })
-
-  // POST /api/socios/:id/rechazar — directiva rechaza solicitud de alta
-  fastify.post('/:id/rechazar', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      const socio = await sociosService.rechazar(id, request.user.id)
-      return reply.send({ message: 'Solicitud rechazada', data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(400).send({ error: message })
-    }
-  })
-
-  // POST /api/socios/:id/baja — directiva da de baja a un socio activo
-  fastify.post('/:id/baja', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      const socio = await sociosService.darDeBaja(id, request.user.id)
-      return reply.send({ message: 'Socio dado de baja correctamente', data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(400).send({ error: message })
-    }
-  })
-
-  // POST /api/socios/:id/solicitar-llaves — el propio socio solicita llaves
-  fastify.post('/:id/solicitar-llaves', {
-    preHandler: fastify.authenticate,
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-
-    if (request.user.id !== id) {
-      return reply.status(403).send({ error: 'Solo puedes solicitar llaves para tu propia cuenta' })
-    }
-
-    try {
-      const socio = await sociosService.solicitarLlaves(id)
-      return reply.send({ message: 'Solicitud de llaves enviada', data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(400).send({ error: message })
-    }
-  })
-
-  // POST /api/socios/:id/aprobar-llaves — directiva aprueba solicitud de llaves
-  fastify.post('/:id/aprobar-llaves', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      const socio = await sociosService.aprobarLlaves(id, request.user.id)
-      return reply.send({ message: 'Llaves aprobadas correctamente', data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(400).send({ error: message })
-    }
-  })
-  // POST /api/socios/:id/devolver-llaves — directiva registra devolución de llaves
-  fastify.post('/:id/devolver-llaves', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    try {
-      const socio = await sociosService.devolverLlaves(id, request.user.id)
-      return reply.send({ message: 'Llave devuelta correctamente', data: socio })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(400).send({ error: message })
-    }
-  })
-
-  // POST /api/socios/grupos/:grupoId/aprobar — directiva aprueba solicitud grupal
-  fastify.post('/grupos/:grupoId/aprobar', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { grupoId } = request.params as { grupoId: string }
-    try {
-      const resultado = await sociosService.aprobarGrupo(grupoId, request.user.id)
-      return reply.send({ message: 'Solicitud grupal aprobada correctamente', data: resultado })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      const status = message.includes('no encontrada') ? 404 : 400
-      return reply.status(status).send({ error: message })
-    }
-  })
-
-  // POST /api/socios/grupos/:grupoId/rechazar — directiva rechaza solicitud grupal
-  fastify.post('/grupos/:grupoId/rechazar', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { grupoId } = request.params as { grupoId: string }
-    try {
-      const resultado = await sociosService.rechazarGrupo(grupoId, request.user.id)
-      return reply.send({ message: 'Solicitud grupal rechazada', data: resultado })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      const status = message.includes('no encontrada') ? 404 : 400
-      return reply.status(status).send({ error: message })
-    }
-  })
-  // GET /api/socios/:id/comprobante — directiva descarga el comprobante de transferencia
-  fastify.get('/:id/comprobante', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA_Y_VOCALES),
-  }, async (request, reply) => {
-    const { id } = request.params as { id: string }
-    const socio = await fastify.prisma.usuario.findUnique({
-      where: { id },
-      select: { comprobante_transferencia: true, nombre: true, apellidos: true },
-    })
-    if (!socio) {
-      return reply.status(404).send({ error: 'Socio no encontrado' })
-    }
-    if (!socio.comprobante_transferencia) {
-      return reply.status(404).send({ error: 'Este socio no tiene comprobante adjunto' })
-    }
-    const filePath = path.join(UPLOADS_DIR, socio.comprobante_transferencia)
-    if (!fs.existsSync(filePath)) {
-      return reply.status(404).send({ error: 'Archivo no encontrado en el servidor' })
-    }
-    const ext = path.extname(socio.comprobante_transferencia).toLowerCase()
-    const mimeTypes: Record<string, string> = {
-      '.pdf': 'application/pdf',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.webp': 'image/webp',
-    }
-    const contentType = mimeTypes[ext] ?? 'application/octet-stream'
-    const nombreArchivo = `comprobante_${socio.nombre}_${socio.apellidos}${ext}`.replace(/\s+/g, '_')
-    reply.header('Content-Type', contentType)
-    reply.header('Content-Disposition', `inline; filename="${nombreArchivo}"`)
-    return reply.send(fs.createReadStream(filePath))
-  })
-}
-
-export default sociosRoutes
+export default router

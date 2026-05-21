@@ -1,51 +1,46 @@
-import { FastifyPluginAsync } from 'fastify'
+import { Router } from 'express'
 import { z } from 'zod'
-import { ConfiguracionService } from '../services/configuracion.service.js'
-import { requireRoles, ROLES } from '../plugins/authenticate.plugin.js'
+import { ConfiguracionService } from '../services/configuracion.service'
+import { requireRoles, ROLES } from '../middleware/auth'
+import { prisma } from '../lib/prisma'
 
 const updateConfigSchema = z.object({
   valor: z.string().min(1, 'El valor es obligatorio'),
 })
 
-const configuracionRoutes: FastifyPluginAsync = async (fastify) => {
-  const configService = new ConfiguracionService(fastify.prisma)
+const router = Router()
+const configService = new ConfiguracionService(prisma)
 
-  // GET /api/config — listado (directiva)
-  fastify.get('/', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (_request, reply) => {
-    const configs = await configService.getAll()
-    return reply.send({ data: configs })
-  })
+// GET /api/config — listado (directiva)
+router.get('/', requireRoles(...ROLES.DIRECTIVA), async (_req, res) => {
+  const configs = await configService.getAll()
+  res.json({ data: configs })
+})
 
-  // GET /api/config/:clave — valor individual (público)
-  fastify.get('/:clave', async (request, reply) => {
-    const { clave } = request.params as { clave: string }
-    try {
-      const config = await configService.getByKey(clave)
-      return reply.send({ data: config })
-    } catch {
-      return reply.status(404).send({ error: `Configuración '${clave}' no encontrada` })
-    }
-  })
+// GET /api/config/:clave — valor individual (público)
+router.get('/:clave', async (req, res) => {
+  try {
+    const config = await configService.getByKey(req.params.clave)
+    res.json({ data: config })
+  } catch {
+    res.status(404).json({ error: `Configuración '${req.params.clave}' no encontrada` })
+  }
+})
 
-  // PUT /api/config/:clave — actualizar valor (directiva)
-  fastify.put('/:clave', {
-    preHandler: requireRoles(...ROLES.DIRECTIVA),
-  }, async (request, reply) => {
-    const { clave } = request.params as { clave: string }
-    const parsed = updateConfigSchema.safeParse(request.body)
-    if (!parsed.success) {
-      return reply.status(400).send({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
-    }
-    try {
-      const config = await configService.update(clave, parsed.data.valor)
-      return reply.send({ data: config })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error'
-      return reply.status(404).send({ error: message })
-    }
-  })
-}
+// PUT /api/config/:clave — actualizar (directiva)
+router.put('/:clave', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const parsed = updateConfigSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  try {
+    const config = await configService.update(req.params.clave, parsed.data.valor)
+    res.json({ data: config })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(404).json({ error: message })
+  }
+})
 
-export default configuracionRoutes
+export default router

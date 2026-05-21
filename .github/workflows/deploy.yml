@@ -27,13 +27,13 @@ jobs:
           CHANGED=$(git diff --name-only HEAD~1 HEAD)
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -q "^frontend/"; then
+          if echo "$CHANGED" | grep -qE "^frontend/|^prisma/"; then
             echo "frontend=true" >> $GITHUB_OUTPUT
           else
             echo "frontend=false" >> $GITHUB_OUTPUT
           fi
 
-          if echo "$CHANGED" | grep -q "^backend/"; then
+          if echo "$CHANGED" | grep -qE "^backend/|^prisma/"; then
             echo "backend=true" >> $GITHUB_OUTPUT
           else
             echo "backend=false" >> $GITHUB_OUTPUT
@@ -110,17 +110,16 @@ jobs:
         run: npm ci
 
       - name: Generar cliente Prisma (CI)
-        working-directory: backend
-        run: npx prisma generate
+        run: npx prisma generate --schema=prisma/schema.prisma
 
       - name: Compilar TypeScript
         working-directory: backend
         run: npm run build
 
-      - name: Verificar que el build generó dist/index.js
+      - name: Verificar que el build generó dist/server.js
         run: |
-          if [ ! -f backend/dist/index.js ]; then
-            echo "ERROR: la compilación no generó dist/index.js"
+          if [ ! -f backend/dist/server.js ]; then
+            echo "ERROR: la compilación no generó dist/server.js"
             exit 1
           fi
 
@@ -137,22 +136,21 @@ jobs:
           cp -r backend/dist "$DEPLOY_PATH/backend/dist"
           cp backend/package.json "$DEPLOY_PATH/backend/package.json"
           cp backend/package-lock.json "$DEPLOY_PATH/backend/package-lock.json"
-          rm -rf "$DEPLOY_PATH/backend/prisma"
-          cp -r backend/prisma "$DEPLOY_PATH/backend/prisma"
+          rm -rf "$DEPLOY_PATH/prisma"
+          cp -r prisma "$DEPLOY_PATH/prisma"
 
       - name: Instalar dependencias de producción en servidor
         working-directory: ${{ env.DEPLOY_PATH }}/backend
         run: npm ci --omit=dev
 
       - name: Generar cliente Prisma
-        working-directory: ${{ env.DEPLOY_PATH }}/backend
-        run: npx prisma generate
+        working-directory: ${{ env.DEPLOY_PATH }}
+        run: npx prisma generate --schema=prisma/schema.prisma
 
       - name: Resolver migraciones fallidas
-        working-directory: ${{ env.DEPLOY_PATH }}/backend
+        working-directory: ${{ env.DEPLOY_PATH }}
         run: |
-          # Lee la DATABASE_URL del .env y consulta directamente _prisma_migrations
-          source .env 2>/dev/null || true
+          source backend/.env 2>/dev/null || true
           FAILED=$(psql "$DATABASE_URL" -t -c \
             "SELECT migration_name FROM _prisma_migrations WHERE rolled_back_at IS NULL AND finished_at IS NULL AND started_at IS NOT NULL;" \
             2>/dev/null | tr -d ' ' | grep -v '^$' || true)
@@ -160,22 +158,22 @@ jobs:
             echo "Migraciones fallidas: $FAILED"
             for m in $FAILED; do
               echo "Marcando $m como rolled-back..."
-              npx prisma migrate resolve --rolled-back "$m"
+              npx prisma migrate resolve --rolled-back "$m" --schema=prisma/schema.prisma
             done
           else
             echo "No hay migraciones fallidas"
           fi
 
       - name: Ejecutar migraciones
-        working-directory: ${{ env.DEPLOY_PATH }}/backend
-        run: npm run prisma:migrate
+        working-directory: ${{ env.DEPLOY_PATH }}
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
 
       - name: Reiniciar backend con PM2
         run: |
           if pm2 describe dragon-backend > /dev/null 2>&1; then
             pm2 restart dragon-backend --update-env
           else
-            pm2 start "$DEPLOY_PATH/backend/dist/index.js" \
+            pm2 start "$DEPLOY_PATH/backend/dist/server.js" \
               --name dragon-backend \
               --cwd "$DEPLOY_PATH/backend"
             pm2 save
@@ -184,7 +182,7 @@ jobs:
       - name: Verificar que el backend responde
         run: |
           sleep 3
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)
           if [ "$STATUS" != "200" ]; then
             echo "ERROR: backend devuelve $STATUS — ejecutando rollback"
             rm -rf "$DEPLOY_PATH/backend/dist"

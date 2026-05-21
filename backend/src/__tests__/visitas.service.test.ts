@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { VisitasService } from '../services/visitas.service.js'
-import { createPrismaMock } from './helpers/prisma.mock.js'
+import { VisitasService } from '../services/visitas.service'
+import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
 
 let prisma: PrismaClient

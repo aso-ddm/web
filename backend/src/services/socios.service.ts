@@ -1,5 +1,5 @@
 import { PrismaClient, Rol, EstadoSocio } from '@prisma/client'
-import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema.js'
+import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 
 // Campos públicos que se devuelven en listados (sin datos sensibles)
 const SOCIO_PUBLIC_SELECT = {

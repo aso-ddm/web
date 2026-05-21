@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema.js'
+import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 
 export class JuegosService {
   constructor(private prisma: PrismaClient) {}
