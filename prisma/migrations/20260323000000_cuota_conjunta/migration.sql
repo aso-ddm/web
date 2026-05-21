@@ -53,7 +53,9 @@ ALTER TABLE "Usuario"
     USING "tipo_cuota"::text::"TipoCuota";
 DROP TYPE "TipoCuota_old";
 
--- 10. Añadir valor 'familiar_directo' al enum TipoRelacion existente
+COMMIT;
+
+-- 10. Añadir valor 'familiar_directo' al enum TipoRelacion existente (fuera de transacción)
 ALTER TYPE "TipoRelacion" ADD VALUE IF NOT EXISTS 'familiar_directo';
 
 COMMIT;
@@ -66,3 +68,5 @@ ALTER TABLE "RelacionSocio"
     ALTER COLUMN "tipo_relacion" TYPE "TipoRelacion"
     USING "tipo_relacion"::text::"TipoRelacion";
 DROP TYPE "TipoRelacion_old";
+
+COMMIT;
