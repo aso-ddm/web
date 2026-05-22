@@ -12,7 +12,6 @@ import {
   Handshake,
   UserCheck,
   Menu,
-  CalendarDays,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -44,7 +43,6 @@ function useSidebarItems(): NavEntry[] {
       { type: 'item', label: 'Gestión socios', to: '/directiva/socios',       icon: <Users        className="h-4 w-4" /> },
       { type: 'item', label: 'Solicitudes',    to: '/directiva/solicitudes',  icon: <ClipboardList className="h-4 w-4" /> },
       { type: 'item', label: 'Llaves',         to: '/directiva/llaves',       icon: <Key           className="h-4 w-4" /> },
-      { type: 'item', label: 'Invitados',      to: '/directiva/visitas',      icon: <CalendarDays  className="h-4 w-4" /> },
     )
   }
 

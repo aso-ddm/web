@@ -26,8 +26,8 @@ router.get('/buscar', authenticate, async (req, res) => {
   res.json({ data: resultados })
 })
 
-// GET /api/visitas — listado paginado (directiva + ludotecario)
-router.get('/', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+// GET /api/visitas — listado paginado (cualquier socio autenticado)
+router.get('/', authenticate, async (req, res) => {
   const page   = Math.max(1, parseInt(String(req.query.page  ?? '1'),  10) || 1)
   const limit  = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '50'), 10) || 50))
   const search = typeof req.query.search === 'string' && req.query.search.trim().length >= 2
