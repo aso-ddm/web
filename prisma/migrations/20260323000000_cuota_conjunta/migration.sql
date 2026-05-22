@@ -61,7 +61,12 @@ ALTER TYPE "TipoRelacion" ADD VALUE IF NOT EXISTS 'familiar_directo';
 COMMIT;
 BEGIN;
 
--- 11. Recrear enum TipoRelacion con solo 'pareja' y 'familiar_directo'
+-- 11. Migrar datos: hijo y padre → familiar_directo
+UPDATE "RelacionSocio"
+    SET "tipo_relacion" = 'familiar_directo'
+    WHERE "tipo_relacion" IN ('hijo', 'padre');
+
+-- 12. Recrear enum TipoRelacion con solo 'pareja' y 'familiar_directo'
 ALTER TYPE "TipoRelacion" RENAME TO "TipoRelacion_old";
 CREATE TYPE "TipoRelacion" AS ENUM ('pareja', 'familiar_directo');
 ALTER TABLE "RelacionSocio"
