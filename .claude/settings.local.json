@@ -28,7 +28,14 @@
       "Bash(PGPASSWORD=\"DragonTest_2026\" /c/Program Files/PostgreSQL/14/bin/psql.exe *)",
       "Bash(/c/Program Files/PostgreSQL/14/bin/pg_ctl.exe reload *)",
       "PowerShell(Restart-Service *)",
-      "Bash(PGPASSWORD=\"\" /c/Program Files/PostgreSQL/14/bin/psql.exe *)"
+      "Bash(PGPASSWORD=\"\" /c/Program Files/PostgreSQL/14/bin/psql.exe *)",
+      "Bash(docker push *)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Usuario\\\\Proyects\\\\dragondemadera\\\\prisma\\\\migrations\\\\20260522000002_add_log_solicitud_juego\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"dir created\")",
+      "Bash(pnpm -C backend test:run)",
+      "Bash(npx tsc *)",
+      "Bash(git commit *)"
     ]
   }
 }

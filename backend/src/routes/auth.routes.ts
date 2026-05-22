@@ -5,6 +5,7 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { AuthService } from '../services/auth.service'
 import { registerSchema, loginSchema } from '../schemas/auth.schema'
+import { telegramAuthSchema } from '../schemas/telegram.schema'
 import { authenticate, signToken } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 
@@ -113,6 +114,34 @@ router.get('/me', authenticate, async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     res.status(404).json({ error: message })
+  }
+})
+
+// POST /api/auth/link-telegram
+router.post('/link-telegram', authenticate, async (req, res) => {
+  const parsed = telegramAuthSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+
+  try {
+    const result = await authService.linkTelegram(req.user.id, parsed.data)
+    res.json({ data: result })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error al vincular Telegram'
+    res.status(400).json({ error: message })
+  }
+})
+
+// DELETE /api/auth/link-telegram
+router.delete('/link-telegram', authenticate, async (req, res) => {
+  try {
+    await authService.unlinkTelegram(req.user.id)
+    res.json({ data: { ok: true } })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error al desvincular Telegram'
+    res.status(400).json({ error: message })
   }
 })
 

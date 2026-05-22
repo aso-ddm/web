@@ -23,6 +23,8 @@ export interface Usuario {
   fecha_nacimiento?: string | null
   direccion?: string | null
   alias_telegram?: string | null
+  telegram_chat_id?: string | null
+  telegram_linked_at?: string | null
   apodo?: string | null
   tipo_cuota: TipoCuota
   consentimiento_tiendas?: boolean

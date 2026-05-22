@@ -36,6 +36,7 @@ services:
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-https://test.dragondemadera.com}
+      BOT_TOKEN: ${BOT_TOKEN:-8895560407:AAE-prede2NeNvvoXcPkpv0T6gLPb4TuqysK}
     depends_on:
       dragondemadera_db:
         condition: service_healthy

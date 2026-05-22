@@ -1,6 +1,19 @@
 import { PrismaClient, Rol } from '@prisma/client'
 import bcrypt from 'bcrypt'
+import crypto from 'node:crypto'
 import { RegisterInput, LoginInput } from '../schemas/auth.schema'
+import { TelegramAuthInput } from '../schemas/telegram.schema'
+
+function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
+  const { hash, ...rest } = data
+  const checkString = (Object.keys(rest) as (keyof typeof rest)[])
+    .sort()
+    .map(k => `${k}=${rest[k]}`)
+    .join('\n')
+  const secretKey = crypto.createHash('sha256').update(botToken).digest()
+  const hmac = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex')
+  return hmac === hash
+}
 
 const SALT_ROUNDS = 12
 
@@ -228,6 +241,8 @@ export class AuthService {
         tiene_llaves: true,
         fecha_solicitud_llaves: true,
         fecha_aprobacion_llaves: true,
+        telegram_chat_id: true,
+        telegram_linked_at: true,
       },
     })
 
@@ -235,6 +250,49 @@ export class AuthService {
       throw new Error('Usuario no encontrado')
     }
 
-    return usuario
+    const { telegram_chat_id, ...rest } = usuario
+    return { ...rest, telegram_chat_id: telegram_chat_id?.toString() ?? null }
+  }
+
+  async linkTelegram(userId: string, data: TelegramAuthInput) {
+    const botToken = process.env.BOT_TOKEN
+    if (!botToken) throw new Error('BOT_TOKEN no configurado')
+
+    if (!verifyTelegramData(data, botToken)) {
+      throw new Error('Firma de Telegram inválida')
+    }
+
+    const now = Math.floor(Date.now() / 1000)
+    if (now - data.auth_date > 86400) {
+      throw new Error('La autenticación de Telegram ha expirado, vuelve a intentarlo')
+    }
+
+    const existing = await this.prisma.usuario.findFirst({
+      where: { telegram_chat_id: BigInt(data.id), NOT: { id: userId } },
+    })
+    if (existing) throw new Error('Este usuario de Telegram ya está vinculado a otra cuenta')
+
+    const updated = await this.prisma.usuario.update({
+      where: { id: userId },
+      data: {
+        telegram_chat_id: BigInt(data.id),
+        alias_telegram: data.username ? `@${data.username}` : null,
+        telegram_linked_at: new Date(),
+      },
+      select: {
+        alias_telegram: true,
+        telegram_chat_id: true,
+        telegram_linked_at: true,
+      },
+    })
+
+    return { ...updated, telegram_chat_id: updated.telegram_chat_id?.toString() ?? null }
+  }
+
+  async unlinkTelegram(userId: string) {
+    await this.prisma.usuario.update({
+      where: { id: userId },
+      data: { telegram_chat_id: null, telegram_linked_at: null },
+    })
   }
 }
