@@ -2,6 +2,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+RUN apk add --no-cache python3 make g++
 RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -10,6 +11,7 @@ COPY frontend/package.json ./frontend/
 COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile
+RUN pnpm rebuild bcrypt
 
 RUN pnpm exec prisma generate
 
