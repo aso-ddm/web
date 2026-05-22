@@ -59,8 +59,6 @@ jobs:
 
             docker compose down
 
-            docker volume rm web_postgres_data 2>/dev/null || true
-
             docker rmi asoddm/dragondemadera-backend:latest \
                        asoddm/dragondemadera-frontend:latest 2>/dev/null || true
 

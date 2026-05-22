@@ -42,8 +42,6 @@ services:
     networks:
       proxy_network:
         ipv4_address: 192.168.1.111
-        aliases:
-          - backend
 
   dragondemadera_frontend:
     container_name: dragondemadera_frontend

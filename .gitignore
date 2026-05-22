@@ -22,6 +22,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code
+.claude/
+
 # Prisma — las migraciones SÍ se versionan
 # prisma/migrations/  ← eliminado: deben ir al repo
 
