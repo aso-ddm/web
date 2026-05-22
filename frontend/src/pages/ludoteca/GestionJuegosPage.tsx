@@ -177,6 +177,9 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
           <DialogTitle className="font-display text-primary">
             {isEdit ? 'Editar juego' : 'Añadir juego al catálogo'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEdit ? 'Edita los datos del juego' : 'Rellena los datos para añadir un nuevo juego al catálogo'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4 py-2">
