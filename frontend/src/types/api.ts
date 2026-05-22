@@ -180,6 +180,7 @@ export interface Visita {
   es_pago: boolean
   importe?: string | null
   socio_registro_id: string
+  socio_registro?: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> | null
 }
 
 export interface VisitanteSugerido {

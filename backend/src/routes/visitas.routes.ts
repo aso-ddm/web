@@ -26,10 +26,15 @@ router.get('/buscar', authenticate, async (req, res) => {
   res.json({ data: resultados })
 })
 
-// GET /api/visitas — historial reciente (directiva)
-router.get('/', requireRoles(...ROLES.DIRECTIVA), async (_req, res) => {
-  const visitas = await visitasService.getRecientes(100)
-  res.json({ data: visitas })
+// GET /api/visitas — listado paginado (directiva + ludotecario)
+router.get('/', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+  const page   = Math.max(1, parseInt(String(req.query.page  ?? '1'),  10) || 1)
+  const limit  = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '50'), 10) || 50))
+  const search = typeof req.query.search === 'string' && req.query.search.trim().length >= 2
+    ? req.query.search.trim()
+    : undefined
+  const result = await visitasService.getAll({ page, limit, search })
+  res.json(result)
 })
 
 // POST /api/visitas — registrar visita

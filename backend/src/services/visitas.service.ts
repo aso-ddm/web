@@ -73,4 +73,25 @@ export class VisitasService {
       },
     })
   }
+
+  async getAll(filtros: { page: number; limit: number; search?: string }) {
+    const { page, limit, search } = filtros
+    const skip = (page - 1) * limit
+    const where = search
+      ? { nombre_completo: { contains: search, mode: 'insensitive' as const } }
+      : {}
+
+    const [visitas, total] = await Promise.all([
+      this.prisma.visita.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { fecha_visita: 'desc' },
+        include: { socio_registro: { select: { id: true, nombre: true, apellidos: true } } },
+      }),
+      this.prisma.visita.count({ where }),
+    ])
+
+    return { data: visitas, total, page, limit, totalPages: Math.ceil(total / limit) }
+  }
 }
