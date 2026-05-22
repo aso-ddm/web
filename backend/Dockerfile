@@ -17,6 +17,7 @@ COPY backend/src ./backend/src/
 COPY backend/tsconfig.json ./backend/
 
 RUN cd backend && pnpm exec tsc
+RUN node_modules/.bin/tsc --module commonjs --target ES2020 --esModuleInterop true --skipLibCheck true prisma/seed.ts || true
 
 # ── Production stage ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS production
@@ -32,4 +33,4 @@ COPY backend/package.json ./backend/
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node backend/dist/server.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node prisma/seed.js && node backend/dist/server.js"]

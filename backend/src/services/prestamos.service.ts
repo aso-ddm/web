@@ -97,7 +97,7 @@ export class PrestamosService {
         usuario_aprobo_id: aprobadoPorId,
       },
       include: {
-        juego: { select: { id: true, titulo: true } },
+        juego: { select: { id: true, nombre: true } },
         socio: { select: { id: true, nombre: true, apellidos: true } },
       },
     })
