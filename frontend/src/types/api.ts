@@ -152,6 +152,7 @@ export interface LogJuego {
   texto: string
   usuario_id?: string | null
   usuario?: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> | null
+  juego?: Pick<Juego, 'id' | 'nombre'> | null
   created_at: string
 }
 

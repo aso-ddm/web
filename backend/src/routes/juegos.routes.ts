@@ -9,6 +9,19 @@ const router = Router()
 const logsService = new LogsJuegoService(prisma)
 const juegosService = new JuegosService(prisma, logsService)
 
+// GET /api/juegos/logs — todos los logs (staff)
+router.get('/logs', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+  try {
+    const { filtrosLogsSchema } = await import('../schemas/log_juego.schema')
+    const filtros = filtrosLogsSchema.parse(req.query)
+    const result = await logsService.getAll(filtros)
+    res.json(result)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
+
 // GET /api/juegos/export/csv — exportar catálogo (staff)
 router.get('/export/csv', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
   try {

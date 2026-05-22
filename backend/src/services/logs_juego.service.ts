@@ -2,9 +2,27 @@ import { PrismaClient, TipoLogJuego } from '@prisma/client'
 import type { FiltrosLogsInput } from '../schemas/log_juego.schema'
 
 const usuarioSelect = { select: { id: true, nombre: true, apellidos: true } }
+const juegoSelect   = { select: { id: true, nombre: true } }
 
 export class LogsJuegoService {
   constructor(private prisma: PrismaClient) {}
+
+  async getAll(filtros: FiltrosLogsInput) {
+    const { page, limit } = filtros
+    const skip = (page - 1) * limit
+
+    const [logs, total] = await Promise.all([
+      this.prisma.logJuego.findMany({
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: { usuario: usuarioSelect, juego: juegoSelect },
+      }),
+      this.prisma.logJuego.count(),
+    ])
+
+    return { data: logs, total, page, limit, totalPages: Math.ceil(total / limit) }
+  }
 
   async getByJuego(juego_id: string, filtros: FiltrosLogsInput) {
     const { page, limit } = filtros

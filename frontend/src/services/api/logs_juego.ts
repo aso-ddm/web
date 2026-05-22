@@ -2,6 +2,9 @@ import { api } from './client'
 import type { LogJuego, PaginatedResponse } from '@/types/api'
 
 export const logsJuegoApi = {
+  getAll: (page = 1) =>
+    api.get<PaginatedResponse<LogJuego>>(`/juegos/logs?page=${page}&limit=50`),
+
   getByJuego: (juegoId: string, page = 1) =>
     api.get<PaginatedResponse<LogJuego>>(`/juegos/${juegoId}/logs?page=${page}&limit=20`),
 
