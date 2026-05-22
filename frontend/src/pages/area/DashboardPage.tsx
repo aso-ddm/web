@@ -92,7 +92,7 @@ export function DashboardPage() {
               Hola, {authUsuario?.nombre} 👋
             </h1>
           )}
-          <p className="text-muted-foreground mt-1">Bienvenido a tu área de socio</p>
+          <p className="text-muted-foreground mt-1">Bienvenido a tu área de socio priiimo!</p>
         </div>
 
         {/* Estadísticas rápidas */}
