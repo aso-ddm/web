@@ -14,12 +14,9 @@ export const filtrosPrestamosSchema = z.object({
 export const filtrosGestionPrestamosSchema = z.object({
   estado: z.nativeEnum(EstadoPrestamo).optional(),
   socio_id: z.string().optional(),
+  vencidos: z.coerce.boolean().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(30),
-})
-
-export const rechazarPrestamoSchema = z.object({
-  motivo: z.string().optional(),
 })
 
 export type SolicitarPrestamoInput = z.infer<typeof solicitarPrestamoSchema>

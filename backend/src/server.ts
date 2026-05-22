@@ -10,6 +10,8 @@ import juegosRouter from './routes/juegos.routes'
 import prestamosRouter from './routes/prestamos.routes'
 import visitasRouter from './routes/visitas.routes'
 import configuracionRouter from './routes/configuracion.routes'
+import logsJuegoRouter from './routes/logs_juego.routes'
+import solicitudesJuegoRouter from './routes/solicitudes_juego.routes'
 import { notFound, errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -28,9 +30,11 @@ app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/socios', sociosRouter)
 app.use('/api/juegos', juegosRouter)
+app.use('/api/juegos/:juegoId/logs', logsJuegoRouter)
 app.use('/api/prestamos', prestamosRouter)
 app.use('/api/visitas', visitasRouter)
 app.use('/api/config', configuracionRouter)
+app.use('/api/solicitudes-juego', solicitudesJuegoRouter)
 
 // ── Errores ───────────────────────────────────────────────────────────────────
 app.use(notFound)

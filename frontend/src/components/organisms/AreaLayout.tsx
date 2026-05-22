@@ -32,8 +32,9 @@ function useSidebarItems(): NavEntry[] {
     { type: 'section', label: 'Mi área' },
     { type: 'item', label: 'Mi panel',         to: '/area',          icon: <LayoutDashboard className="h-4 w-4" /> },
     { type: 'item', label: 'Mi perfil',        to: '/area/perfil',   icon: <User            className="h-4 w-4" /> },
-    { type: 'item', label: 'Mis préstamos',    to: '/area/prestamos',icon: <BookOpen        className="h-4 w-4" /> },
-    { type: 'item', label: 'Registrar visita', to: '/area/visita',   icon: <UserCheck       className="h-4 w-4" /> },
+    { type: 'item', label: 'Mis préstamos',    to: '/area/prestamos', icon: <BookOpen        className="h-4 w-4" /> },
+    { type: 'item', label: 'Ludoteca',         to: '/area/ludoteca',  icon: <Library         className="h-4 w-4" /> },
+    { type: 'item', label: 'Registrar visita', to: '/area/visita',    icon: <UserCheck       className="h-4 w-4" /> },
   ]
 
   if (isDirectivaOVocal()) {

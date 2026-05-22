@@ -51,11 +51,22 @@ enum EstadoJuego {
 }
 
 enum EstadoPrestamo {
-  pendiente
-  aprobado
-  rechazado
   activo
   devuelto
+}
+
+enum TipoLogJuego {
+  donado
+  retirado
+  prestamo_activo
+  prestamo_devuelto
+  nota_manual
+}
+
+enum EstadoSolicitudJuego {
+  pendiente
+  aprobada
+  rechazada
 }
 
 // ============================================================
@@ -108,11 +119,16 @@ model Usuario {
 
   // Préstamos
   prestamos              Prestamo[]  @relation("SocioPrestamo")
-  prestamos_aprobados    Prestamo[]  @relation("AproboPrestamoRel")
   prestamos_devolucion   Prestamo[]  @relation("ConfirmoDevolucionRel")
 
   // Juegos en propiedad
   juegos_en_propiedad    Juego[]     @relation("PropietarioJuego")
+
+  // Logs de juegos generados por este usuario
+  logs_juego_generados   LogJuego[]  @relation("LogsGenerados")
+
+  // Solicitudes de donación de juegos
+  solicitudes_juego      SolicitudJuego[] @relation("SolicitudesJuego")
 
   // Visitas registradas por este socio
   visitas_registradas    Visita[]
@@ -150,8 +166,10 @@ model Juego {
   estado             EstadoJuego @default(en_estanteria)
   propietario_id     String?
 
-  propietario Usuario?   @relation("PropietarioJuego", fields: [propietario_id], references: [id], onDelete: SetNull)
-  prestamos   Prestamo[]
+  propietario  Usuario?         @relation("PropietarioJuego", fields: [propietario_id], references: [id], onDelete: SetNull)
+  prestamos    Prestamo[]
+  logs         LogJuego[]
+  solicitudes  SolicitudJuego[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -164,26 +182,24 @@ model Prestamo {
   id                      String         @id @default(uuid())
   juego_id                String
   socio_id                String
-  usuario_aprobo_id       String?
   usuario_confirmo_dev_id String?
-  fecha_solicitud         DateTime       @default(now())
-  fecha_aprobacion        DateTime?
-  fecha_prestamo          DateTime?
+  fecha_prestamo          DateTime       @default(now())
+  fecha_limite            DateTime
   fecha_devolucion        DateTime?
-  estado                  EstadoPrestamo @default(pendiente)
-  motivo_rechazo          String?
+  estado                  EstadoPrestamo @default(activo)
+  renovaciones            Int            @default(0)
   notas                   String?
 
-  juego                        Juego    @relation(fields: [juego_id],                 references: [id])
-  socio                        Usuario  @relation("SocioPrestamo",         fields: [socio_id],                  references: [id])
-  usuario_aprobo               Usuario? @relation("AproboPrestamoRel",     fields: [usuario_aprobo_id],         references: [id])
-  usuario_confirmo_devolucion  Usuario? @relation("ConfirmoDevolucionRel", fields: [usuario_confirmo_dev_id],   references: [id])
+  juego                       Juego    @relation(fields: [juego_id],               references: [id])
+  socio                       Usuario  @relation("SocioPrestamo",       fields: [socio_id],                references: [id])
+  usuario_confirmo_devolucion Usuario? @relation("ConfirmoDevolucionRel", fields: [usuario_confirmo_dev_id], references: [id])
 
   created_at DateTime @default(now())
 
   @@index([juego_id])
   @@index([socio_id])
   @@index([estado])
+  @@index([fecha_limite])
 }
 
 model Visita {
@@ -212,6 +228,41 @@ model SolicitudGrupal {
 
   titular  Usuario   @relation("TitularGrupo",  fields: [titular_id], references: [id])
   miembros Usuario[] @relation("MiembrosGrupo")
+}
+
+model LogJuego {
+  id         String       @id @default(uuid())
+  juego_id   String
+  tipo       TipoLogJuego
+  texto      String
+  usuario_id String?
+
+  juego   Juego    @relation(fields: [juego_id], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation("LogsGenerados", fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  created_at DateTime @default(now())
+
+  @@index([juego_id])
+  @@index([created_at])
+}
+
+model SolicitudJuego {
+  id             String               @id @default(uuid())
+  socio_id       String
+  nombre         String
+  notas          String?
+  estado         EstadoSolicitudJuego @default(pendiente)
+  motivo_rechazo String?
+  juego_id       String?
+
+  socio Usuario  @relation("SolicitudesJuego", fields: [socio_id], references: [id])
+  juego Juego?   @relation(fields: [juego_id], references: [id], onDelete: SetNull)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([estado])
+  @@index([socio_id])
 }
 
 model Configuracion {

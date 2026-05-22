@@ -48,6 +48,30 @@ async function main() {
   // ── Configuración inicial ──────────────────────────────────────────────
   const configsIniciales = [
     {
+      clave: 'dias_prestamo',
+      valor: '14',
+      tipo: 'numero',
+      descripcion: 'Duración en días de un préstamo desde que se activa',
+    },
+    {
+      clave: 'dias_renovacion',
+      valor: '14',
+      tipo: 'numero',
+      descripcion: 'Días adicionales que añade cada renovación al préstamo',
+    },
+    {
+      clave: 'max_renovaciones',
+      valor: '2',
+      tipo: 'numero',
+      descripcion: 'Número máximo de renovaciones permitidas por préstamo',
+    },
+    {
+      clave: 'dias_aviso_devolucion',
+      valor: '3',
+      tipo: 'numero',
+      descripcion: 'Días antes del vencimiento para enviar aviso al socio (pendiente de implementar notificaciones)',
+    },
+    {
       clave: 'precio_cuota_individual',
       valor: '15',
       tipo: 'numero',

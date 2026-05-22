@@ -24,4 +24,7 @@ export const juegosApi = {
 
   getById: (id: string) =>
     api.get<{ data: Juego }>(`/juegos/${id}`),
+
+  retirar: (id: string) =>
+    api.action<{ data: Juego }>(`/juegos/${id}/retirar`),
 }

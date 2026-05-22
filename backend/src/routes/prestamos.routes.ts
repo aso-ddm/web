@@ -1,18 +1,15 @@
 import { Router } from 'express'
 import { PrestamosService } from '../services/prestamos.service'
-import {
-  solicitarPrestamoSchema,
-  filtrosPrestamosSchema,
-  filtrosGestionPrestamosSchema,
-  rechazarPrestamoSchema,
-} from '../schemas/prestamo.schema'
+import { LogsJuegoService } from '../services/logs_juego.service'
+import { solicitarPrestamoSchema, filtrosPrestamosSchema, filtrosGestionPrestamosSchema } from '../schemas/prestamo.schema'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 
 const router = Router()
-const prestamosService = new PrestamosService(prisma)
+const logsService = new LogsJuegoService(prisma)
+const prestamosService = new PrestamosService(prisma, logsService)
 
-// GET /api/prestamos/mis-prestamos — historial propio
+// GET /api/prestamos/mis-prestamos
 router.get('/mis-prestamos', authenticate, async (req, res) => {
   const parsed = filtrosPrestamosSchema.safeParse(req.query)
   if (!parsed.success) {
@@ -34,7 +31,7 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res)
   res.json(result)
 })
 
-// POST /api/prestamos — solicitar préstamo
+// POST /api/prestamos — crear préstamo directo (socio autenticado)
 router.post('/', authenticate, async (req, res) => {
   const parsed = solicitarPrestamoSchema.safeParse(req.body)
   if (!parsed.success) {
@@ -50,60 +47,24 @@ router.post('/', authenticate, async (req, res) => {
   }
 })
 
-// POST /api/prestamos/:id/aprobar
-router.post('/:id/aprobar', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+// POST /api/prestamos/:id/renovar — socio renueva su propio préstamo
+router.post('/:id/renovar', authenticate, async (req, res) => {
   try {
-    const prestamo = await prestamosService.aprobar(req.params.id, req.user.id)
+    const prestamo = await prestamosService.renovar(req.params.id, req.user.id)
     res.json({ data: prestamo })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
+    const status = message.includes('permiso') ? 403 : 400
+    res.status(status).json({ error: message })
   }
 })
 
-// POST /api/prestamos/:id/activar
-router.post('/:id/activar', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+// POST /api/prestamos/:id/devolucion — socio o admin confirma devolución
+router.post('/:id/devolucion', authenticate, async (req, res) => {
+  const esAdmin = ROLES.DIRECTIVA_Y_LUDOTECARIO.some((r) => req.user.roles.includes(r))
   try {
-    const prestamo = await prestamosService.activar(req.params.id)
+    const prestamo = await prestamosService.devolucion(req.params.id, req.user.id, esAdmin)
     res.json({ data: prestamo })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
-})
-
-// POST /api/prestamos/:id/rechazar
-router.post('/:id/rechazar', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
-  const parsed = rechazarPrestamoSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos' })
-    return
-  }
-  try {
-    const prestamo = await prestamosService.rechazar(req.params.id, parsed.data.motivo)
-    res.json({ data: prestamo })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
-})
-
-// POST /api/prestamos/:id/devolucion
-router.post('/:id/devolucion', requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
-  try {
-    const prestamo = await prestamosService.confirmarDevolucion(req.params.id, req.user.id)
-    res.json({ data: prestamo })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
-})
-
-// DELETE /api/prestamos/:id — cancelar préstamo propio (pendiente)
-router.delete('/:id', authenticate, async (req, res) => {
-  try {
-    await prestamosService.cancelar(req.params.id, req.user.id)
-    res.status(204).send()
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     const status = message.includes('permiso') ? 403 : 400

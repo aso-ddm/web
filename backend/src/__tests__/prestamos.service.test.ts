@@ -2,19 +2,32 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { PrestamosService } from '../services/prestamos.service'
 import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
+import type { LogsJuegoService } from '../services/logs_juego.service'
+
+const mockLogsService = {
+  crearSistema: vi.fn().mockResolvedValue({}),
+  crearManual: vi.fn().mockResolvedValue({}),
+  getByJuego: vi.fn().mockResolvedValue({ data: [], total: 0 }),
+} as unknown as LogsJuegoService
 
 let prisma: PrismaClient
 let service: PrestamosService
 
 beforeEach(() => {
   prisma = createPrismaMock()
-  service = new PrestamosService(prisma)
+  vi.clearAllMocks()
+  service = new PrestamosService(prisma, mockLogsService)
 })
 
-const juegoDisponible = { id: 'g1', nombre: 'Catan', estado: 'en_estanteria', juego_id: 'g1' }
-const prestamoPendiente = { id: 'p1', socio_id: 'u1', juego_id: 'g1', estado: 'pendiente' }
-const prestamoAprobado = { id: 'p1', socio_id: 'u1', juego_id: 'g1', estado: 'aprobado' }
-const prestamoActivo = { id: 'p1', socio_id: 'u1', juego_id: 'g1', estado: 'activo' }
+const juegoDisponible = { id: 'g1', nombre: 'Catan', estado: 'en_estanteria' }
+const prestamoActivo = {
+  id: 'p1',
+  socio_id: 'u1',
+  juego_id: 'g1',
+  estado: 'activo',
+  renovaciones: 0,
+  fecha_limite: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+}
 
 describe('PrestamosService.solicitar', () => {
   it('juego no existe → throws', async () => {
@@ -34,241 +47,154 @@ describe('PrestamosService.solicitar', () => {
     )
   })
 
-  it('préstamo duplicado activo → throws', async () => {
+  it('préstamo activo existente → throws', async () => {
     ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(juegoDisponible)
-    ;(prisma.prestamo.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
+    ;(prisma.prestamo.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
 
     await expect(service.solicitar('u1', { juego_id: 'g1' })).rejects.toThrow(
-      'Ya tienes un préstamo activo o pendiente para este juego',
+      'Ya tienes un préstamo activo para este juego',
     )
   })
 
-  it('éxito → crea préstamo con estado=pendiente', async () => {
+  it('éxito → transacción: préstamo activo + juego=prestado', async () => {
     ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(juegoDisponible)
     ;(prisma.prestamo.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-    ;(prisma.prestamo.create as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      clave: 'dias_prestamo',
+      valor: '14',
+    })
+    const txMock = {
+      prestamo: { create: vi.fn().mockResolvedValue(prestamoActivo) },
+      juego: { update: vi.fn().mockResolvedValue({ id: 'g1', estado: 'prestado' }) },
+    }
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
 
-    const result = await service.solicitar('u1', { juego_id: 'g1', notas: 'urgente' })
+    await service.solicitar('u1', { juego_id: 'g1', notas: 'urgente' })
 
-    expect(prisma.prestamo.create).toHaveBeenCalledWith(
+    expect(txMock.prestamo.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           juego_id: 'g1',
           socio_id: 'u1',
           notas: 'urgente',
-          estado: 'pendiente',
+          estado: 'activo',
+          fecha_limite: expect.any(Date),
         }),
       }),
     )
-    expect(result).toMatchObject({ estado: 'pendiente' })
+    expect(txMock.juego.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { estado: 'prestado' } }),
+    )
   })
 })
 
-describe('PrestamosService.aprobar', () => {
+describe('PrestamosService.renovar', () => {
   it('no encontrado → throws', async () => {
     ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(service.aprobar('p1', 'admin')).rejects.toThrow('Préstamo no encontrado')
+    await expect(service.renovar('p1', 'u1')).rejects.toThrow('Préstamo no encontrado')
   })
 
-  it('no está pendiente → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
-
-    await expect(service.aprobar('p1', 'admin')).rejects.toThrow(
-      'Solo se pueden aprobar préstamos en estado pendiente',
-    )
-  })
-
-  it('pendiente → actualiza a aprobado con fecha y aprobadoPorId', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoPendiente,
-      estado: 'aprobado',
+  it('otro socio → throws permiso', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...prestamoActivo,
+      socio_id: 'otro',
     })
 
-    await service.aprobar('p1', 'admin1')
+    await expect(service.renovar('p1', 'u1')).rejects.toThrow('No tienes permiso')
+  })
+
+  it('max renovaciones alcanzado → throws', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...prestamoActivo,
+      renovaciones: 2,
+    })
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      clave: 'max_renovaciones',
+      valor: '2',
+    })
+
+    await expect(service.renovar('p1', 'u1')).rejects.toThrow('Máximo de renovaciones alcanzado')
+  })
+
+  it('éxito → extiende fecha_limite e incrementa renovaciones', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...prestamoActivo,
+      renovaciones: 1,
+    })
+
+    await service.renovar('p1', 'u1')
 
     expect(prisma.prestamo.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          estado: 'aprobado',
-          fecha_aprobacion: expect.any(Date),
-          usuario_aprobo_id: 'admin1',
+          fecha_limite: expect.any(Date),
+          renovaciones: { increment: 1 },
         }),
       }),
     )
   })
 })
 
-describe('PrestamosService.activar', () => {
+describe('PrestamosService.devolucion', () => {
   it('no encontrado → throws', async () => {
     ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(service.activar('p1')).rejects.toThrow('Préstamo no encontrado')
+    await expect(service.devolucion('p1', 'u1')).rejects.toThrow('Préstamo no encontrado')
   })
 
-  it('no aprobado → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
-
-    await expect(service.activar('p1')).rejects.toThrow(
-      'Solo se pueden activar préstamos en estado aprobado',
-    )
-  })
-
-  it('aprobado → transacción: préstamo=activo y juego=prestado', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoAprobado)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoAprobado,
-      estado: 'activo',
-    })
-    ;(prisma.juego.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: 'g1',
-      estado: 'prestado',
-    })
-
-    await service.activar('p1')
-
-    expect(prisma.prestamo.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ estado: 'activo', fecha_prestamo: expect.any(Date) }),
-      }),
-    )
-    expect(prisma.juego.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'g1' },
-        data: { estado: 'prestado' },
-      }),
-    )
-  })
-})
-
-describe('PrestamosService.rechazar', () => {
-  it('estado=activo → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
-
-    await expect(service.rechazar('p1')).rejects.toThrow(
-      'Solo se pueden rechazar préstamos pendientes o aprobados',
-    )
-  })
-
-  it('pendiente → actualiza a rechazado con motivo', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoPendiente,
-      estado: 'rechazado',
-    })
-
-    await service.rechazar('p1', 'Sin stock')
-
-    expect(prisma.prestamo.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ estado: 'rechazado', motivo_rechazo: 'Sin stock' }),
-      }),
-    )
-  })
-
-  it('sin motivo → motivo_rechazo = null', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoPendiente,
-      estado: 'rechazado',
-    })
-
-    await service.rechazar('p1')
-
-    expect(prisma.prestamo.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ motivo_rechazo: null }),
-      }),
-    )
-  })
-})
-
-describe('PrestamosService.confirmarDevolucion', () => {
-  it('no encontrado → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-
-    await expect(service.confirmarDevolucion('p1', 'admin')).rejects.toThrow('Préstamo no encontrado')
-  })
-
-  it('no activo → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
-
-    await expect(service.confirmarDevolucion('p1', 'admin')).rejects.toThrow(
-      'Solo se pueden devolver préstamos en estado activo',
-    )
-  })
-
-  it('activo → transacción: préstamo=devuelto y juego=en_estanteria', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it('otro socio sin admin → throws permiso', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...prestamoActivo,
-      estado: 'devuelto',
-    })
-    ;(prisma.juego.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: 'g1',
-      estado: 'en_estanteria',
+      socio_id: 'otro',
     })
 
-    await service.confirmarDevolucion('p1', 'admin1')
+    await expect(service.devolucion('p1', 'u1', false)).rejects.toThrow('No tienes permiso')
+  })
 
-    expect(prisma.prestamo.update).toHaveBeenCalledWith(
+  it('admin puede devolver préstamo de otro socio', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...prestamoActivo,
+      socio_id: 'otro',
+    })
+    ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ nombre: 'Catan' })
+    const txMock = {
+      prestamo: { update: vi.fn().mockResolvedValue({ ...prestamoActivo, estado: 'devuelto' }) },
+      juego: { update: vi.fn().mockResolvedValue({ id: 'g1', estado: 'en_estanteria' }) },
+    }
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
+
+    await service.devolucion('p1', 'admin1', true)
+
+    expect(txMock.juego.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { estado: 'en_estanteria' } }),
+    )
+  })
+
+  it('éxito socio → préstamo=devuelto + juego=en_estanteria', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
+    ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ nombre: 'Catan' })
+    const txMock = {
+      prestamo: { update: vi.fn().mockResolvedValue({ ...prestamoActivo, estado: 'devuelto' }) },
+      juego: { update: vi.fn().mockResolvedValue({ id: 'g1', estado: 'en_estanteria' }) },
+    }
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
+
+    await service.devolucion('p1', 'u1')
+
+    expect(txMock.prestamo.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           estado: 'devuelto',
           fecha_devolucion: expect.any(Date),
-          usuario_confirmo_dev_id: 'admin1',
+          usuario_confirmo_dev_id: 'u1',
         }),
       }),
     )
-    expect(prisma.juego.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'g1' },
-        data: { estado: 'en_estanteria' },
-      }),
-    )
-  })
-})
-
-describe('PrestamosService.cancelar', () => {
-  it('no encontrado → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-
-    await expect(service.cancelar('p1', 'u1')).rejects.toThrow('Préstamo no encontrado')
-  })
-
-  it('otro socio → throws "No tienes permiso"', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoPendiente,
-      socio_id: 'otro',
-    })
-
-    await expect(service.cancelar('p1', 'u1')).rejects.toThrow(
-      'No tienes permiso para cancelar este préstamo',
-    )
-  })
-
-  it('no está pendiente → throws', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
-
-    await expect(service.cancelar('p1', 'u1')).rejects.toThrow(
-      'Solo se pueden cancelar préstamos en estado pendiente',
-    )
-  })
-
-  it('propio + pendiente → cancela', async () => {
-    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoPendiente)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoPendiente,
-      estado: 'rechazado',
-    })
-
-    await service.cancelar('p1', 'u1')
-
-    expect(prisma.prestamo.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { estado: 'rechazado' },
-      }),
+    expect(txMock.juego.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { estado: 'en_estanteria' } }),
     )
   })
 })

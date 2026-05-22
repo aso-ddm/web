@@ -126,20 +126,47 @@ export interface Juego {
 }
 
 // ── Préstamo ──────────────────────────────────────────────────────────────────
-export type EstadoPrestamo = 'pendiente' | 'aprobado' | 'rechazado' | 'activo' | 'devuelto'
+export type EstadoPrestamo = 'activo' | 'devuelto'
 
 export interface Prestamo {
   id: string
   juego_id: string
   socio_id: string
   estado: EstadoPrestamo
-  fecha_solicitud: string
-  fecha_aprobacion?: string | null
-  fecha_prestamo?: string | null
+  fecha_prestamo: string
+  fecha_limite: string
   fecha_devolucion?: string | null
-  motivo_rechazo?: string | null
+  renovaciones: number
   notas?: string | null
   juego?: Pick<Juego, 'id' | 'nombre'>
+  socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }
+}
+
+// ── LogJuego ──────────────────────────────────────────────────────────────────
+export type TipoLogJuego = 'donado' | 'retirado' | 'prestamo_activo' | 'prestamo_devuelto' | 'nota_manual'
+
+export interface LogJuego {
+  id: string
+  juego_id: string
+  tipo: TipoLogJuego
+  texto: string
+  usuario_id?: string | null
+  usuario?: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> | null
+  created_at: string
+}
+
+// ── SolicitudJuego ────────────────────────────────────────────────────────────
+export type EstadoSolicitudJuego = 'pendiente' | 'aprobada' | 'rechazada'
+
+export interface SolicitudJuego {
+  id: string
+  socio_id: string
+  nombre: string
+  notas?: string | null
+  estado: EstadoSolicitudJuego
+  motivo_rechazo?: string | null
+  juego_id?: string | null
+  created_at: string
   socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }
 }
 

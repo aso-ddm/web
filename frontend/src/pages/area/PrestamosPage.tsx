@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  BookOpen, Clock, CheckCircle2, XCircle, Plus, Search, Loader2, Package
+  BookOpen, Plus, Search, Loader2, Package, RotateCcw, RefreshCw, AlertTriangle, Clock,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -12,23 +12,35 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 import { SEOHead } from '@/components/SEOHead'
 import { prestamosApi } from '@/services/api/prestamos'
 import { juegosApi } from '@/services/api/juegos'
-import type { EstadoPrestamo, Juego } from '@/types/api'
-
-const estadoConfig: Record<EstadoPrestamo, { label: string; icon: React.ReactNode; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pendiente: { label: 'Pendiente', icon: <Clock className="h-3 w-3" />, variant: 'secondary' },
-  aprobado: { label: 'Aprobado', icon: <CheckCircle2 className="h-3 w-3" />, variant: 'default' },
-  activo: { label: 'Activo', icon: <CheckCircle2 className="h-3 w-3" />, variant: 'default' },
-  devuelto: { label: 'Devuelto', icon: <CheckCircle2 className="h-3 w-3" />, variant: 'outline' },
-  rechazado: { label: 'Cancelado', icon: <XCircle className="h-3 w-3" />, variant: 'destructive' },
-}
+import { configuracionApi } from '@/services/api/configuracion'
+import type { Juego, Prestamo } from '@/types/api'
 
 function formatDate(dateStr?: string | null) {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function diasRestantes(fechaLimite: string): number {
+  const diff = new Date(fechaLimite).getTime() - Date.now()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
+function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
+  const dias = diasRestantes(fechaLimite)
+  if (dias < 0) return (
+    <span className="flex items-center gap-1 text-xs text-destructive font-medium">
+      <AlertTriangle className="h-3 w-3" /> Vencido hace {Math.abs(dias)}d
+    </span>
+  )
+  if (dias <= 3) return (
+    <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+      <Clock className="h-3 w-3" /> Vence en {dias}d
+    </span>
+  )
+  return <span className="text-xs text-muted-foreground">Hasta {formatDate(fechaLimite)}</span>
 }
 
 function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => void }) {
@@ -51,8 +63,7 @@ function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => 
               {juego.num_jugadores_min}
               {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
                 ? `–${juego.num_jugadores_max}`
-                : ''}{' '}
-              jugadores
+                : ''}{' '}jugadores
             </p>
           )}
         </div>
@@ -73,6 +84,13 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
   const [notas, setNotas] = useState('')
   const queryClient = useQueryClient()
 
+  const { data: configData } = useQuery({
+    queryKey: ['config', 'dias_prestamo'],
+    queryFn: () => configuracionApi.getOne('dias_prestamo'),
+    enabled: open,
+  })
+  const diasPrestamo = configData?.data?.valor ?? '14'
+
   const { data, isLoading } = useQuery({
     queryKey: ['juegos-catalogo', search],
     queryFn: () => juegosApi.getAll({ search: search || undefined, limit: 50 }),
@@ -82,8 +100,9 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
   const { mutate: solicitar, isPending } = useMutation({
     mutationFn: () => prestamosApi.solicitar(juegoSeleccionado!.id, notas || undefined),
     onSuccess: () => {
-      toast.success(`Préstamo de "${juegoSeleccionado?.nombre}" solicitado correctamente`)
+      toast.success(`Préstamo de "${juegoSeleccionado?.nombre}" creado — tienes ${diasPrestamo} días`)
       queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
+      queryClient.invalidateQueries({ queryKey: ['juegos-catalogo'] })
       handleClose()
     },
     onError: (err: Error) => toast.error(err.message),
@@ -100,15 +119,14 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="font-display text-primary">Solicitar préstamo</DialogTitle>
+          <DialogTitle className="font-display text-primary">Pedir un juego prestado</DialogTitle>
           <DialogDescription>
-            Selecciona un juego disponible del catálogo de la ludoteca
+            Selecciona un juego disponible. El préstamo dura {diasPrestamo} días y puedes renovarlo desde aquí.
           </DialogDescription>
         </DialogHeader>
 
         {!juegoSeleccionado ? (
           <>
-            {/* Buscador */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -118,8 +136,6 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
                 className="pl-9"
               />
             </div>
-
-            {/* Lista de juegos */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1" style={{ minHeight: 0, maxHeight: '50vh' }}>
               {isLoading ? (
                 [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 w-full" />)
@@ -137,12 +153,9 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
           </>
         ) : (
           <div className="space-y-4">
-            {/* Juego seleccionado */}
             <div className="p-3 rounded-lg border border-primary/30 bg-accent/20">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-display font-bold">{juegoSeleccionado.nombre}</p>
-                </div>
+                <p className="font-display font-bold">{juegoSeleccionado.nombre}</p>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -153,11 +166,10 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
                 </Button>
               </div>
             </div>
-
             <div className="space-y-1.5">
               <label className="text-sm font-display font-bold">Notas (opcional)</label>
               <Input
-                placeholder="Alguna indicación para el ludotecario..."
+                placeholder="Alguna indicación..."
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
               />
@@ -166,20 +178,10 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
         )}
 
         <DialogFooter className="mt-2 gap-2">
-          <Button variant="outline" onClick={handleClose} className="font-display">
-            Cancelar
-          </Button>
+          <Button variant="outline" onClick={handleClose} className="font-display">Cancelar</Button>
           {juegoSeleccionado && (
-            <Button
-              onClick={() => solicitar()}
-              disabled={isPending}
-              className="font-display font-bold"
-            >
-              {isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Solicitando...</>
-              ) : (
-                'Confirmar solicitud'
-              )}
+            <Button onClick={() => solicitar()} disabled={isPending} className="font-display font-bold">
+              {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : 'Confirmar préstamo'}
             </Button>
           )}
         </DialogFooter>
@@ -188,28 +190,92 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
   )
 }
 
+function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRenovaciones: number }) {
+  const queryClient = useQueryClient()
+  const puedeRenovar = prestamo.renovaciones < maxRenovaciones
+
+  const { mutate: renovar, isPending: renovando } = useMutation({
+    mutationFn: () => prestamosApi.renovar(prestamo.id),
+    onSuccess: () => {
+      toast.success('Préstamo renovado')
+      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const { mutate: devolver, isPending: devolviendo } = useMutation({
+    mutationFn: () => prestamosApi.devolucion(prestamo.id),
+    onSuccess: () => {
+      toast.success('Devolución registrada')
+      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
+      queryClient.invalidateQueries({ queryKey: ['juegos-catalogo'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  return (
+    <div className="py-3 border-b border-border last:border-0">
+      <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+            <span>Prestado: {formatDate(prestamo.fecha_prestamo)}</span>
+            <FechaLimiteBadge fechaLimite={prestamo.fecha_limite} />
+          </div>
+          {prestamo.renovaciones > 0 && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Renovado {prestamo.renovaciones}/{maxRenovaciones} veces
+            </p>
+          )}
+          {prestamo.notas && (
+            <p className="text-xs text-muted-foreground italic mt-1">"{prestamo.notas}"</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {puedeRenovar && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => renovar()}
+              disabled={renovando}
+              className="font-display h-8 gap-1"
+            >
+              {renovando ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Renovar
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={() => devolver()}
+            disabled={devolviendo}
+            className="font-display font-bold h-8 gap-1"
+          >
+            {devolviendo ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+            Devolver
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PrestamosPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['mis-prestamos', 1],
     queryFn: () => prestamosApi.misPrestamos(1),
   })
 
-  const { mutate: cancelar } = useMutation({
-    mutationFn: (id: string) => prestamosApi.cancelar(id),
-    onSuccess: () => {
-      toast.success('Solicitud cancelada')
-      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
-    },
-    onError: (err: Error) => toast.error(err.message),
+  const { data: configData } = useQuery({
+    queryKey: ['config', 'max_renovaciones'],
+    queryFn: () => configuracionApi.getOne('max_renovaciones'),
   })
+  const maxRenovaciones = parseInt(configData?.data?.valor ?? '2', 10)
 
   const prestamos = data?.data ?? []
-  const activos = prestamos.filter((p) => ['activo', 'aprobado'].includes(p.estado))
-  const pendientes = prestamos.filter((p) => p.estado === 'pendiente')
-  const historial = prestamos.filter((p) => ['devuelto', 'rechazado'].includes(p.estado))
+  const activos = prestamos.filter((p) => p.estado === 'activo')
+  const historial = prestamos.filter((p) => p.estado === 'devuelto')
 
   return (
     <>
@@ -219,11 +285,10 @@ export function PrestamosPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Mis préstamos</h1>
-            <p className="text-muted-foreground mt-1">Gestiona tus solicitudes y préstamos activos</p>
+            <p className="text-muted-foreground mt-1">Gestiona tus préstamos activos y devoluciones</p>
           </div>
           <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-            <Plus className="h-4 w-4" />
-            Solicitar juego
+            <Plus className="h-4 w-4" /> Pedir juego prestado
           </Button>
         </div>
 
@@ -237,47 +302,30 @@ export function PrestamosPage() {
               <BookOpen className="h-12 w-12 text-muted-foreground/30 mb-4" />
               <h2 className="font-display font-bold text-lg text-primary mb-1">Sin préstamos aún</h2>
               <p className="text-muted-foreground text-sm mb-4">
-                Solicita un juego de la ludoteca cuando quieras llevártelo a casa
+                Llévate un juego de la ludoteca cuando quieras
               </p>
               <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-                <Plus className="h-4 w-4" />
-                Solicitar mi primer juego
+                <Plus className="h-4 w-4" /> Pedir mi primer juego
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Activos y aprobados */}
             {activos.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <CardTitle className="font-display text-base text-primary">
                     Préstamos activos ({activos.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PrestamosList prestamos={activos} onCancelar={cancelar} />
+                  {activos.map((p) => (
+                    <PrestamoCard key={p.id} prestamo={p} maxRenovaciones={maxRenovaciones} />
+                  ))}
                 </CardContent>
               </Card>
             )}
 
-            {/* Pendientes */}
-            {pendientes.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-amber-500" />
-                    Pendientes de aprobación ({pendientes.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PrestamosList prestamos={pendientes} onCancelar={cancelar} showCancel />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Historial */}
             {historial.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
@@ -286,7 +334,17 @@ export function PrestamosPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PrestamosList prestamos={historial} onCancelar={cancelar} />
+                  {historial.map((p) => (
+                    <div key={p.id} className="py-2 border-b border-border last:border-0 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-display font-bold text-sm">{p.juego?.nombre ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(p.fecha_prestamo)} → {formatDate(p.fecha_devolucion)}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="font-display text-xs">Devuelto</Badge>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
@@ -296,66 +354,5 @@ export function PrestamosPage() {
 
       <SolicitarDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </>
-  )
-}
-
-function PrestamosList({
-  prestamos,
-  onCancelar,
-  showCancel = false,
-}: {
-  prestamos: ReturnType<typeof prestamosApi.misPrestamos> extends Promise<infer R>
-    ? R extends { data: (infer T)[] } ? T[] : never
-    : never
-  onCancelar: (id: string) => void
-  showCancel?: boolean
-}) {
-  return (
-    <ul className="divide-y divide-border">
-      {prestamos.map((p, idx) => {
-        const cfg = estadoConfig[p.estado]
-        return (
-          <li key={p.id} className={`py-3 ${idx === 0 ? '' : ''}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-display font-bold text-sm truncate">
-                  {p.juego?.nombre ?? 'Juego desconocido'}
-                </p>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
-                  <span>Solicitado: {formatDate(p.fecha_solicitud)}</span>
-                  {p.fecha_prestamo && <span>Prestado: {formatDate(p.fecha_prestamo)}</span>}
-                  {p.fecha_devolucion && <span>Devuelto: {formatDate(p.fecha_devolucion)}</span>}
-                </div>
-                {p.motivo_rechazo && (
-                  <p className="text-xs text-destructive mt-1">Motivo: {p.motivo_rechazo}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Badge variant={cfg.variant} className="font-display gap-1 text-xs">
-                  {cfg.icon}
-                  {cfg.label}
-                </Badge>
-                {showCancel && p.estado === 'pendiente' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2"
-                    onClick={() => onCancelar(p.id)}
-                  >
-                    Cancelar
-                  </Button>
-                )}
-              </div>
-            </div>
-            {p.notas && (
-              <>
-                <Separator className="my-2" />
-                <p className="text-xs text-muted-foreground italic">Nota: {p.notas}</p>
-              </>
-            )}
-          </li>
-        )
-      })}
-    </ul>
   )
 }

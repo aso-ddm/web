@@ -17,6 +17,7 @@ import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute'
 import { DashboardPage } from '@/pages/area/DashboardPage'
 import { PerfilPage } from '@/pages/area/PerfilPage'
 import { PrestamosPage } from '@/pages/area/PrestamosPage'
+import { LudotecaPage } from '@/pages/area/LudotecaPage'
 
 // Panel ludotecario — Sprint 4
 import { GestionJuegosPage } from '@/pages/ludoteca/GestionJuegosPage'
@@ -58,6 +59,7 @@ export function AppRoutes() {
           <Route path="/area" element={<DashboardPage />} />
           <Route path="/area/perfil" element={<PerfilPage />} />
           <Route path="/area/prestamos" element={<PrestamosPage />} />
+          <Route path="/area/ludoteca" element={<LudotecaPage />} />
           <Route path="/area/visita" element={<RegistroVisitaPage />} />
         </Route>
       </Route>

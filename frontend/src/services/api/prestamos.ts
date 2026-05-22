@@ -9,22 +9,19 @@ export const prestamosApi = {
   solicitar: (juego_id: string, notas?: string) =>
     api.post<{ data: Prestamo }>('/prestamos', { juego_id, notas }),
 
-  cancelar: (id: string) =>
-    api.delete<void>(`/prestamos/${id}`),
+  renovar: (id: string) =>
+    api.action<{ data: Prestamo }>(`/prestamos/${id}/renovar`),
+
+  devolucion: (id: string) =>
+    api.action<{ data: Prestamo }>(`/prestamos/${id}/devolucion`),
 
   // Ludotecario / Directiva
-  getAll: (params: { estado?: EstadoPrestamo; page?: number } = {}) => {
+  getAll: (params: { estado?: EstadoPrestamo; vencidos?: boolean; page?: number } = {}) => {
     const q = new URLSearchParams()
     if (params.estado) q.set('estado', params.estado)
+    if (params.vencidos) q.set('vencidos', 'true')
     if (params.page) q.set('page', String(params.page))
     q.set('limit', '30')
     return api.get<PaginatedResponse<Prestamo>>(`/prestamos?${q.toString()}`)
   },
-
-  aprobar: (id: string) => api.action<{ data: Prestamo }>(`/prestamos/${id}/aprobar`),
-  activar: (id: string) => api.action<{ data: Prestamo }>(`/prestamos/${id}/activar`),
-  rechazar: (id: string, motivo?: string) =>
-    api.post<{ data: Prestamo }>(`/prestamos/${id}/rechazar`, { motivo }),
-  confirmarDevolucion: (id: string) =>
-    api.action<{ data: Prestamo }>(`/prestamos/${id}/devolucion`),
 }

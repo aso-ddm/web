@@ -4,15 +4,19 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, Library, Search, MapPin } from 'lucide-react'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Plus, Pencil, Trash2, Loader2, Library, Search, MapPin, Archive,
+  ChevronDown, ChevronUp, Download, Check, X,
+} from 'lucide-react'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,9 +26,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
 import { juegosApi } from '@/services/api/juegos'
+import { logsJuegoApi } from '@/services/api/logs_juego'
+import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
 import { sociosApi } from '@/services/api/socios'
 import { api } from '@/services/api/client'
-import type { Juego, EstadoJuego } from '@/types/api'
+import { useAuthStore } from '@/store/authStore'
+import type { Juego, EstadoJuego, LogJuego, SolicitudJuego } from '@/types/api'
 
 const juegoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -42,13 +49,83 @@ const estadoConfig: Record<EstadoJuego, { label: string; variant: 'default' | 's
   retirado: { label: 'Retirado', variant: 'destructive' },
 }
 
-function JuegoFormDialog({
-  open, onClose, juego,
-}: {
-  open: boolean
-  onClose: () => void
-  juego?: Juego
-}) {
+const tipoLogLabel: Record<string, string> = {
+  donado: '🎁 Donado',
+  retirado: '📦 Retirado',
+  prestamo_activo: '📤 Prestado',
+  prestamo_devuelto: '📥 Devuelto',
+  nota_manual: '📝 Nota',
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// ── Logs panel ────────────────────────────────────────────────────────────────
+
+function LogsPanel({ juego }: { juego: Juego }) {
+  const queryClient = useQueryClient()
+  const [nota, setNota] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['juego-logs', juego.id],
+    queryFn: () => logsJuegoApi.getByJuego(juego.id),
+  })
+
+  const { mutate: addNota, isPending } = useMutation({
+    mutationFn: () => logsJuegoApi.crearManual(juego.id, nota),
+    onSuccess: () => {
+      toast.success('Nota añadida')
+      queryClient.invalidateQueries({ queryKey: ['juego-logs', juego.id] })
+      setNota('')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const logs = data?.data ?? []
+
+  return (
+    <div className="bg-muted/40 px-4 py-3 border-t border-border space-y-3">
+      {isLoading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : logs.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Sin entradas de historial aún</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {logs.map((log: LogJuego) => (
+            <li key={log.id} className="text-xs flex items-start gap-2">
+              <span className="text-muted-foreground flex-shrink-0">{formatDate(log.created_at)}</span>
+              <span className="font-medium flex-shrink-0">{tipoLogLabel[log.tipo] ?? log.tipo}</span>
+              <span className="text-muted-foreground">{log.texto}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex gap-2">
+        <Input
+          placeholder="Añadir nota manual..."
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          className="h-7 text-xs"
+          onKeyDown={(e) => e.key === 'Enter' && nota.trim() && addNota()}
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 font-display text-xs"
+          disabled={isPending || !nota.trim()}
+          onClick={() => addNota()}
+        >
+          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Añadir'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// ── Juego form dialog ─────────────────────────────────────────────────────────
+
+function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () => void; juego?: Juego }) {
   const queryClient = useQueryClient()
   const isEdit = !!juego
 
@@ -77,18 +154,13 @@ function JuegoFormDialog({
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: JuegoForm) => {
-      const clean = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== '' && v !== undefined),
-      )
-      if (isEdit) {
-        return api.put<{ data: Juego }>(`/juegos/${juego.id}`, clean)
-      }
+      const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== '' && v !== undefined))
+      if (isEdit) return api.put<{ data: Juego }>(`/juegos/${juego.id}`, clean)
       return api.post<{ data: Juego }>('/juegos', clean)
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
       queryClient.invalidateQueries({ queryKey: ['juegos'] })
-      queryClient.invalidateQueries({ queryKey: ['juegos-catalogo'] })
       handleClose()
     },
     onError: (err: Error) => toast.error(err.message),
@@ -111,12 +183,10 @@ function JuegoFormDialog({
             <Input id="nombre" {...register('nombre')} className={errors.nombre ? 'border-destructive' : ''} />
             {errors.nombre && <p className="text-xs text-destructive">{errors.nombre.message}</p>}
           </div>
-
           <div className="space-y-1.5">
             <Label htmlFor="localizacion" className="font-display font-bold text-xs">Estantería / Localización</Label>
             <Input id="localizacion" {...register('localizacion')} placeholder="Ej: A3, Estante superior..." />
           </div>
-
           <div className="space-y-1.5">
             <Label className="font-display font-bold text-xs">Nº jugadores</Label>
             <div className="flex items-center gap-2">
@@ -125,7 +195,6 @@ function JuegoFormDialog({
               <Input type="number" {...register('num_jugadores_max')} placeholder="Máx" />
             </div>
           </div>
-
           <div className="space-y-1.5">
             <Label className="font-display font-bold text-xs">Propietario</Label>
             <Select
@@ -145,21 +214,12 @@ function JuegoFormDialog({
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-1.5">
             <Label htmlFor="notas" className="font-display font-bold text-xs">Notas</Label>
-            <Textarea
-              id="notas"
-              {...register('notas')}
-              placeholder="Estado del juego, piezas faltantes, observaciones..."
-              rows={3}
-            />
+            <Textarea id="notas" {...register('notas')} placeholder="Estado del juego, piezas faltantes..." rows={3} />
           </div>
-
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose} className="font-display">
-              Cancelar
-            </Button>
+            <Button type="button" variant="outline" onClick={handleClose} className="font-display">Cancelar</Button>
             <Button type="submit" disabled={isPending} className="font-display font-bold">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? 'Guardar cambios' : 'Añadir juego'}
             </Button>
@@ -170,23 +230,160 @@ function JuegoFormDialog({
   )
 }
 
+// ── Solicitudes tab ───────────────────────────────────────────────────────────
+
+function SolicitudesTab() {
+  const queryClient = useQueryClient()
+  const [rechazando, setRechazando] = useState<SolicitudJuego | null>(null)
+  const [motivo, setMotivo] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['solicitudes-juego-pendientes'],
+    queryFn: () => solicitudesJuegoApi.getPendientes(),
+  })
+
+  const { mutate: aprobar, isPending: aprobando } = useMutation({
+    mutationFn: (id: string) => solicitudesJuegoApi.aprobar(id),
+    onSuccess: () => {
+      toast.success('Solicitud aprobada — juego añadido al catálogo')
+      queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
+      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const { mutate: rechazar, isPending: rechazando2 } = useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo?: string }) =>
+      solicitudesJuegoApi.rechazar(id, motivo),
+    onSuccess: () => {
+      toast.success('Solicitud rechazada')
+      queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
+      setRechazando(null)
+      setMotivo('')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const solicitudes = data?.data ?? []
+
+  if (isLoading) return (
+    <div className="space-y-3 pt-4">
+      {[1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
+    </div>
+  )
+
+  if (solicitudes.length === 0) return (
+    <div className="text-center py-12 text-muted-foreground">
+      <Check className="h-8 w-8 mx-auto mb-2 opacity-30" />
+      <p className="text-sm">Sin solicitudes pendientes</p>
+    </div>
+  )
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="font-display text-sm text-primary">
+            Solicitudes pendientes ({solicitudes.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y divide-border p-0">
+          {solicitudes.map((s: SolicitudJuego) => (
+            <div key={s.id} className="px-4 py-3 flex items-start gap-3 flex-wrap sm:flex-nowrap">
+              <div className="flex-1 min-w-0">
+                <p className="font-display font-bold text-sm">{s.nombre}</p>
+                {s.socio && (
+                  <p className="text-xs text-muted-foreground">
+                    {s.socio.nombre} {s.socio.apellidos}
+                    {s.socio.apodo ? ` (${s.socio.apodo})` : ''}
+                    {' · '}{s.socio.email}
+                  </p>
+                )}
+                {s.notas && <p className="text-xs text-muted-foreground italic mt-0.5">"{s.notas}"</p>}
+                <p className="text-xs text-muted-foreground mt-0.5">{formatDate(s.created_at)}</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-7 font-display text-xs gap-1"
+                  onClick={() => aprobar(s.id)}
+                  disabled={aprobando}
+                >
+                  <Check className="h-3 w-3" /> Aprobar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 font-display text-xs gap-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+                  onClick={() => setRechazando(s)}
+                >
+                  <X className="h-3 w-3" /> Rechazar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!rechazando} onOpenChange={(v) => { if (!v) { setRechazando(null); setMotivo('') } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Rechazar solicitud</DialogTitle>
+            <DialogDescription>«{rechazando?.nombre}» de {rechazando?.socio?.nombre}</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label className="font-display text-sm">Motivo (opcional)</Label>
+            <Textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Explica al socio por qué se rechaza..."
+              rows={3}
+              className="mt-1"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRechazando(null)} className="font-display">Cancelar</Button>
+            <Button
+              variant="destructive"
+              className="font-display"
+              disabled={rechazando2}
+              onClick={() => rechazando && rechazar({ id: rechazando.id, motivo: motivo || undefined })}
+            >
+              {rechazando2 && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Rechazar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export function GestionJuegosPage() {
   const [search, setSearch] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoJuego | 'todos'>('todos')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando] = useState<Juego | undefined>()
   const [eliminando, setEliminando] = useState<Juego | undefined>()
+  const [retirando, setRetirando] = useState<Juego | undefined>()
+  const [expandedLogs, setExpandedLogs] = useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  const token = useAuthStore((s) => s.token)
 
   const { data, isLoading } = useQuery({
     queryKey: ['juegos', search, estadoFiltro],
-    queryFn: () =>
-      juegosApi.getAll({
-        search: search || undefined,
-        estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined,
-        limit: 50,
-      }),
+    queryFn: () => juegosApi.getAll({ search: search || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, limit: 50 }),
   })
+
+  const { data: solicitudesData } = useQuery({
+    queryKey: ['solicitudes-juego-pendientes'],
+    queryFn: () => solicitudesJuegoApi.getPendientes(),
+  })
+  const pendientesCount = solicitudesData?.data.length ?? 0
 
   const { mutate: eliminar, isPending: eliminandoPending } = useMutation({
     mutationFn: (id: string) => api.delete<void>(`/juegos/${id}`),
@@ -198,15 +395,32 @@ export function GestionJuegosPage() {
     onError: (err: Error) => { toast.error(err.message); setEliminando(undefined) },
   })
 
-  const { mutate: cambiarEstado } = useMutation({
-    mutationFn: ({ id, estado }: { id: string; estado: EstadoJuego }) =>
-      api.put<{ data: Juego }>(`/juegos/${id}`, { estado }),
+  const { mutate: retirar, isPending: retirandoPending } = useMutation({
+    mutationFn: (id: string) => juegosApi.retirar(id),
     onSuccess: () => {
+      toast.success('Juego retirado del catálogo')
       queryClient.invalidateQueries({ queryKey: ['juegos'] })
-      queryClient.invalidateQueries({ queryKey: ['juegos-catalogo'] })
+      setRetirando(undefined)
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => { toast.error(err.message); setRetirando(undefined) },
   })
+
+  const handleExportCsv = () => {
+    const url = `/api/juegos/export/csv`
+    const a = document.createElement('a')
+    a.href = url
+    a.setAttribute('download', '')
+    // Token en cabecera no es posible con <a> directo; usamos fetch + blob
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const objUrl = URL.createObjectURL(blob)
+        a.href = objUrl
+        a.click()
+        URL.revokeObjectURL(objUrl)
+      })
+      .catch(() => toast.error('Error al exportar CSV'))
+  }
 
   const juegos = data?.data ?? []
 
@@ -222,130 +436,168 @@ export function GestionJuegosPage() {
               {data?.total ?? 0} juego{data?.total !== 1 ? 's' : ''} en el catálogo
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-            <Plus className="h-4 w-4" /> Añadir juego
-          </Button>
-        </div>
-
-        {/* Filtros */}
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre, estantería..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="font-display gap-2" onClick={handleExportCsv}>
+              <Download className="h-4 w-4" /> CSV
+            </Button>
+            <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
+              <Plus className="h-4 w-4" /> Añadir juego
+            </Button>
           </div>
-          <Select
-            value={estadoFiltro}
-            onValueChange={(v) => setEstadoFiltro(v as EstadoJuego | 'todos')}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos los estados</SelectItem>
-              <SelectItem value="en_estanteria">En estantería</SelectItem>
-              <SelectItem value="prestado">Prestado</SelectItem>
-              <SelectItem value="retirado">Retirado</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
-        {/* Lista */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
-              </div>
-            ) : juegos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Library className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h2 className="font-display font-bold text-lg text-primary mb-1">Sin juegos aún</h2>
-                <p className="text-muted-foreground text-sm mb-4">
-                  Empieza añadiendo los primeros juegos al catálogo de la ludoteca
-                </p>
-                <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-                  <Plus className="h-4 w-4" /> Añadir primer juego
-                </Button>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {juegos.map((juego) => {
-                  const cfg = estadoConfig[juego.estado]
-                  return (
-                    <div key={juego.id} className="flex items-center gap-4 px-4 py-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-display font-bold text-sm">{juego.nombre}</p>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {juego.localizacion && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />{juego.localizacion}
-                            </span>
-                          )}
-                          {(juego.num_jugadores_min || juego.num_jugadores_max) && (
-                            <span className="text-xs text-muted-foreground">
-                              {juego.num_jugadores_min}
-                              {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
-                                ? `–${juego.num_jugadores_max}`
-                                : ''}{' '}j.
-                            </span>
-                          )}
-                          {juego.propietario && (
-                            <span className="text-xs text-muted-foreground">
-                              {juego.propietario.nombre} {juego.propietario.apellidos}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+        <Tabs defaultValue="catalogo">
+          <TabsList className="mb-4">
+            <TabsTrigger value="catalogo" className="font-display">Catálogo</TabsTrigger>
+            <TabsTrigger value="solicitudes" className="font-display relative">
+              Solicitudes
+              {pendientesCount > 0 && (
+                <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5 font-bold">
+                  {pendientesCount}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Select
-                          value={juego.estado}
-                          onValueChange={(v) => cambiarEstado({ id: juego.id, estado: v as EstadoJuego })}
-                        >
-                          <SelectTrigger className="h-8 w-40 text-xs">
-                            <SelectValue>
+          <TabsContent value="catalogo">
+            {/* Filtros */}
+            <div className="flex gap-3 flex-wrap mb-4">
+              <div className="relative flex-1 min-w-48">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre, estantería..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={estadoFiltro} onValueChange={(v) => setEstadoFiltro(v as EstadoJuego | 'todos')}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los estados</SelectItem>
+                  <SelectItem value="en_estanteria">En estantería</SelectItem>
+                  <SelectItem value="prestado">Prestado</SelectItem>
+                  <SelectItem value="retirado">Retirado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Lista */}
+            <Card>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-4 space-y-3">
+                    {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+                  </div>
+                ) : juegos.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <Library className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                    <h2 className="font-display font-bold text-lg text-primary mb-1">Sin juegos aún</h2>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Empieza añadiendo los primeros juegos al catálogo
+                    </p>
+                    <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
+                      <Plus className="h-4 w-4" /> Añadir primer juego
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    {juegos.map((juego) => {
+                      const cfg = estadoConfig[juego.estado]
+                      const logsExpanded = expandedLogs === juego.id
+                      return (
+                        <div key={juego.id} className="border-b border-border last:border-0">
+                          <div className="flex items-center gap-4 px-4 py-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-display font-bold text-sm">{juego.nombre}</p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {juego.localizacion && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />{juego.localizacion}
+                                  </span>
+                                )}
+                                {(juego.num_jugadores_min || juego.num_jugadores_max) && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {juego.num_jugadores_min}
+                                    {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
+                                      ? `–${juego.num_jugadores_max}` : ''}{' '}j.
+                                  </span>
+                                )}
+                                {juego.propietario && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {juego.propietario.nombre} {juego.propietario.apellidos}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 flex-shrink-0">
                               <Badge variant={cfg.variant} className="font-display text-xs">
                                 {cfg.label}
                               </Badge>
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en_estanteria">En estantería</SelectItem>
-                            <SelectItem value="prestado">Prestado</SelectItem>
-                            <SelectItem value="retirado">Retirado</SelectItem>
-                          </SelectContent>
-                        </Select>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          onClick={() => { setEditando(juego); setDialogOpen(true) }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => setEliminando(juego)}
-                          disabled={juego.estado === 'prestado'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                title="Ver historial"
+                                onClick={() => setExpandedLogs(logsExpanded ? null : juego.id)}
+                              >
+                                {logsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                title="Editar"
+                                onClick={() => { setEditando(juego); setDialogOpen(true) }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+
+                              {juego.estado !== 'retirado' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-amber-600"
+                                  title="Retirar juego"
+                                  disabled={juego.estado === 'prestado'}
+                                  onClick={() => setRetirando(juego)}
+                                >
+                                  <Archive className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                title="Eliminar"
+                                onClick={() => setEliminando(juego)}
+                                disabled={juego.estado === 'prestado'}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {logsExpanded && <LogsPanel juego={juego} />}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="solicitudes">
+            <SolicitudesTab />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <JuegoFormDialog
@@ -354,6 +606,31 @@ export function GestionJuegosPage() {
         onClose={() => { setDialogOpen(false); setEditando(undefined) }}
       />
 
+      {/* Confirmar retirar */}
+      <AlertDialog open={!!retirando} onOpenChange={(v) => !v && setRetirando(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-primary">
+              ¿Retirar «{retirando?.nombre}»?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El juego quedará marcado como retirado y se registrará en el historial. No podrá prestarse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="font-display font-bold bg-amber-600 text-white hover:bg-amber-700"
+              onClick={() => retirando && retirar(retirando.id)}
+              disabled={retirandoPending}
+            >
+              {retirandoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Archive className="h-4 w-4 mr-1" /> Retirar</>}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmar eliminar */}
       <AlertDialog open={!!eliminando} onOpenChange={(v) => !v && setEliminando(undefined)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { User, BookOpen, Key, Clock, CheckCircle2, AlertCircle, XCircle } from 'lucide-react'
+import { User, BookOpen, Key, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,19 +26,13 @@ const estadoVariants: Record<EstadoSocio, 'default' | 'secondary' | 'destructive
 }
 
 const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
-  pendiente: <Clock className="h-3.5 w-3.5" />,
-  aprobado: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />,
   activo: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />,
   devuelto: <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />,
-  rechazado: <XCircle className="h-3.5 w-3.5 text-destructive" />,
 }
 
 const prestamoEstadoLabel: Record<EstadoPrestamo, string> = {
-  pendiente: 'Pendiente',
-  aprobado: 'Aprobado',
   activo: 'Activo',
   devuelto: 'Devuelto',
-  rechazado: 'Cancelado',
 }
 
 function formatDate(dateStr?: string | null) {
@@ -61,9 +55,9 @@ export function DashboardPage() {
 
   const usuario = meData?.data
   const prestamosActivos = prestamosData?.data.filter(
-    (p) => p.estado === 'activo' || p.estado === 'aprobado',
+    (p) => p.estado === 'activo',
   ) ?? []
-  const prestamosPendientes = prestamosData?.data.filter((p) => p.estado === 'pendiente') ?? []
+  const prestamosPendientes: typeof prestamosActivos = []
   const ultimosPrestamos = prestamosData?.data.slice(0, 3) ?? []
 
   // Lógica de llaves — admins exentos del requisito de 6 meses
@@ -92,7 +86,7 @@ export function DashboardPage() {
               Hola, {authUsuario?.nombre} 👋
             </h1>
           )}
-          <p className="text-muted-foreground mt-1">Bienvenido a tu área de socio priiimo!</p>
+          <p className="text-muted-foreground mt-1">Bienvenido a tu área de socio</p>
         </div>
 
         {/* Estadísticas rápidas */}
@@ -277,7 +271,7 @@ export function DashboardPage() {
                           {p.juego?.nombre ?? 'Juego desconocido'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(p.fecha_solicitud)}
+                          {formatDate(p.fecha_prestamo)}
                         </p>
                       </div>
                       <span className="text-xs text-muted-foreground flex-shrink-0">
