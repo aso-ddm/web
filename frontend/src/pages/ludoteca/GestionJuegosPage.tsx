@@ -77,6 +77,7 @@ function LogsPanel({ juego }: { juego: Juego }) {
     onSuccess: () => {
       toast.success('Nota añadida')
       queryClient.invalidateQueries({ queryKey: ['juego-logs', juego.id] })
+      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setNota('')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -161,6 +162,7 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
       queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      if (!isEdit) queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       handleClose()
     },
     onError: (err: Error) => toast.error(err.message),
@@ -248,6 +250,7 @@ function SolicitudesTab() {
       toast.success('Solicitud aprobada — juego añadido al catálogo')
       queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
       queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -476,6 +479,7 @@ export function GestionJuegosPage() {
     onSuccess: () => {
       toast.success('Juego retirado del catálogo')
       queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setRetirando(undefined)
     },
     onError: (err: Error) => { toast.error(err.message); setRetirando(undefined) },
