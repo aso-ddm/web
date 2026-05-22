@@ -11,7 +11,7 @@ COPY frontend/package.json ./frontend/
 COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm rebuild bcrypt
+RUN cd /app/node_modules/.pnpm/bcrypt@5.1.1/node_modules/bcrypt && npm run install
 
 RUN pnpm exec prisma generate
 
