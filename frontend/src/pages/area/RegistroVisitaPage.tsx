@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useInfiniteQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, UserCheck, Euro, Gift, Loader2, RotateCcw, Users, CalendarDays } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -62,19 +62,29 @@ function VisitaConfirmada({ visita, onNueva }: { visita: Visita; onNueva: () => 
   )
 }
 
+const PAGE_SIZE = 25
+
 function ListadoVisitas() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['visitas-listado', debouncedSearch, page],
-    queryFn: () => visitasApi.getAll({ search: debouncedSearch || undefined, page, limit: 50 }),
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['visitas-listado', debouncedSearch],
+    queryFn: ({ pageParam }) =>
+      visitasApi.getAll({ search: debouncedSearch || undefined, page: pageParam as number, limit: PAGE_SIZE }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
   })
 
   const handleSearch = (val: string) => {
     setSearch(val)
-    setPage(1)
     clearTimeout((handleSearch as { _t?: ReturnType<typeof setTimeout> })._t)
     ;(handleSearch as { _t?: ReturnType<typeof setTimeout> })._t = setTimeout(
       () => setDebouncedSearch(val),
@@ -82,7 +92,8 @@ function ListadoVisitas() {
     )
   }
 
-  const visitas = data?.data ?? []
+  const visitas = data?.pages.flatMap((p) => p.data) ?? []
+  const total = data?.pages[0]?.total
 
   return (
     <div className="space-y-4">
@@ -93,7 +104,9 @@ function ListadoVisitas() {
             Historial de invitados
           </h2>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {data ? `${data.total} visita${data.total !== 1 ? 's' : ''} registradas` : 'Historial de visitas de no socios'}
+            {total !== undefined
+              ? `${total} visita${total !== 1 ? 's' : ''} registradas`
+              : 'Historial de visitas de no socios'}
           </p>
         </div>
         <div className="relative max-w-sm w-full sm:w-auto">
@@ -116,7 +129,9 @@ function ListadoVisitas() {
           ) : visitas.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <Users className="h-10 w-10 mb-3 opacity-30" />
-              <p className="text-sm">Sin visitas registradas</p>
+              <p className="text-sm">
+                {debouncedSearch ? 'Sin resultados para esa búsqueda' : 'Sin visitas registradas'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -152,28 +167,17 @@ function ListadoVisitas() {
         </CardContent>
       </Card>
 
-      {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3">
+      {hasNextPage && (
+        <div className="flex justify-center">
           <Button
             variant="outline"
             size="sm"
-            className="font-display"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
+            className="font-display gap-2"
+            disabled={isFetchingNextPage}
+            onClick={() => fetchNextPage()}
           >
-            Anterior
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {page} / {data.totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="font-display"
-            disabled={page === data.totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Siguiente
+            {isFetchingNextPage && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isFetchingNextPage ? 'Cargando...' : `Cargar más (${total! - visitas.length} restantes)`}
           </Button>
         </div>
       )}
