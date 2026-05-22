@@ -83,9 +83,10 @@ model Usuario {
   telefono                String?
   fecha_nacimiento        DateTime?
   direccion               String?
-  alias_telegram          String?
-  telegram_chat_id        BigInt?   @unique
-  telegram_linked_at      DateTime?
+  alias_telegram              String?
+  telegram_chat_id            BigInt?   @unique
+  telegram_linked_at          DateTime?
+  telegram_avisos_confirmado  Boolean   @default(false)
   apodo                   String?
   tipo_cuota              TipoCuota   @default(individual)
   consentimiento_tiendas      Boolean     @default(false)

@@ -12,6 +12,7 @@ import visitasRouter from './routes/visitas.routes'
 import configuracionRouter from './routes/configuracion.routes'
 import logsJuegoRouter from './routes/logs_juego.routes'
 import solicitudesJuegoRouter from './routes/solicitudes_juego.routes'
+import telegramRouter from './routes/telegram.routes'
 import { notFound, errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -25,6 +26,11 @@ app.use(cors({
 }))
 app.use(express.json())
 
+// BigInt → string en todas las respuestas JSON
+app.set('json replacer', (_key: string, value: unknown) =>
+  typeof value === 'bigint' ? value.toString() : value
+)
+
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
@@ -35,6 +41,7 @@ app.use('/api/prestamos', prestamosRouter)
 app.use('/api/visitas', visitasRouter)
 app.use('/api/config', configuracionRouter)
 app.use('/api/solicitudes-juego', solicitudesJuegoRouter)
+app.use('/api/telegram', telegramRouter)
 
 // ── Errores ───────────────────────────────────────────────────────────────────
 app.use(notFound)

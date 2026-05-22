@@ -243,6 +243,7 @@ export class AuthService {
         fecha_aprobacion_llaves: true,
         telegram_chat_id: true,
         telegram_linked_at: true,
+        telegram_avisos_confirmado: true,
       },
     })
 
@@ -292,7 +293,7 @@ export class AuthService {
   async unlinkTelegram(userId: string) {
     await this.prisma.usuario.update({
       where: { id: userId },
-      data: { telegram_chat_id: null, telegram_linked_at: null },
+      data: { telegram_chat_id: null, telegram_linked_at: null, telegram_avisos_confirmado: false },
     })
   }
 }

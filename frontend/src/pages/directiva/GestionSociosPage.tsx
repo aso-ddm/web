@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, Users, ChevronRight, Loader2, UserX, Shield, Key, CheckCircle2, Clock } from 'lucide-react'
+import { Search, Users, ChevronRight, Loader2, UserX, Shield, Key, CheckCircle2, Clock, Send } from 'lucide-react'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
@@ -48,6 +48,33 @@ function RolBadge({ rol }: { rol: Rol }) {
     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-display capitalize ${colors[rol]}`}>
       {rol.replace(/_/g, ' ')}
     </span>
+  )
+}
+
+function TelegramSection({ socio }: { socio: SocioAdmin }) {
+  const { mutate: enviarBienvenida, isPending } = useMutation({
+    mutationFn: () => sociosApi.enviarBienvenidaTelegram(socio.id),
+    onSuccess: () => toast.success('Mensaje de bienvenida enviado por Telegram'),
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Send className="h-4 w-4 text-primary" />
+        <p className="font-display font-bold text-sm">Telegram vinculado</p>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => enviarBienvenida()}
+        disabled={isPending}
+        className="font-display gap-2"
+      >
+        {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+        Enviar bienvenida
+      </Button>
+    </div>
   )
 }
 
@@ -132,6 +159,13 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
             </div>
           )}
         </div>
+
+        {socio.telegram_chat_id && (
+          <>
+            <Separator />
+            <TelegramSection socio={socio} />
+          </>
+        )}
 
         <Separator />
 

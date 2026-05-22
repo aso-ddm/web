@@ -239,6 +239,12 @@ export function PerfilPage() {
                     {usuario.alias_telegram && (
                       <p className="text-xs text-emerald-600 mt-0.5">{usuario.alias_telegram}</p>
                     )}
+                    <p className="text-xs mt-1">
+                      {usuario.telegram_avisos_confirmado
+                        ? <span className="text-emerald-600 font-display font-bold">✓ Avisos confirmados</span>
+                        : <span className="text-amber-600 font-display">⏳ Pendiente de confirmar avisos</span>
+                      }
+                    </p>
                   </div>
                 </div>
                 <Button
