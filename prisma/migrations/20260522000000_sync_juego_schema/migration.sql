@@ -44,11 +44,11 @@ UPDATE "Juego" SET "estado" = 'retirado'      WHERE "estado" = 'mantenimiento';
 -- ── 8. Recrear enum sin valores obsoletos ────────────────────────────────────
 ALTER TYPE "EstadoJuego" RENAME TO "EstadoJuego_old";
 CREATE TYPE "EstadoJuego" AS ENUM ('en_estanteria', 'prestado', 'retirado');
+ALTER TABLE "Juego" ALTER COLUMN "estado" DROP DEFAULT;
 ALTER TABLE "Juego"
   ALTER COLUMN "estado" TYPE "EstadoJuego"
   USING "estado"::text::"EstadoJuego";
-ALTER TABLE "Juego"
-  ALTER COLUMN "estado" SET DEFAULT 'en_estanteria';
+ALTER TABLE "Juego" ALTER COLUMN "estado" SET DEFAULT 'en_estanteria'::"EstadoJuego";
 DROP TYPE "EstadoJuego_old";
 
 COMMIT;
