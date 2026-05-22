@@ -11,7 +11,7 @@ beforeEach(() => {
   service = new PrestamosService(prisma)
 })
 
-const juegoDisponible = { id: 'g1', titulo: 'Catan', estado: 'disponible', juego_id: 'g1' }
+const juegoDisponible = { id: 'g1', nombre: 'Catan', estado: 'en_estanteria', juego_id: 'g1' }
 const prestamoPendiente = { id: 'p1', socio_id: 'u1', juego_id: 'g1', estado: 'pendiente' }
 const prestamoAprobado = { id: 'p1', socio_id: 'u1', juego_id: 'g1', estado: 'aprobado' }
 const prestamoActivo = { id: 'p1', socio_id: 'u1', juego_id: 'g1', estado: 'activo' }
@@ -199,7 +199,7 @@ describe('PrestamosService.confirmarDevolucion', () => {
     )
   })
 
-  it('activo → transacción: préstamo=devuelto y juego=disponible', async () => {
+  it('activo → transacción: préstamo=devuelto y juego=en_estanteria', async () => {
     ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
     ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...prestamoActivo,
@@ -207,7 +207,7 @@ describe('PrestamosService.confirmarDevolucion', () => {
     })
     ;(prisma.juego.update as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: 'g1',
-      estado: 'disponible',
+      estado: 'en_estanteria',
     })
 
     await service.confirmarDevolucion('p1', 'admin1')
@@ -224,7 +224,7 @@ describe('PrestamosService.confirmarDevolucion', () => {
     expect(prisma.juego.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'g1' },
-        data: { estado: 'disponible' },
+        data: { estado: 'en_estanteria' },
       }),
     )
   })
