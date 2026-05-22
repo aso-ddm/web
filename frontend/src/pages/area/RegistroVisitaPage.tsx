@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQuery, useInfiniteQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, UserCheck, Euro, Gift, Loader2, RotateCcw, Users, CalendarDays } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -192,6 +192,7 @@ export function RegistroVisitaPage() {
   const [seleccionado, setSeleccionado] = useState<string>('')
   const [visitaRegistrada, setVisitaRegistrada] = useState<Visita | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const queryClient = useQueryClient()
 
   const { data: configData } = useQuery({
     queryKey: ['configuracion'],
@@ -235,6 +236,7 @@ export function RegistroVisitaPage() {
     mutationFn: () => visitasApi.registrar(nombreFinal),
     onSuccess: ({ data }) => {
       setVisitaRegistrada(data)
+      queryClient.invalidateQueries({ queryKey: ['visitas-listado'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
