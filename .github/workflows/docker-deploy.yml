@@ -1,0 +1,68 @@
+name: Docker Deploy
+
+on:
+  push:
+    branches:
+      - web2-feature
+
+jobs:
+  # ── Build y push de imágenes ──────────────────────────────────────────────
+  build-push:
+    name: Build & Push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            image: asoddm/dragondemadera-backend
+            dockerfile: backend/Dockerfile
+          - service: frontend
+            image: asoddm/dragondemadera-frontend
+            dockerfile: frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ── Despliegue en servidor ────────────────────────────────────────────────
+  deploy:
+    name: Deploy to server
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/web
+
+            docker compose down
+
+            docker volume rm web_postgres_data 2>/dev/null || true
+
+            docker rmi asoddm/dragondemadera-backend:latest \
+                       asoddm/dragondemadera-frontend:latest 2>/dev/null || true
+
+            docker compose pull
+            docker compose up -d
