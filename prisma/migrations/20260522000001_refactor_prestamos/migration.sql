@@ -13,6 +13,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'Prestamo' AND column_name = 'fecha_solicitud'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'Prestamo' AND column_name = 'fecha_prestamo'
   ) THEN
     ALTER TABLE "Prestamo" RENAME COLUMN "fecha_solicitud" TO "fecha_prestamo";
   END IF;
