@@ -48,9 +48,11 @@ UPDATE "Usuario"
 -- 9. Recrear enum TipoCuota con solo 'individual' y 'conjunta'
 ALTER TYPE "TipoCuota" RENAME TO "TipoCuota_old";
 CREATE TYPE "TipoCuota" AS ENUM ('individual', 'conjunta');
+ALTER TABLE "Usuario" ALTER COLUMN "tipo_cuota" DROP DEFAULT;
 ALTER TABLE "Usuario"
     ALTER COLUMN "tipo_cuota" TYPE "TipoCuota"
     USING "tipo_cuota"::text::"TipoCuota";
+ALTER TABLE "Usuario" ALTER COLUMN "tipo_cuota" SET DEFAULT 'individual'::"TipoCuota";
 DROP TYPE "TipoCuota_old";
 
 COMMIT;
