@@ -37,6 +37,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-https://test.dragondemadera.com}
       BOT_TOKEN: ${BOT_TOKEN:-8895560407:AAE-prede2NeNvvoXcPkpv0T6gLPb4TuqysK}
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       dragondemadera_db:
         condition: service_healthy
@@ -57,6 +59,7 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
 
 networks:
   proxy_network:
