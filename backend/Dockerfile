@@ -34,4 +34,4 @@ COPY backend/package.json ./backend/
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node prisma/seed.js && node backend/dist/server.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && NODE_PATH=/app/backend/node_modules node prisma/seed.js && node backend/dist/server.js"]
