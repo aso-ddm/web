@@ -24,6 +24,7 @@ router.post('/webhook', async (req, res) => {
 
   const { id: callbackId, data, message } = update.callback_query
   const chatId = message?.chat?.id
+  const messageId = message?.message_id
 
   if (!data || !chatId) {
     res.sendStatus(200)
@@ -43,6 +44,10 @@ router.post('/webhook', async (req, res) => {
     await answerCallback(botToken, callbackId, '')
   }
 
+  if (messageId) {
+    await removeInlineKeyboard(botToken, chatId, messageId)
+  }
+
   res.sendStatus(200)
 })
 
@@ -54,11 +59,20 @@ async function answerCallback(token: string, callbackQueryId: string, text: stri
   })
 }
 
+async function removeInlineKeyboard(token: string, chatId: number, messageId: number) {
+  await fetch(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
+  })
+}
+
 interface TelegramUpdate {
   callback_query?: {
     id: string
     data?: string
     message?: {
+      message_id: number
       chat?: { id: number }
     }
   }
