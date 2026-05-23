@@ -1,5 +1,5 @@
 import { PrismaClient, Rol } from '@prisma/client'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import { RegisterInput, LoginInput } from '../schemas/auth.schema'
 import { TelegramAuthInput } from '../schemas/telegram.schema'

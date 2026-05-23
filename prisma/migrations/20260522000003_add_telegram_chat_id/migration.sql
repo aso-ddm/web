@@ -1,5 +1,4 @@
 -- AlterTable
-ALTER TABLE "Usuario" ADD COLUMN "alias_telegram" TEXT;
 ALTER TABLE "Usuario" ADD COLUMN "telegram_chat_id" BIGINT;
 ALTER TABLE "Usuario" ADD COLUMN "telegram_linked_at" TIMESTAMP(3);
 

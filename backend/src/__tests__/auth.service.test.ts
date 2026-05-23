@@ -8,7 +8,7 @@ const { mockHash, mockCompare } = vi.hoisted(() => ({
   mockCompare: vi.fn(),
 }))
 
-vi.mock('bcrypt', () => ({
+vi.mock('bcryptjs', () => ({
   default: { hash: mockHash, compare: mockCompare },
 }))
 
