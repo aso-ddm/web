@@ -50,7 +50,11 @@ function tipoRelacionLabel(tipo: string | null) {
 
 function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; precioIndividual: number }) {
   const queryClient = useQueryClient()
-  const invalidar = () => queryClient.invalidateQueries({ queryKey: ['pendientes'] })
+  const invalidar = () => {
+    queryClient.invalidateQueries({ queryKey: ['pendientes'] })
+    queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
+    queryClient.invalidateQueries({ queryKey: ['socios-activos'] })
+  }
 
   const { mutate: aprobar, isPending: aprobando } = useMutation({
     mutationFn: () => sociosApi.aprobar(socio.id),
@@ -118,7 +122,11 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
 
 function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grupo: SolicitudGrupal; precioIndividual: number; precioAdicional: number }) {
   const queryClient = useQueryClient()
-  const invalidar = () => queryClient.invalidateQueries({ queryKey: ['pendientes'] })
+  const invalidar = () => {
+    queryClient.invalidateQueries({ queryKey: ['pendientes'] })
+    queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
+    queryClient.invalidateQueries({ queryKey: ['socios-activos'] })
+  }
 
   const { mutate: aprobar, isPending: aprobando } = useMutation({
     mutationFn: () => sociosApi.aprobarGrupo(grupo.id),

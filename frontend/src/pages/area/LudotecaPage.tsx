@@ -16,6 +16,7 @@ import { SEOHead } from '@/components/SEOHead'
 import { juegosApi } from '@/services/api/juegos'
 import { prestamosApi } from '@/services/api/prestamos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
+import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import type { Juego, SolicitudJuego, EstadoSolicitudJuego } from '@/types/api'
 
 const estadoJuegoLabel: Record<string, string> = {
@@ -100,8 +101,8 @@ function SolicitarDialog({
     mutationFn: () => prestamosApi.solicitar(juego!.id, notas || undefined),
     onSuccess: () => {
       toast.success('Préstamo solicitado')
-      queryClient.invalidateQueries({ queryKey: ['ludoteca'] })
-      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
+      invalidarPrestamos(queryClient)
+      invalidarJuegos(queryClient)
       onClose()
       setNotas('')
     },

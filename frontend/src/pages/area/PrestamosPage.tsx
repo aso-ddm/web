@@ -16,6 +16,7 @@ import { SEOHead } from '@/components/SEOHead'
 import { prestamosApi } from '@/services/api/prestamos'
 import { juegosApi } from '@/services/api/juegos'
 import { configuracionApi } from '@/services/api/configuracion'
+import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import type { Juego, Prestamo } from '@/types/api'
 
 function formatDate(dateStr?: string | null) {
@@ -101,8 +102,8 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
     mutationFn: () => prestamosApi.solicitar(juegoSeleccionado!.id, notas || undefined),
     onSuccess: () => {
       toast.success(`Préstamo de "${juegoSeleccionado?.nombre}" creado — tienes ${diasPrestamo} días`)
-      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
-      queryClient.invalidateQueries({ queryKey: ['juegos-catalogo'] })
+      invalidarPrestamos(queryClient)
+      invalidarJuegos(queryClient)
       handleClose()
     },
     onError: (err: Error) => toast.error(err.message),
@@ -207,8 +208,8 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
     mutationFn: () => prestamosApi.devolucion(prestamo.id),
     onSuccess: () => {
       toast.success('Devolución registrada')
-      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
-      queryClient.invalidateQueries({ queryKey: ['juegos-catalogo'] })
+      invalidarPrestamos(queryClient)
+      invalidarJuegos(queryClient)
     },
     onError: (err: Error) => toast.error(err.message),
   })

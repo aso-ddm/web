@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { RotateCcw, Loader2, Clock, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -33,8 +34,8 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
     mutationFn: () => prestamosApi.devolucion(prestamo.id),
     onSuccess: () => {
       toast.success('Devolución confirmada')
-      queryClient.invalidateQueries({ queryKey: ['prestamos-gestion'] })
-      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      invalidarPrestamos(queryClient)
+      invalidarJuegos(queryClient)
     },
     onError: (err: Error) => toast.error(err.message),
   })

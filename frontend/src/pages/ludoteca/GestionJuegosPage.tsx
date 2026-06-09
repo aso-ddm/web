@@ -28,6 +28,7 @@ import { SEOHead } from '@/components/SEOHead'
 import { juegosApi } from '@/services/api/juegos'
 import { logsJuegoApi } from '@/services/api/logs_juego'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
+import { invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
 import { api } from '@/services/api/client'
 import { useAuthStore } from '@/store/authStore'
@@ -180,7 +181,7 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
-      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      invalidarJuegos(queryClient)
       if (!isEdit) queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       handleClose()
     },
@@ -271,7 +272,7 @@ function SolicitudesTab() {
     onSuccess: () => {
       toast.success('Solicitud aprobada — juego añadido al catálogo')
       queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
-      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      invalidarJuegos(queryClient)
       queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
     },
     onError: (err: Error) => toast.error(err.message),
@@ -491,7 +492,7 @@ export function GestionJuegosPage() {
     mutationFn: (id: string) => api.delete<void>(`/juegos/${id}`),
     onSuccess: () => {
       toast.success('Juego eliminado del catálogo')
-      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      invalidarJuegos(queryClient)
       setEliminando(undefined)
     },
     onError: (err: Error) => { toast.error(err.message); setEliminando(undefined) },
@@ -501,7 +502,7 @@ export function GestionJuegosPage() {
     mutationFn: (id: string) => juegosApi.retirar(id),
     onSuccess: () => {
       toast.success('Juego retirado del catálogo')
-      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      invalidarJuegos(queryClient)
       queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setRetirando(undefined)
     },
@@ -512,7 +513,7 @@ export function GestionJuegosPage() {
     mutationFn: (id: string) => juegosApi.reactivar(id),
     onSuccess: () => {
       toast.success('Juego reactivado y disponible en la estantería')
-      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      invalidarJuegos(queryClient)
       queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setReactivando(undefined)
     },

@@ -73,6 +73,7 @@ function ConfigField({ config }: { config: ConfigItem }) {
     onSuccess: () => {
       toast.success(`"${meta?.label ?? config.clave}" actualizado`)
       queryClient.invalidateQueries({ queryKey: ['configuracion'] })
+      queryClient.invalidateQueries({ queryKey: ['config', config.clave] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
