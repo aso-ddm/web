@@ -1,23 +1,15 @@
-import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { MessageCircle } from 'lucide-react'
 import { DragonIcon } from '@/components/atoms/icons'
+import { TelegramLoginWidget } from '@/components/TelegramLoginWidget'
 import { authApi, type TelegramUser } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 
-declare global {
-  interface Window {
-    TelegramLoginCallback?: (user: TelegramUser) => void
-  }
-}
-
 export function TelegramLinkModal() {
   const { usuario } = useAuthStore()
   const queryClient = useQueryClient()
-  const widgetRef = useRef<HTMLDivElement>(null)
-  const scriptRef = useRef<HTMLScriptElement | null>(null)
 
   const { data: meData } = useQuery({
     queryKey: ['me'],
@@ -33,8 +25,6 @@ export function TelegramLinkModal() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const botUsername = botConfig?.data?.valor
-
   const { mutate: linkTelegram } = useMutation({
     mutationFn: (user: TelegramUser) => authApi.linkTelegram(user),
     onSuccess: () => {
@@ -49,36 +39,7 @@ export function TelegramLinkModal() {
     !meData.data.telegram_chat_id &&
     !meData.data.roles.includes('administrador')
 
-  // Inject Telegram Login Widget script when modal is visible and bot username is known
-  useEffect(() => {
-    if (!needsTelegramLink || !botUsername || !widgetRef.current) return
-
-    window.TelegramLoginCallback = (user: TelegramUser) => {
-      linkTelegram(user)
-    }
-
-    if (scriptRef.current) {
-      scriptRef.current.remove()
-      scriptRef.current = null
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://telegram.org/js/telegram-widget.js?22'
-    script.setAttribute('data-telegram-login', botUsername)
-    script.setAttribute('data-size', 'large')
-    script.setAttribute('data-radius', '8')
-    script.setAttribute('data-onauth', 'TelegramLoginCallback(user)')
-    script.setAttribute('data-request-access', 'write')
-    script.async = true
-
-    widgetRef.current.innerHTML = ''
-    widgetRef.current.appendChild(script)
-    scriptRef.current = script
-
-    return () => {
-      delete window.TelegramLoginCallback
-    }
-  }, [needsTelegramLink, botUsername, linkTelegram])
+  const botUsername = botConfig?.data?.valor
 
   if (!needsTelegramLink) return null
 
@@ -127,7 +88,14 @@ export function TelegramLinkModal() {
         </div>
 
         {botUsername ? (
-          <div className="flex justify-center" ref={widgetRef} />
+          <div className="flex justify-center">
+            <TelegramLoginWidget
+              onAuth={linkTelegram}
+              botUsername={botUsername}
+              size="large"
+              radius={8}
+            />
+          </div>
         ) : (
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <MessageCircle className="h-5 w-5" />

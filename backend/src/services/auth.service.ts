@@ -297,6 +297,7 @@ export class AuthService {
     })
   }
 
+
   async requestPasswordReset(email: string) {
     const usuario = await this.prisma.usuario.findUnique({ where: { email } })
     if (!usuario || !usuario.telegram_chat_id || usuario.estado !== 'activo') {
