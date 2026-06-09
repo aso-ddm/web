@@ -273,9 +273,16 @@ export function PrestamosPage() {
   })
   const maxRenovaciones = parseInt(configData?.data?.valor ?? '2', 10)
 
+  const { data: configMaxPrestamos } = useQuery({
+    queryKey: ['config', 'max_prestamos_activos'],
+    queryFn: () => configuracionApi.getOne('max_prestamos_activos'),
+  })
+  const maxPrestamosActivos = parseInt(configMaxPrestamos?.data?.valor ?? '3', 10)
+
   const prestamos = data?.data ?? []
   const activos = prestamos.filter((p) => p.estado === 'activo')
   const historial = prestamos.filter((p) => p.estado === 'devuelto')
+  const limitePrestamosAlcanzado = activos.length >= maxPrestamosActivos
 
   return (
     <>
@@ -287,9 +294,20 @@ export function PrestamosPage() {
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Mis préstamos</h1>
             <p className="text-muted-foreground mt-1">Gestiona tus préstamos activos y devoluciones</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-            <Plus className="h-4 w-4" /> Pedir juego prestado
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              onClick={() => setDialogOpen(true)}
+              disabled={limitePrestamosAlcanzado}
+              className="font-display font-bold gap-2"
+            >
+              <Plus className="h-4 w-4" /> Pedir juego prestado
+            </Button>
+            {limitePrestamosAlcanzado && (
+              <p className="text-xs text-muted-foreground">
+                Límite de {maxPrestamosActivos} préstamos simultáneos alcanzado
+              </p>
+            )}
+          </div>
         </div>
 
         {isLoading ? (

@@ -27,4 +27,7 @@ export const juegosApi = {
 
   retirar: (id: string) =>
     api.action<{ data: Juego }>(`/juegos/${id}/retirar`),
+
+  reactivar: (id: string) =>
+    api.put<{ data: Juego }>(`/juegos/${id}/reactivar`, {}),
 }

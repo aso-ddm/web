@@ -17,11 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/SEOHead'
 import { PdfViewerDialog } from '@/components/organisms/PdfViewerDialog'
+import { RichTextContent } from '@/components/ui/rich-text-content'
 import { authApi } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { calcularPrecio } from '@/lib/cuota'
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
+
+const DNI_LETTERS = 'TRWAGMYFPDXBNJZSQVHLCKE'
 
 const passwordSchema = z
   .string()
@@ -34,6 +37,22 @@ const dniSchema = z
   .min(9, 'El DNI debe tener 9 caracteres')
   .max(9, 'El DNI debe tener 9 caracteres')
   .regex(/^[0-9]{8}[A-Za-z]$/, 'Formato de DNI no válido (ej: 12345678A)')
+  .refine((dni) => {
+    const num = parseInt(dni.slice(0, 8), 10)
+    return dni[8].toUpperCase() === DNI_LETTERS[num % 23]
+  }, 'La letra del DNI no es correcta')
+
+const fechaNacimientoSchema = z
+  .string()
+  .min(1, 'La fecha de nacimiento es obligatoria')
+  .refine((val) => new Date(val) <= new Date(), 'La fecha de nacimiento no puede ser en el futuro')
+  .refine((val) => {
+    const date = new Date(val)
+    const now = new Date()
+    const age = now.getFullYear() - date.getFullYear() -
+      (now.getMonth() < date.getMonth() || (now.getMonth() === date.getMonth() && now.getDate() < date.getDate()) ? 1 : 0)
+    return age >= 16
+  }, 'Debes tener al menos 16 años para registrarte')
 
 const miembroAdicionalSchema = z
   .object({
@@ -42,7 +61,7 @@ const miembroAdicionalSchema = z
     dni: dniSchema,
     email: z.string().email('Introduce un email válido'),
     telefono: z.string().min(1, 'El teléfono es obligatorio'),
-    fecha_nacimiento: z.string().min(1, 'La fecha de nacimiento es obligatoria'),
+    fecha_nacimiento: fechaNacimientoSchema,
     alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
     apodo: z.string().optional(),
     consentimiento_tiendas: z.boolean().default(false),
@@ -64,7 +83,7 @@ const camposTitular = {
   dni: dniSchema,
   email: z.string().email('Introduce un email válido'),
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
-  fecha_nacimiento: z.string().min(1, 'La fecha de nacimiento es obligatoria'),
+  fecha_nacimiento: fechaNacimientoSchema,
   direccion: z.string().min(1, 'La dirección es obligatoria'),
   alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
   apodo: z.string().optional(),
@@ -131,20 +150,6 @@ function errMsg(err: unknown): string | undefined {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function renderInline(text: string): React.ReactNode {
-  const parts = text.split(/(https?:\/\/[^\s)]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g)
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (/^https?:\/\//.test(part))
-          return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-secondary underline hover:opacity-80 break-all">{part}</a>
-        if (/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(part))
-          return <a key={i} href={`mailto:${part}`} className="text-secondary underline hover:opacity-80">{part}</a>
-        return part
-      })}
-    </>
-  )
-}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
@@ -185,31 +190,6 @@ function FormSection({
   )
 }
 
-function BienvenidaCard({ texto }: { texto: string }) {
-  const lines = texto.split('\n')
-  const nonEmptyIdx = lines.reduce<number[]>((acc, l, i) => (l.trim() ? [...acc, i] : acc), [])
-  const titleIdx = nonEmptyIdx[0] ?? -1
-  const subtitleIdx = nonEmptyIdx[1] ?? -1
-  const elements: React.ReactNode[] = []
-
-  for (let idx = 0; idx < lines.length; idx++) {
-    const line = lines[idx]
-    if (!line.trim()) { elements.push(<div key={idx} className="h-2" />); continue }
-    if (idx === titleIdx) { elements.push(<p key={idx} className="font-display font-bold text-base text-primary">{line}</p>); continue }
-    if (idx === subtitleIdx) { elements.push(<p key={idx} className="font-display font-bold text-sm text-secondary">{line}</p>); continue }
-    if (/^\*\*[^*]+\*\*$/.test(line.trim())) {
-      elements.push(<h4 key={idx} className="font-display font-bold text-xs uppercase tracking-widest text-primary mt-4 pt-3 border-t border-primary/20">{line.replace(/\*\*/g, '')}</h4>)
-      continue
-    }
-    elements.push(<p key={idx} className="text-sm leading-relaxed">{renderInline(line)}</p>)
-  }
-
-  return (
-    <Card className="border-primary/30 bg-primary/5 shadow-none">
-      <CardContent className="px-6 py-5 space-y-1">{elements}</CardContent>
-    </Card>
-  )
-}
 
 function DocumentosCard({ urlEstatutos, urlReglamento }: { urlEstatutos?: string; urlReglamento?: string }) {
   const [pdfOpen, setPdfOpen] = useState<{ url: string; title: string } | null>(null)
@@ -341,7 +321,7 @@ function MiembroForm({
 
       <div className="space-y-1.5">
         <Label className="font-display font-bold text-sm">Alias de Telegram <span className="text-destructive">*</span></Label>
-        <Input placeholder="@tuusuario" {...register(`miembros_adicionales.${index}.alias_telegram` as const)} />
+        <Input placeholder="tuusuario" {...register(`miembros_adicionales.${index}.alias_telegram` as const)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.replace(/^@+/, ''); register(`miembros_adicionales.${index}.alias_telegram` as const).onChange(e) }} />
         <FieldError message={(err?.alias_telegram as { message?: string } | undefined)?.message} />
       </div>
 
@@ -500,7 +480,7 @@ export function RegistroPage() {
           <div className="bg-card border border-border rounded-xl p-5 text-left space-y-3">
             <p className="font-display font-bold text-sm text-primary uppercase tracking-wide">Próximos pasos</p>
             <ol className="space-y-2">
-              {['La directiva revisa tu solicitud', 'Recibirás un email con la aprobación', 'Realiza la transferencia de la cuota', '¡Bienvenido al club!'].map((step, i) => (
+              {['La directiva revisa tu solicitud y el comprobante de transferencia que ya adjuntaste', 'Recibirás un mensaje de Telegram con la confirmación de alta', '¡Bienvenido al club!'].map((step, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm">
                   <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary font-display font-bold text-xs flex items-center justify-center mt-0.5">{i + 1}</span>
                   {step}
@@ -547,7 +527,11 @@ export function RegistroPage() {
               </CardContent>
             </Card>
           ) : configBienvenida?.data?.valor ? (
-            <BienvenidaCard texto={configBienvenida.data.valor} />
+            <Card className="border-primary/30 bg-primary/5 shadow-none">
+              <CardContent className="px-6 py-5">
+                <RichTextContent html={configBienvenida.data.valor} />
+              </CardContent>
+            </Card>
           ) : null}
 
           {/* Documentos */}
@@ -666,7 +650,7 @@ export function RegistroPage() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="alias_telegram" className="font-display font-bold text-sm">Alias de Telegram <span className="text-destructive">*</span></Label>
-                  <Input id="alias_telegram" placeholder="@tuusuario" {...register('alias_telegram')} />
+                  <Input id="alias_telegram" placeholder="tuusuario" {...register('alias_telegram')} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.replace(/^@+/, ''); register('alias_telegram').onChange(e) }} />
                   <FieldError message={errMsg(errors.alias_telegram)} />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">

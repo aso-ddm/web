@@ -34,6 +34,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
     onSuccess: () => {
       toast.success('Devolución confirmada')
       queryClient.invalidateQueries({ queryKey: ['prestamos-gestion'] })
+      queryClient.invalidateQueries({ queryKey: ['juegos'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })

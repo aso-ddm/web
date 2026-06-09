@@ -12,12 +12,16 @@ import {
   Handshake,
   UserCheck,
   Menu,
+  Megaphone,
+  ShieldAlert,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { DragonIcon } from '@/components/atoms/icons'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
+import { getRolLabel } from '@/lib/roles'
+import { TelegramLinkModal } from './TelegramLinkModal'
 
 /* ── Tipos ───────────────────────────────────────────────────────── */
 type NavItem    = { type: 'item';    label: string; to: string; icon: React.ReactNode }
@@ -26,7 +30,7 @@ type NavEntry   = NavItem | NavSection
 
 /* ── Hook de items ───────────────────────────────────────────────── */
 function useSidebarItems(): NavEntry[] {
-  const { isDirectiva, isLudotecario, isDirectivaOVocal } = useAuthStore()
+  const { isDirectiva, isLudotecario, isDirectivaOVocal, hasRole } = useAuthStore()
 
   const items: NavEntry[] = [
     { type: 'section', label: 'Mi área' },
@@ -43,6 +47,7 @@ function useSidebarItems(): NavEntry[] {
       { type: 'item', label: 'Gestión socios', to: '/directiva/socios',       icon: <Users        className="h-4 w-4" /> },
       { type: 'item', label: 'Solicitudes',    to: '/directiva/solicitudes',  icon: <ClipboardList className="h-4 w-4" /> },
       { type: 'item', label: 'Llaves',         to: '/directiva/llaves',       icon: <Key           className="h-4 w-4" /> },
+      { type: 'item', label: 'Anuncios',       to: '/directiva/anuncios',     icon: <Megaphone     className="h-4 w-4" /> },
     )
   }
 
@@ -55,8 +60,15 @@ function useSidebarItems(): NavEntry[] {
   if (isLudotecario()) {
     items.push(
       { type: 'section', label: 'Ludoteca' },
-      { type: 'item', label: 'Gestión juegos', to: '/ludoteca/juegos',    icon: <Library  className="h-4 w-4" /> },
+      { type: 'item', label: 'Gestión de juegos', to: '/ludoteca/juegos',    icon: <Library  className="h-4 w-4" /> },
       { type: 'item', label: 'Préstamos',      to: '/ludoteca/prestamos', icon: <Handshake className="h-4 w-4" /> },
+    )
+  }
+
+  if (hasRole('administrador')) {
+    items.push(
+      { type: 'section', label: 'Administración' },
+      { type: 'item', label: 'Usuarios', to: '/admin/usuarios', icon: <ShieldAlert className="h-4 w-4" /> },
     )
   }
 
@@ -106,7 +118,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               {usuario?.nombre} {usuario?.apellidos}
             </p>
             <p className="text-xs text-muted-foreground capitalize truncate mt-0.5">
-              {usuario?.roles?.[0]?.replace(/_/g, ' ') ?? 'Socio'}
+              {usuario?.roles?.[0] ? getRolLabel(usuario.roles[0]) : 'Socio'}
             </p>
           </div>
         </div>
@@ -163,6 +175,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 export function AreaLayout() {
   return (
     <div className="min-h-screen flex bg-muted/20">
+      <TelegramLinkModal />
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card flex-shrink-0">
         <SidebarContent />

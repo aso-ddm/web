@@ -145,4 +145,44 @@ router.delete('/link-telegram', authenticate, async (req, res) => {
   }
 })
 
+// POST /api/auth/reset-password/request — público
+router.post('/reset-password/request', async (req, res) => {
+  const { email } = req.body
+  if (!email || typeof email !== 'string') {
+    res.status(400).json({ error: 'Email requerido' })
+    return
+  }
+  try {
+    const result = await authService.requestPasswordReset(email.toLowerCase().trim())
+    res.json({ data: result })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(500).json({ error: message })
+  }
+})
+
+// POST /api/auth/reset-password/confirm — público
+router.post('/reset-password/confirm', async (req, res) => {
+  const { email, token, password } = req.body
+  if (!email || !token || !password) {
+    res.status(400).json({ error: 'Email, código y contraseña son obligatorios' })
+    return
+  }
+  if (typeof password !== 'string' || password.length < 8) {
+    res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' })
+    return
+  }
+  try {
+    await authService.confirmPasswordReset(
+      email.toLowerCase().trim(),
+      String(token).trim(),
+      password,
+    )
+    res.json({ data: { ok: true } })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
+
 export default router

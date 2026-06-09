@@ -7,6 +7,8 @@ import { SocioPage } from '@/pages/SocioPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegistroPage } from '@/pages/RegistroPage'
+import { RgpdPage } from '@/pages/RgpdPage'
+import { RecuperarPasswordPage } from '@/pages/RecuperarPasswordPage'
 
 // Layouts y guards
 import { AreaLayout } from '@/components/organisms/AreaLayout'
@@ -28,6 +30,8 @@ import { SolicitudesPage } from '@/pages/directiva/SolicitudesPage'
 import { GestionSociosPage } from '@/pages/directiva/GestionSociosPage'
 import { ConfiguracionPage } from '@/pages/directiva/ConfiguracionPage'
 import { LlavesPage } from '@/pages/directiva/LlavesPage'
+import { AnunciosPage } from '@/pages/directiva/AnunciosPage'
+import { AdminUsuariosPage } from '@/pages/admin/AdminUsuariosPage'
 
 // Visitas — Sprint 6
 import { RegistroVisitaPage } from '@/pages/area/RegistroVisitaPage'
@@ -52,6 +56,8 @@ export function AppRoutes() {
       <Route path="/socio" element={<SocioPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/registro" element={<RegistroPage />} />
+      <Route path="/rgpd" element={<RgpdPage />} />
+      <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
 
       {/* ── Área de socio (cualquier autenticado) ───────────────────── */}
       <Route element={<ProtectedRoute />}>
@@ -68,7 +74,7 @@ export function AppRoutes() {
       <Route
         element={
           <RoleBasedRoute
-            allowedRoles={['presidente', 'secretario', 'tesorero', 'vocal']}
+            allowedRoles={['administrador', 'presidente', 'secretario', 'tesorero', 'vocal']}
           />
         }
       >
@@ -78,6 +84,7 @@ export function AppRoutes() {
           <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
           <Route path="/directiva/llaves" element={<LlavesPage />} />
           <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
+          <Route path="/directiva/anuncios" element={<AnunciosPage />} />
         </Route>
       </Route>
 
@@ -85,7 +92,7 @@ export function AppRoutes() {
       <Route
         element={
           <RoleBasedRoute
-            allowedRoles={['presidente', 'secretario', 'tesorero', 'ludotecario']}
+            allowedRoles={['administrador', 'presidente', 'secretario', 'tesorero', 'ludotecario']}
           />
         }
       >
@@ -93,6 +100,18 @@ export function AppRoutes() {
           <Route path="/ludoteca" element={<Navigate to="/ludoteca/prestamos" replace />} />
           <Route path="/ludoteca/juegos" element={<GestionJuegosPage />} />
           <Route path="/ludoteca/prestamos" element={<GestionPrestamosPage />} />
+        </Route>
+      </Route>
+
+      {/* ── Panel administrador ─────────────────────────────────────── */}
+      <Route
+        element={
+          <RoleBasedRoute allowedRoles={['administrador']} />
+        }
+      >
+        <Route element={<AreaLayout />}>
+          <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
+          <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
         </Route>
       </Route>
 

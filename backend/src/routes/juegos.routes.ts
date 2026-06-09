@@ -97,6 +97,18 @@ router.post('/:id/retirar', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDO
   }
 })
 
+// PUT /api/juegos/:id/reactivar — reactivar juego retirado (ludotecario / directiva)
+router.put('/:id/reactivar', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+  try {
+    const juego = await juegosService.reactivar(req.params.id, req.user!.id)
+    res.json({ data: juego })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    const status = message.includes('no encontrado') ? 404 : 409
+    res.status(status).json({ error: message })
+  }
+})
+
 // DELETE /api/juegos/:id — eliminar (solo directiva)
 router.delete('/:id', authenticate, requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   try {

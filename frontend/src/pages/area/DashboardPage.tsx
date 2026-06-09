@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { User, BookOpen, Key, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
+import { User, BookOpen, Key, CheckCircle2, AlertCircle, Clock, ExternalLink, FileText, MessageCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
 import { authApi } from '@/services/api/auth'
 import { prestamosApi } from '@/services/api/prestamos'
+import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import type { EstadoSocio, EstadoPrestamo } from '@/types/api'
 
@@ -51,6 +52,22 @@ export function DashboardPage() {
   const { data: prestamosData, isLoading: loadingPrestamos } = useQuery({
     queryKey: ['mis-prestamos', 1],
     queryFn: () => prestamosApi.misPrestamos(1),
+  })
+
+  const { data: clubLinks } = useQuery({
+    queryKey: ['config-club-links'],
+    queryFn: () => Promise.allSettled([
+      configuracionApi.getOne('url_estatutos'),
+      configuracionApi.getOne('url_reglamento_interno'),
+      configuracionApi.getOne('url_telegram_principal'),
+      configuracionApi.getOne('url_telegram_partidas'),
+    ]).then(([estatutos, reglamento, telegram, telegramPartidas]) => ({
+      urlEstatutos: estatutos.status === 'fulfilled' ? estatutos.value?.data?.valor : '',
+      urlReglamento: reglamento.status === 'fulfilled' ? reglamento.value?.data?.valor : '',
+      urlTelegram: telegram.status === 'fulfilled' ? telegram.value?.data?.valor : '',
+      urlTelegramPartidas: telegramPartidas.status === 'fulfilled' ? telegramPartidas.value?.data?.valor : '',
+    })),
+    staleTime: 5 * 60 * 1000,
   })
 
   const usuario = meData?.data
@@ -139,9 +156,7 @@ export function DashboardPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                {prestamosPendientes.length > 0
-                  ? `${prestamosPendientes.length} pendiente${prestamosPendientes.length > 1 ? 's' : ''} de aprobación`
-                  : 'Sin solicitudes pendientes'}
+                Los préstamos se aprueban automáticamente
               </p>
             </CardContent>
           </Card>
@@ -253,7 +268,8 @@ export function DashboardPage() {
               ) : ultimosPrestamos.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">Aún no tienes préstamos</p>
+                  <p className="text-sm font-medium">Aún no tienes préstamos activos</p>
+                  <p className="text-xs mt-1">Los préstamos se aprueban automáticamente al solicitarlos</p>
                   <Button asChild variant="link" size="sm" className="mt-1 font-display text-secondary">
                     <Link to="/area/prestamos">Solicitar un juego</Link>
                   </Button>
@@ -284,6 +300,53 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recursos del club */}
+        {clubLinks && (clubLinks.urlEstatutos || clubLinks.urlReglamento || clubLinks.urlTelegram || clubLinks.urlTelegramPartidas) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="font-display text-lg text-primary">Recursos del club</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {clubLinks.urlEstatutos && (
+                <Button asChild variant="outline" className="justify-start gap-3 font-display">
+                  <a href={clubLinks.urlEstatutos} target="_blank" rel="noopener noreferrer">
+                    <FileText className="h-4 w-4" />
+                    Estatutos
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </a>
+                </Button>
+              )}
+              {clubLinks.urlReglamento && (
+                <Button asChild variant="outline" className="justify-start gap-3 font-display">
+                  <a href={clubLinks.urlReglamento} target="_blank" rel="noopener noreferrer">
+                    <FileText className="h-4 w-4" />
+                    Reglamento interno
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </a>
+                </Button>
+              )}
+              {clubLinks.urlTelegram && (
+                <Button asChild variant="outline" className="justify-start gap-3 font-display">
+                  <a href={clubLinks.urlTelegram} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-4 w-4" />
+                    Grupo de Telegram
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </a>
+                </Button>
+              )}
+              {clubLinks.urlTelegramPartidas && (
+                <Button asChild variant="outline" className="justify-start gap-3 font-display">
+                  <a href={clubLinks.urlTelegramPartidas} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-4 w-4" />
+                    Grupo Telegram partidas
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </a>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </>
   )

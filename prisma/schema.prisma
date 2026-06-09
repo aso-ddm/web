@@ -13,6 +13,7 @@ datasource db {
 // ============================================================
 
 enum Rol {
+  administrador
   presidente
   secretario
   tesorero
@@ -87,6 +88,8 @@ model Usuario {
   telegram_chat_id            BigInt?   @unique
   telegram_linked_at          DateTime?
   telegram_avisos_confirmado  Boolean   @default(false)
+  reset_token                 String?   @unique
+  reset_token_expiry          DateTime?
   apodo                   String?
   tipo_cuota              TipoCuota   @default(individual)
   consentimiento_tiendas      Boolean     @default(false)

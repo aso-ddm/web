@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Usuario, Rol } from '@/types/api'
 
-const DIRECTIVA: Rol[] = ['presidente', 'secretario', 'tesorero']
+const DIRECTIVA: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero']
 const DIRECTIVA_Y_VOCALES: Rol[] = [...DIRECTIVA, 'vocal']
 const DIRECTIVA_Y_LUDOTECARIO: Rol[] = [...DIRECTIVA, 'ludotecario']
 

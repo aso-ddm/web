@@ -60,6 +60,14 @@ export const sociosApi = {
   aprobar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar`),
   rechazar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/rechazar`),
   darDeBaja: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/baja`),
+  reactivar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/reactivar`),
+
+  getComprobante: async (id: string): Promise<void> => {
+    const { blob, contentType } = await api.getBlob(`/socios/${id}/comprobante`)
+    const url = URL.createObjectURL(new Blob([blob], { type: contentType }))
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  },
 
   aprobarGrupo: (grupoId: string) => api.action(`/socios/grupos/${grupoId}/aprobar`),
   rechazarGrupo: (grupoId: string) => api.action(`/socios/grupos/${grupoId}/rechazar`),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Settings, FileText, Link, Loader2, Save } from 'lucide-react'
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
+import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { SEOHead } from '@/components/SEOHead'
 import { configuracionApi, type ConfigItem } from '@/services/api/configuracion'
 
@@ -32,6 +32,15 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     description: 'Importe en euros que se cobra a los no socios que ya superaron las visitas gratuitas',
     suffix: '€',
   },
+  telegram_bot_username: {
+    label: 'Nombre del bot de Telegram',
+    description: 'Usuario del bot sin @ (ej: dragondemadera_bot). Necesario para el widget de vinculación de Telegram',
+  },
+  max_prestamos_activos: {
+    label: 'Préstamos simultáneos por socio',
+    description: 'Número máximo de préstamos activos que puede tener un socio al mismo tiempo',
+    suffix: 'préstamos',
+  },
   url_estatutos: {
     label: 'Estatutos (enlace)',
     description: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
@@ -39,6 +48,18 @@ const configLabels: Record<string, { label: string; description: string; suffix?
   url_reglamento_interno: {
     label: 'Reglamento interno (enlace)',
     description: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
+  },
+  url_telegram_principal: {
+    label: 'Grupo de Telegram (enlace)',
+    description: 'Enlace de invitación al grupo principal de Telegram del club',
+  },
+  url_telegram_partidas: {
+    label: 'Grupo Telegram partidas (enlace)',
+    description: 'Enlace de invitación al grupo de Telegram de organización de partidas',
+  },
+  iban_club: {
+    label: 'IBAN del club',
+    description: 'Número de cuenta bancaria para el pago de cuotas (se incluye en los recordatorios de pago)',
   },
 }
 
@@ -96,7 +117,7 @@ function ConfigField({ config }: { config: ConfigItem }) {
   )
 }
 
-function TextAreaConfigField({
+function RichTextConfigField({
   clave,
   initialValor,
   label,
@@ -109,22 +130,10 @@ function TextAreaConfigField({
 }) {
   const queryClient = useQueryClient()
   const [valor, setValor] = useState(initialValor)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const autoResize = useCallback(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [])
 
   useEffect(() => {
     setValor(initialValor)
   }, [initialValor])
-
-  useEffect(() => {
-    autoResize()
-  }, [valor, autoResize])
 
   const { mutate: guardar, isPending } = useMutation({
     mutationFn: () => configuracionApi.update(clave, valor),
@@ -142,16 +151,12 @@ function TextAreaConfigField({
     <div className="space-y-2">
       <Label className="font-display font-bold text-sm">{label}</Label>
       <p className="text-xs text-muted-foreground">{description}</p>
-      <Textarea
-        ref={textareaRef}
-        value={valor}
-        onChange={(e) => setValor(e.target.value)}
-        className="font-mono text-xs resize-none overflow-hidden"
+      <RichTextEditor
+        key={initialValor}
+        value={initialValor}
+        onChange={setValor}
         placeholder="Escribe aquí el texto..."
       />
-      <p className="text-xs text-muted-foreground">
-        Usa <code className="bg-muted px-1 rounded">**SECCIÓN**</code> para cabeceras y escribe las URLs completas para que sean clicables.
-      </p>
       <Button
         size="sm"
         onClick={() => guardar()}
@@ -159,7 +164,7 @@ function TextAreaConfigField({
         className="font-display font-bold gap-1"
       >
         {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-        Guardar texto
+        Guardar
       </Button>
     </div>
   )
@@ -185,6 +190,9 @@ export function ConfiguracionPage() {
 
   const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
   const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
+  const comunicacionConfigs = ['telegram_bot_username', 'iban_club']
+    .map((clave) => (data?.data ?? []).find((c) => c.clave === clave))
+    .filter(Boolean) as typeof configs
 
   const configsCuota = ['precio_cuota_individual', 'precio_cuota_adicional']
     .map((clave) => configs.find((c) => c.clave === clave))
@@ -243,6 +251,25 @@ export function ConfiguracionPage() {
         </Card>
 
         <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Comunicaciones y bot
+            </CardTitle>
+            <CardDescription>
+              Configuración del bot de Telegram y datos bancarios del club
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isLoading ? (
+              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
+            ) : (
+              comunicacionConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader>
             <CardTitle className="font-display text-base text-primary flex items-center gap-2">
               <Link className="h-4 w-4" />
@@ -275,7 +302,7 @@ export function ConfiguracionPage() {
             {isBienvenidaLoading ? (
               <Skeleton className="h-96 w-full" />
             ) : (
-              <TextAreaConfigField
+              <RichTextConfigField
                 key={bienvenidaData?.data?.valor ?? 'empty'}
                 clave="texto_bienvenida_alta"
                 initialValor={bienvenidaData?.data?.valor ?? ''}
@@ -301,7 +328,7 @@ export function ConfiguracionPage() {
             {isConsentimientoLoading ? (
               <Skeleton className="h-32 w-full" />
             ) : (
-              <TextAreaConfigField
+              <RichTextConfigField
                 key={consentimientoData?.data?.valor ?? 'empty-consentimiento'}
                 clave="texto_consentimiento_tiendas"
                 initialValor={consentimientoData?.data?.valor ?? ''}

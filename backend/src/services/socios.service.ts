@@ -1,4 +1,4 @@
-import { PrismaClient, Rol, EstadoSocio } from '@prisma/client'
+import { PrismaClient, Rol, EstadoSocio, Prisma } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 
 // Campos públicos que se devuelven en listados (sin datos sensibles)
@@ -36,18 +36,57 @@ export class SociosService {
     const { estado, search, page, limit } = filtros
     const skip = (page - 1) * limit
 
-    const where = {
-      ...(estado && { estado }),
-      ...(search && {
-        OR: [
-          { nombre: { contains: search, mode: 'insensitive' as const } },
-          { apellidos: { contains: search, mode: 'insensitive' as const } },
-          { email: { contains: search, mode: 'insensitive' as const } },
-          { dni: { contains: search, mode: 'insensitive' as const } },
-          { apodo: { contains: search, mode: 'insensitive' as const } },
-        ],
-      }),
+    if (search) {
+      const pattern = `%${search}%`
+      const estadoClause = estado
+        ? Prisma.sql`AND estado::text = ${estado}`
+        : Prisma.sql``
+
+      const [rows, countRows] = await Promise.all([
+        this.prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "Usuario"
+          WHERE (
+            unaccent(nombre) ILIKE unaccent(${pattern})
+            OR unaccent(apellidos) ILIKE unaccent(${pattern})
+            OR email ILIKE ${pattern}
+            OR dni ILIKE ${pattern}
+            OR unaccent(apodo) ILIKE unaccent(${pattern})
+          )
+          ${estadoClause}
+          ORDER BY created_at DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `,
+        this.prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(*) as count FROM "Usuario"
+          WHERE (
+            unaccent(nombre) ILIKE unaccent(${pattern})
+            OR unaccent(apellidos) ILIKE unaccent(${pattern})
+            OR email ILIKE ${pattern}
+            OR dni ILIKE ${pattern}
+            OR unaccent(apodo) ILIKE unaccent(${pattern})
+          )
+          ${estadoClause}
+        `,
+      ])
+
+      const ids = rows.map((r) => r.id)
+      const total = Number(countRows[0]?.count ?? 0)
+
+      const socios = ids.length > 0
+        ? await this.prisma.usuario.findMany({
+            where: { id: { in: ids } },
+            select: SOCIO_PUBLIC_SELECT,
+            orderBy: { created_at: 'desc' },
+          })
+        : []
+
+      return {
+        data: socios,
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      }
     }
+
+    const where = { ...(estado && { estado }) }
 
     const [socios, total] = await Promise.all([
       this.prisma.usuario.findMany({
@@ -285,6 +324,24 @@ export class SociosService {
         estado: EstadoSocio.baja,
         fecha_baja: new Date(),
         baja_por_id: bajaPorId,
+      },
+      select: SOCIO_PUBLIC_SELECT,
+    })
+  }
+
+  async reactivar(id: string, reactivadoPorId: string) {
+    const socio = await this.prisma.usuario.findUnique({ where: { id } })
+    if (!socio) throw new Error('Socio no encontrado')
+    if (socio.estado !== EstadoSocio.baja) {
+      throw new Error('Solo se pueden reactivar socios dados de baja')
+    }
+
+    return this.prisma.usuario.update({
+      where: { id },
+      data: {
+        estado: EstadoSocio.activo,
+        fecha_baja: null,
+        baja_por_id: null,
       },
       select: SOCIO_PUBLIC_SELECT,
     })

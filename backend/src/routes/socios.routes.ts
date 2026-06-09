@@ -170,6 +170,18 @@ router.post('/:id/baja', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   }
 })
 
+// POST /api/socios/:id/reactivar
+router.post('/:id/reactivar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const { id } = req.params
+  try {
+    const socio = await sociosService.reactivar(id, req.user.id)
+    res.json({ message: 'Socio reactivado correctamente', data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
+
 // POST /api/socios/:id/solicitar-llaves
 router.post('/:id/solicitar-llaves', authenticate, async (req, res) => {
   const { id } = req.params

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SocialLink } from '@/components/molecules/SocialLink'
 import { SPACING } from '@/lib/constants'
@@ -39,6 +40,11 @@ export function Footer() {
             &copy; {new Date().getFullYear()}{' '}
             <span style={{ fontFamily: 'var(--font-frank)' }}>{texts.common.clubName}</span>.{' '}
             {texts.common.copyright}
+          </p>
+          <p className="mt-1">
+            <Link to="/rgpd" className="text-background/70 hover:text-background text-sm underline-offset-2 hover:underline transition-colors">
+              Política de privacidad
+            </Link>
           </p>
         </div>
       </div>

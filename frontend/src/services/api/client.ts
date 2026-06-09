@@ -51,4 +51,17 @@ export const api = {
   put: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+  getBlob: async (endpoint: string): Promise<{ blob: Blob; contentType: string }> => {
+    const token = useAuthStore.getState().token
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!response.ok) {
+      const errorData: ApiError = await response.json().catch(() => ({ error: 'Error de red' }))
+      if (response.status === 401) useAuthStore.getState().logout()
+      throw new Error(errorData.error || `Error ${response.status}`)
+    }
+    const blob = await response.blob()
+    return { blob, contentType: response.headers.get('Content-Type') ?? 'application/octet-stream' }
+  },
 }

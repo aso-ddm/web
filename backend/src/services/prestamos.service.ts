@@ -53,6 +53,14 @@ export class PrestamosService {
     })
     if (prestamoExistente) throw new Error('Ya tienes un préstamo activo para este juego')
 
+    const [prestamosActivos, maxPrestamos] = await Promise.all([
+      this.prisma.prestamo.count({ where: { socio_id: socioId, estado: EstadoPrestamo.activo } }),
+      this.getConfigNum('max_prestamos_activos', 3),
+    ])
+    if (prestamosActivos >= maxPrestamos) {
+      throw new Error(`Has alcanzado el límite de ${maxPrestamos} préstamos simultáneos`)
+    }
+
     const diasPrestamo = await this.getConfigNum('dias_prestamo', 14)
     const ahora = new Date()
     const fechaLimite = this.addDays(ahora, diasPrestamo)

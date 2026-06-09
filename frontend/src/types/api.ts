@@ -1,5 +1,6 @@
 // ── Roles ────────────────────────────────────────────────────────────────────
 export type Rol =
+  | 'administrador'
   | 'presidente'
   | 'secretario'
   | 'tesorero'

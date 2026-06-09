@@ -296,4 +296,58 @@ export class AuthService {
       data: { telegram_chat_id: null, telegram_linked_at: null, telegram_avisos_confirmado: false },
     })
   }
+
+  async requestPasswordReset(email: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { email } })
+    if (!usuario || !usuario.telegram_chat_id || usuario.estado !== 'activo') {
+      return { hasTelegram: false }
+    }
+
+    const botToken = process.env.BOT_TOKEN
+    if (!botToken) throw new Error('BOT_TOKEN no configurado')
+
+    const token = crypto.randomInt(100000, 999999).toString()
+    const expiry = new Date(Date.now() + 15 * 60 * 1000) // 15 min
+
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { reset_token: token, reset_token_expiry: expiry },
+    })
+
+    const texto = `🔐 <b>Recuperación de contraseña — Dragón de Madera</b>\n\nHola ${usuario.nombre}, tu código de recuperación es:\n\n<code>${token}</code>\n\nVálido durante <b>15 minutos</b>. No lo compartas con nadie.`
+
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: usuario.telegram_chat_id.toString(),
+        text: texto,
+        parse_mode: 'HTML',
+      }),
+    })
+
+    return { hasTelegram: true }
+  }
+
+  async confirmPasswordReset(email: string, token: string, newPassword: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { email } })
+    if (!usuario || !usuario.reset_token) throw new Error('Código incorrecto o expirado')
+
+    if (!usuario.reset_token_expiry || usuario.reset_token_expiry < new Date()) {
+      await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
+      throw new Error('El código ha expirado. Solicita uno nuevo')
+    }
+
+    if (usuario.reset_token !== token) {
+      // Invalidar token en intento fallido — previene fuerza bruta
+      await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
+      throw new Error('Código incorrecto. Solicita un nuevo código para volver a intentarlo')
+    }
+
+    const password_hash = await bcrypt.hash(newPassword, SALT_ROUNDS)
+    await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { password_hash, reset_token: null, reset_token_expiry: null },
+    })
+  }
 }

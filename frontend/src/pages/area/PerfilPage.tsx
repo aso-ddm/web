@@ -17,6 +17,7 @@ import { authApi } from '@/services/api/auth'
 import { TelegramLoginWidget } from '@/components/TelegramLoginWidget'
 import { sociosApi } from '@/services/api/socios'
 import { useAuthStore } from '@/store/authStore'
+import { getRolLabel } from '@/lib/roles'
 
 const perfilSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -156,7 +157,7 @@ export function PerfilPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs font-display mb-0.5">Roles</p>
-              <p className="font-medium">{usuario?.roles.join(', ').replace(/_/g, ' ')}</p>
+              <p className="font-medium">{usuario?.roles.map(getRolLabel).join(', ')}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs font-display mb-0.5">Socio desde</p>

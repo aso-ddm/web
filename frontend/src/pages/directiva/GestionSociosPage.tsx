@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, Users, ChevronRight, Loader2, UserX, Shield, Key, CheckCircle2, Clock, Send } from 'lucide-react'
+import { Search, Users, ChevronRight, Loader2, UserX, UserCheck, Shield, Key, CheckCircle2, Clock, Send, FileText } from 'lucide-react'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
@@ -19,9 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { getEstadoLlaves } from '@/lib/llaves'
+import { ROL_LABELS } from '@/lib/roles'
 import type { Rol, EstadoSocio } from '@/types/api'
 
-const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+const ALL_ROLES: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 
 const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   activo: 'default',
@@ -37,6 +38,7 @@ function formatDate(d?: string | null) {
 
 function RolBadge({ rol }: { rol: Rol }) {
   const colors: Record<Rol, string> = {
+    administrador: 'bg-destructive text-destructive-foreground',
     presidente: 'bg-primary text-primary-foreground',
     secretario: 'bg-primary/80 text-primary-foreground',
     tesorero: 'bg-primary/70 text-primary-foreground',
@@ -45,8 +47,8 @@ function RolBadge({ rol }: { rol: Rol }) {
     socio_basico: 'bg-muted text-muted-foreground',
   }
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-display capitalize ${colors[rol]}`}>
-      {rol.replace(/_/g, ' ')}
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-display ${colors[rol]}`}>
+      {ROL_LABELS[rol]}
     </span>
   )
 }
@@ -83,6 +85,8 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
   const [rolesEditados, setRolesEditados] = useState<Rol[]>(socio.roles)
   const [confirmBaja, setConfirmBaja] = useState(false)
   const [confirmDevolucion, setConfirmDevolucion] = useState(false)
+  const [confirmReactivar, setConfirmReactivar] = useState(false)
+  const [abriendo, setAbriendo] = useState(false)
 
   const invalidar = () => {
     queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
@@ -95,9 +99,32 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const { mutate: reactivar, isPending: reactivando } = useMutation({
+    mutationFn: () => sociosApi.reactivar(socio.id),
+    onSuccess: () => { toast.success(`${socio.nombre} reactivado correctamente`); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const abrirComprobante = async () => {
+    setAbriendo(true)
+    try {
+      await sociosApi.getComprobante(socio.id)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al abrir el comprobante')
+    } finally {
+      setAbriendo(false)
+    }
+  }
+
   const { mutate: devolverLlaves, isPending: devolviendo } = useMutation({
     mutationFn: () => sociosApi.devolverLlaves(socio.id),
     onSuccess: () => { toast.success('Llave devuelta correctamente'); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const { mutate: aprobarLlaves, isPending: aprobandoLlaves } = useMutation({
+    mutationFn: () => sociosApi.aprobarLlaves(socio.id),
+    onSuccess: () => { toast.success('Llaves aprobadas correctamente'); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -160,6 +187,28 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
           )}
         </div>
 
+        {socio.comprobante_transferencia && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <p className="font-display font-bold text-sm">Comprobante de pago</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={abrirComprobante}
+                disabled={abriendo}
+                className="font-display gap-2"
+              >
+                {abriendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                Ver justificante
+              </Button>
+            </div>
+          </>
+        )}
+
         {socio.telegram_chat_id && (
           <>
             <Separator />
@@ -191,12 +240,18 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
             </div>
           )}
           {estadoLlaves.tipo === 'pendiente' && (
-            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
-              <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-display font-bold text-amber-700">Solicitud pendiente</p>
-                <p className="text-xs text-amber-600">Solicitadas el {formatDate(socio.fecha_solicitud_llaves)} · Ver en Solicitudes</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-display font-bold text-amber-700">Solicitud pendiente</p>
+                  <p className="text-xs text-amber-600">Solicitadas el {formatDate(socio.fecha_solicitud_llaves)}</p>
+                </div>
               </div>
+              <Button size="sm" variant="outline" onClick={() => aprobarLlaves()} disabled={aprobandoLlaves} className="font-display gap-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                {aprobandoLlaves ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                Aprobar llaves
+              </Button>
             </div>
           )}
           {estadoLlaves.tipo === 'sin_llave' && (
@@ -223,7 +278,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
                     : 'border-border bg-background text-muted-foreground hover:border-primary/50'
                 }`}
               >
-                {rol.replace(/_/g, ' ')}
+                {ROL_LABELS[rol]}
               </button>
             ))}
           </div>
@@ -240,10 +295,23 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
           )}
         </div>
 
-        {socio.estado !== 'baja' && (
-          <>
-            <Separator />
-            <div className="space-y-2">
+        <Separator />
+        <div className="space-y-2">
+          {socio.estado === 'baja' ? (
+            <>
+              <p className="font-display font-bold text-sm text-emerald-700">Reactivar socio</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmReactivar(true)}
+                className="font-display text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-2"
+              >
+                <UserCheck className="h-4 w-4" />
+                Dar de alta al socio
+              </Button>
+            </>
+          ) : (
+            <>
               <p className="font-display font-bold text-sm text-destructive">Zona peligrosa</p>
               <Button
                 variant="outline"
@@ -254,9 +322,9 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
                 <UserX className="h-4 w-4" />
                 Dar de baja al socio
               </Button>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       <AlertDialog open={confirmBaja} onOpenChange={setConfirmBaja}>
@@ -296,6 +364,29 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
             <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => devolverLlaves()} disabled={devolviendo} className="font-display font-bold">
               {devolviendo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmar devolución'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmReactivar} onOpenChange={setConfirmReactivar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-primary">
+              ¿Dar de alta a {socio.nombre} {socio.apellidos}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El socio volverá al estado activo y recuperará el acceso al área privada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => reactivar()}
+              disabled={reactivando}
+              className="font-display font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {reactivando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Dar de alta'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

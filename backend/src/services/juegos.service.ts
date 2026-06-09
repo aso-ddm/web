@@ -1,4 +1,4 @@
-import { PrismaClient, TipoLogJuego } from '@prisma/client'
+import { PrismaClient, TipoLogJuego, Prisma } from '@prisma/client'
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 import type { LogsJuegoService } from './logs_juego.service'
 
@@ -14,18 +14,50 @@ export class JuegosService {
     const { page, limit, search, estado } = filtros
     const skip = (page - 1) * limit
 
-    const where = {
-      ...(estado ? { estado } : {}),
-      ...(search
-        ? {
-            OR: [
-              { nombre: { contains: search, mode: 'insensitive' as const } },
-              { localizacion: { contains: search, mode: 'insensitive' as const } },
-              { notas: { contains: search, mode: 'insensitive' as const } },
-            ],
-          }
-        : {}),
+    if (search) {
+      const pattern = `%${search}%`
+      const estadoClause = estado
+        ? Prisma.sql`AND estado::text = ${estado}`
+        : Prisma.sql``
+
+      const [rows, countRows] = await Promise.all([
+        this.prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "Juego"
+          WHERE (
+            unaccent(nombre) ILIKE unaccent(${pattern})
+            OR localizacion ILIKE ${pattern}
+            OR notas ILIKE ${pattern}
+          )
+          ${estadoClause}
+          ORDER BY nombre ASC
+          LIMIT ${limit} OFFSET ${skip}
+        `,
+        this.prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(*) as count FROM "Juego"
+          WHERE (
+            unaccent(nombre) ILIKE unaccent(${pattern})
+            OR localizacion ILIKE ${pattern}
+            OR notas ILIKE ${pattern}
+          )
+          ${estadoClause}
+        `,
+      ])
+
+      const ids = rows.map((r) => r.id)
+      const total = Number(countRows[0]?.count ?? 0)
+
+      const juegos = ids.length > 0
+        ? await this.prisma.juego.findMany({
+            where: { id: { in: ids } },
+            orderBy: { nombre: 'asc' },
+            include: { propietario: propietarioSelect },
+          })
+        : []
+
+      return { data: juegos, total, page, limit, totalPages: Math.ceil(total / limit) }
     }
+
+    const where = { ...(estado ? { estado } : {}) }
 
     const [juegos, total] = await Promise.all([
       this.prisma.juego.findMany({
@@ -94,6 +126,27 @@ export class JuegosService {
       id,
       TipoLogJuego.retirado,
       `${juego.nombre} retirado del Dragón`,
+      usuario_id,
+    )
+
+    return updated
+  }
+
+  async reactivar(id: string, usuario_id: string) {
+    const juego = await this.prisma.juego.findUnique({ where: { id } })
+    if (!juego) throw new Error('Juego no encontrado')
+    if (juego.estado !== 'retirado') throw new Error('Solo se pueden reactivar juegos retirados')
+
+    const updated = await this.prisma.juego.update({
+      where: { id },
+      data: { estado: 'en_estanteria' },
+      include: { propietario: propietarioSelect },
+    })
+
+    await this.logsService.crearSistema(
+      id,
+      TipoLogJuego.nota_manual,
+      `${juego.nombre} reactivado y vuelto a la estantería`,
       usuario_id,
     )
 

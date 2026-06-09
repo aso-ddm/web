@@ -175,6 +175,14 @@ export function LoginPage() {
                 </Link>
               </p>
               <p className="text-sm">
+                <Link
+                  to="/recuperar-password"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </p>
+              <p className="text-sm">
                 <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
                   ← Volver a la web
                 </Link>
@@ -184,13 +192,7 @@ export function LoginPage() {
 
           {/* Pie de ayuda */}
           <p className="mt-10 text-xs text-muted-foreground text-center max-w-xs">
-            Si tienes problemas para acceder, contacta con la directiva en{' '}
-            <a
-              href="mailto:info@dragondemadera.com"
-              className="text-primary hover:underline"
-            >
-              info@dragondemadera.com
-            </a>
+            Si tienes problemas para acceder, contacta con la directiva por Telegram.
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, Loader2, Library, Search, MapPin, Archive,
-  ChevronDown, ChevronUp, Download, Check, X,
+  ChevronDown, ChevronUp, Download, Check, X, RefreshCw,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -40,6 +40,12 @@ const juegoSchema = z.object({
   num_jugadores_max: z.coerce.number().int().positive().optional().or(z.literal('')),
   notas: z.string().optional(),
   propietario_id: z.string().uuid().optional().or(z.literal('')),
+}).superRefine((data, ctx) => {
+  const min = data.num_jugadores_min
+  const max = data.num_jugadores_max
+  if (min !== '' && max !== '' && min !== undefined && max !== undefined && Number(min) > Number(max)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'El mínimo no puede ser mayor que el máximo', path: ['num_jugadores_min'] })
+  }
 })
 type JuegoForm = z.infer<typeof juegoSchema>
 
@@ -152,6 +158,19 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
   })
 
   const propietarioId = watch('propietario_id')
+
+  useEffect(() => {
+    if (open) {
+      reset(juego ? {
+        nombre: juego.nombre,
+        localizacion: juego.localizacion ?? '',
+        num_jugadores_min: juego.num_jugadores_min ?? '',
+        num_jugadores_max: juego.num_jugadores_max ?? '',
+        notas: juego.notas ?? '',
+        propietario_id: juego.propietario_id ?? '',
+      } : { nombre: '', localizacion: '', num_jugadores_min: '', num_jugadores_max: '', notas: '', propietario_id: '' })
+    }
+  }, [open, juego?.id])
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: JuegoForm) => {
@@ -451,6 +470,7 @@ export function GestionJuegosPage() {
   const [editando, setEditando] = useState<Juego | undefined>()
   const [eliminando, setEliminando] = useState<Juego | undefined>()
   const [retirando, setRetirando] = useState<Juego | undefined>()
+  const [reactivando, setReactivando] = useState<Juego | undefined>()
   const [expandedLogs, setExpandedLogs] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
@@ -486,6 +506,17 @@ export function GestionJuegosPage() {
       setRetirando(undefined)
     },
     onError: (err: Error) => { toast.error(err.message); setRetirando(undefined) },
+  })
+
+  const { mutate: reactivar, isPending: reactivandoPending } = useMutation({
+    mutationFn: (id: string) => juegosApi.reactivar(id),
+    onSuccess: () => {
+      toast.success('Juego reactivado y disponible en la estantería')
+      queryClient.invalidateQueries({ queryKey: ['juegos'] })
+      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
+      setReactivando(undefined)
+    },
+    onError: (err: Error) => { toast.error(err.message); setReactivando(undefined) },
   })
 
   const handleExportCsv = () => {
@@ -642,7 +673,17 @@ export function GestionJuegosPage() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
 
-                              {juego.estado !== 'retirado' && (
+                              {juego.estado === 'retirado' ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-emerald-600"
+                                  title="Reactivar juego"
+                                  onClick={() => setReactivando(juego)}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              ) : (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -713,6 +754,30 @@ export function GestionJuegosPage() {
               disabled={retirandoPending}
             >
               {retirandoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Archive className="h-4 w-4 mr-1" /> Retirar</>}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmar reactivar */}
+      <AlertDialog open={!!reactivando} onOpenChange={(v) => !v && setReactivando(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-primary">
+              ¿Reactivar «{reactivando?.nombre}»?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              El juego volverá a estar disponible en la estantería y podrá prestarse de nuevo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="font-display font-bold"
+              onClick={() => reactivando && reactivar(reactivando.id)}
+              disabled={reactivandoPending}
+            >
+              {reactivandoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="h-4 w-4 mr-1" /> Reactivar</>}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

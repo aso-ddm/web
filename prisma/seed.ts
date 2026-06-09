@@ -30,7 +30,7 @@ async function main() {
       nombre: 'Admin',
       apellidos: 'Dragón de Madera',
       dni: '00000000A',
-      roles: [Rol.presidente],
+      roles: [Rol.administrador],
       estado: EstadoSocio.activo,
       tipo_cuota: TipoCuota.individual,
       consentimiento_tiendas: false,
@@ -70,6 +70,12 @@ async function main() {
       valor: '3',
       tipo: 'numero',
       descripcion: 'Días antes del vencimiento para enviar aviso al socio (pendiente de implementar notificaciones)',
+    },
+    {
+      clave: 'max_prestamos_activos',
+      valor: '3',
+      tipo: 'numero',
+      descripcion: 'Número máximo de préstamos activos simultáneos por socio',
     },
     {
       clave: 'precio_cuota_individual',
@@ -140,6 +146,30 @@ Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o e
       valor: '',
       tipo: 'url',
       descripcion: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
+    },
+    {
+      clave: 'telegram_bot_username',
+      valor: '',
+      tipo: 'texto',
+      descripcion: 'Nombre de usuario del bot de Telegram (sin @), necesario para el widget de vinculación',
+    },
+    {
+      clave: 'url_telegram_principal',
+      valor: '',
+      tipo: 'url',
+      descripcion: 'Enlace de invitación al grupo principal de Telegram del club',
+    },
+    {
+      clave: 'url_telegram_partidas',
+      valor: '',
+      tipo: 'url',
+      descripcion: 'Enlace de invitación al grupo de Telegram de organización de partidas',
+    },
+    {
+      clave: 'iban_club',
+      valor: 'ES4730230180596406354008',
+      tipo: 'texto',
+      descripcion: 'IBAN de la cuenta bancaria del club para pagos de cuotas',
     },
     {
       clave: 'texto_consentimiento_tiendas',

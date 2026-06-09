@@ -34,4 +34,10 @@ export const authApi = {
     ),
 
   unlinkTelegram: () => api.delete<{ data: { ok: boolean } }>('/auth/link-telegram'),
+
+  requestPasswordReset: (email: string) =>
+    api.post<{ data: { hasTelegram: boolean } }>('/auth/reset-password/request', { email }),
+
+  confirmPasswordReset: (email: string, token: string, password: string) =>
+    api.post<{ data: { ok: boolean } }>('/auth/reset-password/confirm', { email, token, password }),
 }

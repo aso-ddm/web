@@ -49,10 +49,11 @@ export function requireRoles(...allowedRoles: Rol[]) {
 }
 
 export const ROLES = {
-  DIRECTIVA: [Rol.presidente, Rol.secretario, Rol.tesorero] as Rol[],
-  DIRECTIVA_Y_VOCALES: [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal] as Rol[],
-  DIRECTIVA_Y_LUDOTECARIO: [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.ludotecario] as Rol[],
-  TODOS_LOS_ROLES: [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal, Rol.ludotecario, Rol.socio_basico] as Rol[],
+  ADMIN: [Rol.administrador] as Rol[],
+  DIRECTIVA: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero] as Rol[],
+  DIRECTIVA_Y_VOCALES: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal] as Rol[],
+  DIRECTIVA_Y_LUDOTECARIO: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero, Rol.ludotecario] as Rol[],
+  TODOS_LOS_ROLES: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal, Rol.ludotecario, Rol.socio_basico] as Rol[],
 }
 
 export function signToken(payload: JwtPayload): string {
