@@ -1,34 +1,21 @@
 import { useState, useMemo } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Send, Loader2, MessageCircle, Wallet, Search, X, Users } from 'lucide-react'
+import { Send, Loader2, MessageCircle, Search, X, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { SEOHead } from '@/components/SEOHead'
 import { api } from '@/services/api/client'
-import { useAuthStore } from '@/store/authStore'
 import { sociosApi } from '@/services/api/socios'
-import type { Rol } from '@/types/api'
-
-const ROL_LABELS: Record<Rol, string> = {
-  administrador: 'Administrador',
-  presidente: 'Presidente',
-  secretario: 'Secretario/a',
-  tesorero: 'Tesorero/a',
-  vocal: 'Vocal',
-  ludotecario: 'Ludotecario/a',
-  socio_basico: 'Socio/a',
-}
-
-const ROLES_FILTRO: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 
 interface AnuncioResult {
   enviados: number
@@ -37,14 +24,11 @@ interface AnuncioResult {
 }
 
 export function AnunciosPage() {
-  const { isDirectiva } = useAuthStore()
   const [mensaje, setMensaje] = useState('')
   const [confirmAnuncio, setConfirmAnuncio] = useState(false)
-  const [confirmPago, setConfirmPago] = useState(false)
+  const [tab, setTab] = useState<'todos' | 'socios'>('todos')
   const [busqueda, setBusqueda] = useState('')
-  const [modoTodos, setModoTodos] = useState(true)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [activeRoles, setActiveRoles] = useState<Set<Rol>>(new Set())
 
   const { data: sociosData } = useQuery({
     queryKey: ['socios-destinatarios'],
@@ -71,68 +55,44 @@ export function AnunciosPage() {
     )
   }, [sociosConTelegram, busqueda])
 
-  const seleccionarTodos = () => {
-    setModoTodos(true)
-    setSelectedIds(new Set())
-    setActiveRoles(new Set())
-  }
-
-  const seleccionarPorRol = (rol: Rol) => {
-    setModoTodos(false)
-    const newActive = new Set(activeRoles)
-    const nuevosIds = new Set(selectedIds)
-
-    if (newActive.has(rol)) {
-      newActive.delete(rol)
-      sociosConTelegram.forEach((s) => {
-        if (s.roles.includes(rol)) {
-          const tieneOtroRolActivo = s.roles.some((r) => r !== rol && newActive.has(r))
-          if (!tieneOtroRolActivo) nuevosIds.delete(s.id)
-        }
-      })
-    } else {
-      newActive.add(rol)
-      sociosConTelegram.forEach((s) => {
-        if (s.roles.includes(rol)) nuevosIds.add(s.id)
-      })
-    }
-
-    setActiveRoles(newActive)
-    setSelectedIds(nuevosIds)
-    if (nuevosIds.size === 0 && newActive.size === 0) setModoTodos(true)
-  }
+  const todosSeleccionados =
+    sociosFiltrados.length > 0 && sociosFiltrados.every((s) => selectedIds.has(s.id))
 
   const toggleSocio = (id: string) => {
-    setModoTodos(false)
     const nuevo = new Set(selectedIds)
     if (nuevo.has(id)) nuevo.delete(id)
     else nuevo.add(id)
     setSelectedIds(nuevo)
-    if (nuevo.size === 0) setModoTodos(true)
+  }
+
+  const toggleTodosVisibles = () => {
+    const nuevo = new Set(selectedIds)
+    if (todosSeleccionados) {
+      sociosFiltrados.forEach((s) => nuevo.delete(s.id))
+    } else {
+      sociosFiltrados.forEach((s) => nuevo.add(s.id))
+    }
+    setSelectedIds(nuevo)
   }
 
   const quitarDestinatario = (id: string) => {
     const nuevo = new Set(selectedIds)
     nuevo.delete(id)
     setSelectedIds(nuevo)
-    if (nuevo.size === 0) setModoTodos(true)
   }
-
-  const destinatariosParaEnvio =
-    modoTodos ? undefined : [...selectedIds]
 
   const selectedSocios = useMemo(
     () => sociosConTelegram.filter((s) => selectedIds.has(s.id)),
     [sociosConTelegram, selectedIds],
   )
 
-  const conteoLabel = modoTodos
-    ? `Todos los socios con Telegram (${sociosConTelegram.length})`
-    : selectedIds.size === 0
-    ? 'Ningún destinatario seleccionado'
-    : `${selectedIds.size} destinatario${selectedIds.size !== 1 ? 's' : ''} seleccionado${selectedIds.size !== 1 ? 's' : ''}`
+  const destinatariosParaEnvio = tab === 'todos' ? undefined : [...selectedIds]
+  const puedeEnviar = tab === 'todos' || selectedIds.size > 0
 
-  const puedeEnviar = modoTodos || selectedIds.size > 0
+  const descConfirm =
+    tab === 'todos'
+      ? `Se enviará a todos los socios activos con Telegram vinculado (${sociosConTelegram.length}).`
+      : `Se enviará a ${selectedIds.size} destinatario${selectedIds.size !== 1 ? 's' : ''} seleccionado${selectedIds.size !== 1 ? 's' : ''}.`
 
   const { mutate: enviarAnuncio, isPending: enviandoAnuncio } = useMutation({
     mutationFn: () =>
@@ -151,26 +111,6 @@ export function AnunciosPage() {
       setConfirmAnuncio(false)
     },
   })
-
-  const { mutate: enviarRecordatorio, isPending: enviandoRecordatorio } = useMutation({
-    mutationFn: () =>
-      api.post<{ data: AnuncioResult }>('/telegram/recordatorio-pago', {
-        ...(destinatariosParaEnvio ? { destinatarios: destinatariosParaEnvio } : {}),
-      }),
-    onSuccess: ({ data }) => {
-      toast.success(`Recordatorio enviado: ${data.enviados} socios notificados`)
-      if (data.errores > 0) toast.error(`${data.errores} envíos fallaron`)
-      setConfirmPago(false)
-    },
-    onError: (err: Error) => {
-      toast.error(err.message)
-      setConfirmPago(false)
-    },
-  })
-
-  const descConfirm = modoTodos
-    ? `Se enviará a todos los socios activos con Telegram vinculado (${sociosConTelegram.length}).`
-    : `Se enviará a ${selectedIds.size} destinatario${selectedIds.size !== 1 ? 's' : ''} seleccionado${selectedIds.size !== 1 ? 's' : ''}.`
 
   return (
     <>
@@ -191,7 +131,7 @@ export function AnunciosPage() {
           </p>
         </div>
 
-        {/* ── Selector de destinatarios ── */}
+        {/* ── Destinatarios ── */}
         <Card>
           <CardHeader>
             <CardTitle className="font-display text-base text-primary flex items-center gap-2">
@@ -199,40 +139,28 @@ export function AnunciosPage() {
               Destinatarios
             </CardTitle>
             <CardDescription>
-              Elige a quién enviar los mensajes. Por defecto se envían a todos.
+              Elige a quién enviar los mensajes.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Filtros rápidos */}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant={modoTodos ? 'default' : 'outline'}
-                className="font-display font-bold h-7 text-xs"
-                onClick={seleccionarTodos}
-              >
-                Todos ({sociosConTelegram.length})
-              </Button>
-              {ROLES_FILTRO.map((rol) => {
-                const count = sociosConTelegram.filter((s) => s.roles.includes(rol)).length
-                if (count === 0) return null
-                return (
-                  <Button
-                    key={rol}
-                    size="sm"
-                    variant={activeRoles.has(rol) ? 'default' : 'outline'}
-                    className="font-display font-bold h-7 text-xs"
-                    onClick={() => seleccionarPorRol(rol)}
-                  >
-                    {ROL_LABELS[rol]} ({count})
-                  </Button>
-                )
-              })}
-            </div>
+          <CardContent>
+            <Tabs value={tab} onValueChange={(v) => setTab(v as 'todos' | 'socios')}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="todos" className="font-display font-bold">
+                  Todos ({sociosConTelegram.length})
+                </TabsTrigger>
+                <TabsTrigger value="socios" className="font-display font-bold">
+                  Socios concretos
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Búsqueda y lista — solo en modo selección */}
-            {!modoTodos && (
-              <>
+              <TabsContent value="todos">
+                <p className="text-sm text-muted-foreground">
+                  El mensaje se enviará a todos los socios activos con Telegram vinculado.
+                </p>
+              </TabsContent>
+
+              <TabsContent value="socios" className="space-y-3">
+                {/* Buscador */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -243,38 +171,52 @@ export function AnunciosPage() {
                   />
                 </div>
 
-                <div className="border rounded-md max-h-52 overflow-y-auto divide-y">
-                  {sociosFiltrados.length === 0 ? (
-                    <p className="text-center text-muted-foreground text-sm py-4">
-                      No se encontraron socios
-                    </p>
-                  ) : (
-                    sociosFiltrados.map((s) => (
-                      <label
-                        key={s.id}
-                        className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={selectedIds.has(s.id)}
-                          onCheckedChange={() => toggleSocio(s.id)}
-                        />
-                        <span className="text-sm flex-1 min-w-0">
-                          <span className="font-medium">
-                            {s.nombre} {s.apellidos}
-                          </span>
-                          {s.apodo && (
-                            <span className="text-muted-foreground ml-1">({s.apodo})</span>
-                          )}
-                        </span>
-                        <span className="text-xs text-muted-foreground hidden sm:block shrink-0">
-                          {ROL_LABELS[s.roles[0]] ?? s.roles[0]}
-                        </span>
-                      </label>
-                    ))
+                {/* Lista */}
+                <div className="border rounded-md overflow-hidden">
+                  {/* Fila seleccionar todos */}
+                  {sociosFiltrados.length > 0 && (
+                    <label className="flex items-center gap-3 px-3 py-2 bg-muted/30 border-b cursor-pointer hover:bg-muted/50">
+                      <Checkbox
+                        checked={todosSeleccionados}
+                        onCheckedChange={toggleTodosVisibles}
+                      />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {todosSeleccionados ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                        {busqueda && ' los resultados'}
+                      </span>
+                    </label>
                   )}
+
+                  <div className="max-h-52 overflow-y-auto divide-y">
+                    {sociosFiltrados.length === 0 ? (
+                      <p className="text-center text-muted-foreground text-sm py-4">
+                        No se encontraron socios
+                      </p>
+                    ) : (
+                      sociosFiltrados.map((s) => (
+                        <label
+                          key={s.id}
+                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedIds.has(s.id)}
+                            onCheckedChange={() => toggleSocio(s.id)}
+                          />
+                          <span className="text-sm flex-1 min-w-0">
+                            <span className="font-medium">
+                              {s.nombre} {s.apellidos}
+                            </span>
+                            {s.apodo && (
+                              <span className="text-muted-foreground ml-1">({s.apodo})</span>
+                            )}
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
 
-                {/* Chips de seleccionados */}
+                {/* Chips seleccionados */}
                 {selectedSocios.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSocios.map((s) => (
@@ -291,10 +233,14 @@ export function AnunciosPage() {
                     ))}
                   </div>
                 )}
-              </>
-            )}
 
-            <p className="text-sm text-muted-foreground">{conteoLabel}</p>
+                {selectedIds.size === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Ningún destinatario seleccionado.
+                  </p>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -328,39 +274,6 @@ export function AnunciosPage() {
             </Button>
           </CardContent>
         </Card>
-
-        {/* ── Recordatorio de cuota ── */}
-        {isDirectiva() && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                Recordatorio de cuota
-              </CardTitle>
-              <CardDescription>
-                El mensaje incluye el importe de la cuota y el IBAN de la asociación.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                className="font-display font-bold gap-2"
-                disabled={enviandoRecordatorio || !puedeEnviar}
-                onClick={() => setConfirmPago(true)}
-              >
-                {enviandoRecordatorio ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Wallet className="h-4 w-4" /> Enviar recordatorio de pago
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* ── Confirmar anuncio ── */}
@@ -382,28 +295,6 @@ export function AnunciosPage() {
               className="font-display font-bold"
             >
               {enviandoAnuncio ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ── Confirmar recordatorio ── */}
-      <AlertDialog open={confirmPago} onOpenChange={setConfirmPago}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Enviar recordatorio de cuota?
-            </AlertDialogTitle>
-            <AlertDialogDescription>{descConfirm}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => enviarRecordatorio()}
-              disabled={enviandoRecordatorio}
-              className="font-display font-bold"
-            >
-              {enviandoRecordatorio ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
