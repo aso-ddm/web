@@ -60,7 +60,7 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
 
   const mensajes = socios
     .filter((s) => s.telegram_chat_id)
-    .map((s) => ({ chat_id: s.telegram_chat_id!.toString(), text: mensaje.trim() }))
+    .map((s) => ({ chat_id: s.telegram_chat_id!.toString(), text: mensaje.trim(), parse_mode: 'HTML' }))
 
   const { enviados, errores } = await sendBatch(botToken, mensajes)
   res.json({ data: { enviados, errores, total: socios.length } })
