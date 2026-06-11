@@ -30,9 +30,9 @@ async function sendBatch(
   return { enviados, errores }
 }
 
-// POST /api/telegram/anuncio — envía mensaje a todos los socios con avisos confirmados
+// POST /api/telegram/anuncio — envía mensaje a socios con Telegram (todos o lista concreta)
 router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
-  const { mensaje } = req.body
+  const { mensaje, destinatarios } = req.body
   if (!mensaje || typeof mensaje !== 'string' || mensaje.trim().length === 0) {
     res.status(400).json({ error: 'El mensaje no puede estar vacío' })
     return
@@ -46,8 +46,15 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
     res.status(500).json({ error: 'BOT_TOKEN no configurado' })
     return
   }
+
+  const idsFiltro = Array.isArray(destinatarios) && destinatarios.length > 0 ? destinatarios : undefined
+
   const socios = await prisma.usuario.findMany({
-    where: { telegram_chat_id: { not: null }, estado: 'activo'},
+    where: {
+      telegram_chat_id: { not: null },
+      estado: 'activo',
+      ...(idsFiltro ? { id: { in: idsFiltro } } : {}),
+    },
     select: { telegram_chat_id: true },
   })
 
@@ -67,9 +74,16 @@ router.post('/recordatorio-pago', requireRoles(...ROLES.DIRECTIVA), async (req, 
     return
   }
 
+  const { destinatarios } = req.body
+  const idsFiltro = Array.isArray(destinatarios) && destinatarios.length > 0 ? destinatarios : undefined
+
   const [socios, configIndividual, configAdicional, configIban] = await Promise.all([
     prisma.usuario.findMany({
-      where: { telegram_chat_id: { not: null }, estado: 'activo'},
+      where: {
+        telegram_chat_id: { not: null },
+        estado: 'activo',
+        ...(idsFiltro ? { id: { in: idsFiltro } } : {}),
+      },
       select: { telegram_chat_id: true, nombre: true, tipo_cuota: true },
     }),
     prisma.configuracion.findUnique({ where: { clave: 'precio_cuota_individual' } }),
