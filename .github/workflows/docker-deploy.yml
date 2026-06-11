@@ -3,7 +3,7 @@ name: Docker Deploy
 on:
   push:
     branches:
-      - web2-feature
+      - main
 
 jobs:
   # ── Build y push de imágenes ──────────────────────────────────────────────
