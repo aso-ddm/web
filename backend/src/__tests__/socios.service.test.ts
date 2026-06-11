@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { Rol } from '@prisma/client'
 import { SociosService } from '../services/socios.service'
 import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
@@ -119,7 +120,7 @@ describe('SociosService.aprobar', () => {
   it('no encontrado → throws', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(service.aprobar('u1', 'admin')).rejects.toThrow('Socio no encontrado')
+    await expect(service.aprobar('u1', 'admin', Rol.socio_basico)).rejects.toThrow('Socio no encontrado')
   })
 
   it('estado !== pendiente → throws', async () => {
@@ -128,12 +129,12 @@ describe('SociosService.aprobar', () => {
       estado: 'activo',
     })
 
-    await expect(service.aprobar('u1', 'admin')).rejects.toThrow(
+    await expect(service.aprobar('u1', 'admin', Rol.socio_basico)).rejects.toThrow(
       'Solo se pueden aprobar solicitudes en estado pendiente',
     )
   })
 
-  it('pendiente → actualiza a activo con fecha_alta y aprobado_por_id', async () => {
+  it('pendiente → actualiza a activo con fecha_alta, aprobado_por_id y rol', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...socioActivo,
       estado: 'pendiente',
@@ -141,9 +142,10 @@ describe('SociosService.aprobar', () => {
     ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...socioActivo,
       estado: 'activo',
+      roles: [Rol.socio_basico],
     })
 
-    const result = await service.aprobar('u1', 'admin1')
+    const result = await service.aprobar('u1', 'admin1', Rol.socio_basico)
 
     expect(prisma.usuario.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -151,6 +153,7 @@ describe('SociosService.aprobar', () => {
           estado: 'activo',
           fecha_alta: expect.any(Date),
           aprobado_por_id: 'admin1',
+          roles: [Rol.socio_basico],
         }),
       }),
     )

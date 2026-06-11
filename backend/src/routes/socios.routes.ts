@@ -6,6 +6,7 @@ import {
   updateSocioSchema,
   updateRolesSchema,
   filtrosSociosSchema,
+  aprobarSocioSchema,
 } from '../schemas/socio.schema'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -137,8 +138,13 @@ router.put('/:id/roles', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
 // POST /api/socios/:id/aprobar
 router.post('/:id/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
+  const parsed = aprobarSocioSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Debe asignar un rol válido al socio antes de aprobar', details: parsed.error.flatten().fieldErrors })
+    return
+  }
   try {
-    const socio = await sociosService.aprobar(id, req.user.id)
+    const socio = await sociosService.aprobar(id, req.user.id, parsed.data.rol)
     res.json({ message: 'Socio aprobado correctamente', data: socio })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'

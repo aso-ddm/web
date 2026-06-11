@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,7 +37,10 @@ export function Header() {
     handleNavigation('/', 'top')
   }
 
+  const queryClient = useQueryClient()
+
   const handleLogout = () => {
+    queryClient.clear()
     logout()
     navigate('/')
   }

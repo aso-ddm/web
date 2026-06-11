@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   User,
   LogOut,
@@ -79,9 +80,11 @@ function useSidebarItems(): NavEntry[] {
 function SidebarContent({ onClose }: { onClose?: () => void }) {
   const { usuario, logout } = useAuthStore()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const items = useSidebarItems()
 
   const handleLogout = () => {
+    queryClient.clear()
     logout()
     navigate('/')
   }

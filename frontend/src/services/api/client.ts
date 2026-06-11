@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/authStore'
+import { queryClient } from '@/lib/queryClient'
 import type { ApiError } from '@/types/api'
 
 const BASE_URL = '/api'
@@ -31,6 +32,7 @@ async function request<T>(
     // Token expirado o inválido → cerrar sesión
     if (response.status === 401) {
       useAuthStore.getState().logout()
+      queryClient.clear()
     }
 
     throw new Error(errorData.error || `Error ${response.status}`)

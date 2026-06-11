@@ -185,6 +185,7 @@ export class SociosService {
           estado: EstadoSocio.activo,
           fecha_alta: new Date(),
           aprobado_por_id: aprobadoPorId,
+          roles: [Rol.socio_basico],
         },
       }),
       this.prisma.solicitudGrupal.update({
@@ -275,7 +276,7 @@ export class SociosService {
     })
   }
 
-  async aprobar(id: string, aprobadoPorId: string) {
+  async aprobar(id: string, aprobadoPorId: string, rol: Rol) {
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new Error('Socio no encontrado')
     if (socio.estado !== EstadoSocio.pendiente) {
@@ -288,6 +289,7 @@ export class SociosService {
         estado: EstadoSocio.activo,
         fecha_alta: new Date(),
         aprobado_por_id: aprobadoPorId,
+        roles: [rol],
       },
       select: SOCIO_PUBLIC_SELECT,
     })

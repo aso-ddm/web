@@ -17,6 +17,12 @@ export const updateRolesSchema = z.object({
   roles: z.array(z.nativeEnum(Rol)).min(1, 'Al menos un rol es obligatorio'),
 })
 
+export const aprobarSocioSchema = z.object({
+  rol: z.nativeEnum(Rol, { message: 'Rol inválido' }),
+})
+
+export type AprobarSocioInput = z.infer<typeof aprobarSocioSchema>
+
 export const bajaSchema = z.object({
   motivo: z.string().optional(),
 })

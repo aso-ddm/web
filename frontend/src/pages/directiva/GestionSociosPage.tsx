@@ -22,7 +22,7 @@ import { getEstadoLlaves } from '@/lib/llaves'
 import { ROL_LABELS } from '@/lib/roles'
 import type { Rol, EstadoSocio } from '@/types/api'
 
-const ALL_ROLES: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 
 const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   activo: 'default',
@@ -137,9 +137,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
   })
 
   const toggleRol = (rol: Rol) => {
-    setRolesEditados((prev) =>
-      prev.includes(rol) ? prev.filter((r) => r !== rol) : [...prev, rol],
-    )
+    setRolesEditados([rol])
   }
 
   const rolesChanged = JSON.stringify([...rolesEditados].sort()) !== JSON.stringify([...socio.roles].sort())

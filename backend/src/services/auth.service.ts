@@ -256,7 +256,7 @@ export class AuthService {
   }
 
   async linkTelegram(userId: string, data: TelegramAuthInput) {
-    const botToken = process.env.BOT_TOKEN
+    const botToken = process.env.BOT_TOKEN?.trim()
     if (!botToken) throw new Error('BOT_TOKEN no configurado')
 
     if (!verifyTelegramData(data, botToken)) {

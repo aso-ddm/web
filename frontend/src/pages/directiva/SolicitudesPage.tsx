@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckCircle2, XCircle, Key, User, Users, Loader2, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,7 +12,10 @@ import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { calcularPrecio } from '@/lib/cuota'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
-import type { SolicitudGrupal } from '@/types/api'
+import { ROL_LABELS } from '@/lib/roles'
+import type { SolicitudGrupal, Rol } from '@/types/api'
+
+const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 
 // Abre el comprobante en una nueva pestaña autenticado
 async function abrirComprobante(socioId: string) {
@@ -50,6 +54,8 @@ function tipoRelacionLabel(tipo: string | null) {
 
 function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; precioIndividual: number }) {
   const queryClient = useQueryClient()
+  const [rolSeleccionado, setRolSeleccionado] = useState<Rol | null>(null)
+
   const invalidar = () => {
     queryClient.invalidateQueries({ queryKey: ['pendientes'] })
     queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
@@ -57,7 +63,7 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
   }
 
   const { mutate: aprobar, isPending: aprobando } = useMutation({
-    mutationFn: () => sociosApi.aprobar(socio.id),
+    mutationFn: () => sociosApi.aprobar(socio.id, rolSeleccionado!),
     onSuccess: () => { toast.success(`Alta aprobada para ${socio.nombre} ${socio.apellidos}`); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -87,10 +93,34 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
               <span>Telegram: {socio.alias_telegram}</span>
             </div>
           )}
+          <div className="pt-2 space-y-1.5">
+            <p className="text-xs text-muted-foreground font-display">Asignar rol <span className="text-destructive">*</span></p>
+            <div className="flex flex-wrap gap-1.5">
+              {ROLES_ASIGNABLES.map((rol) => (
+                <button
+                  key={rol}
+                  onClick={() => setRolSeleccionado(rol)}
+                  className={`px-2.5 py-1 rounded text-xs font-display capitalize transition-colors border ${
+                    rolSeleccionado === rol
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                  }`}
+                >
+                  {ROL_LABELS[rol]}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="flex flex-col gap-2 flex-shrink-0 items-end">
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => aprobar()} disabled={aprobando || rechazando} className="font-display font-bold gap-1 h-9">
+            <Button
+              size="sm"
+              onClick={() => aprobar()}
+              disabled={aprobando || rechazando || !rolSeleccionado}
+              className="font-display font-bold gap-1 h-9"
+              title={!rolSeleccionado ? 'Selecciona un rol antes de aprobar' : undefined}
+            >
               {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Aprobar
             </Button>
