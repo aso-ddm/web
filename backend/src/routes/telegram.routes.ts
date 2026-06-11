@@ -47,7 +47,7 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
     return
   }
   const socios = await prisma.usuario.findMany({
-    where: { telegram_chat_id: { not: null }, telegram_avisos_confirmado: true, estado: 'activo' },
+    where: { telegram_chat_id: { not: null }, estado: 'activo'},
     select: { telegram_chat_id: true },
   })
 
@@ -69,7 +69,7 @@ router.post('/recordatorio-pago', requireRoles(...ROLES.DIRECTIVA), async (req, 
 
   const [socios, configIndividual, configAdicional, configIban] = await Promise.all([
     prisma.usuario.findMany({
-      where: { telegram_chat_id: { not: null }, telegram_avisos_confirmado: true, estado: 'activo' },
+      where: { telegram_chat_id: { not: null }, estado: 'activo'},
       select: { telegram_chat_id: true, nombre: true, tipo_cuota: true },
     }),
     prisma.configuracion.findUnique({ where: { clave: 'precio_cuota_individual' } }),
@@ -128,7 +128,7 @@ router.post('/webhook', async (req, res) => {
     const userId = data.replace('confirm_avisos:', '')
     await prisma.usuario.updateMany({
       where: { id: userId, telegram_chat_id: BigInt(chatId) },
-      data: { telegram_avisos_confirmado: true },
+      data: {},
     })
     await answerCallback(botToken, callbackId, '✅ ¡Confirmado! Recibirás los avisos del club.')
   } else if (data.startsWith('cancel_avisos:')) {

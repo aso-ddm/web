@@ -22,7 +22,6 @@ const USUARIO_SELECT = {
   fecha_nacimiento: true,
   alias_telegram: true,
   telegram_chat_id: true,
-  telegram_avisos_confirmado: true,
   apodo: true,
   tipo_cuota: true,
   roles: true,

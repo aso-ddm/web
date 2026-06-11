@@ -87,7 +87,6 @@ model Usuario {
   alias_telegram              String?
   telegram_chat_id            BigInt?   @unique
   telegram_linked_at          DateTime?
-  telegram_avisos_confirmado  Boolean   @default(false)
   reset_token                 String?   @unique
   reset_token_expiry          DateTime?
   apodo                   String?

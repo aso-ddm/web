@@ -26,7 +26,6 @@ export interface Usuario {
   alias_telegram?: string | null
   telegram_chat_id?: string | null
   telegram_linked_at?: string | null
-  telegram_avisos_confirmado?: boolean
   apodo?: string | null
   tipo_cuota: TipoCuota
   consentimiento_tiendas?: boolean
