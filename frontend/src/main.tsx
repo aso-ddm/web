@@ -9,6 +9,8 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import App from './App'
 import '@/styles/globals.css'
 
+console.log('%c🐉 Dragón de Madera%c v' + __APP_VERSION__, 'color:#e85d04;font-weight:bold;font-size:14px', 'color:#888;font-size:14px')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HelmetProvider>

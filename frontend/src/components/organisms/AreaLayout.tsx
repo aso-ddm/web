@@ -177,16 +177,16 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 /* ── Layout principal ────────────────────────────────────────────── */
 export function AreaLayout() {
   return (
-    <div className="min-h-screen flex bg-muted/20">
+    <div className="h-screen flex overflow-hidden bg-muted/20">
       <TelegramLinkModal />
       {/* Sidebar desktop */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card flex-shrink-0">
         <SidebarContent />
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar mobile */}
-        <header className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-border bg-card sticky top-0 z-40">
+        <header className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-border bg-card flex-shrink-0 z-40">
           <Link to="/area" className="flex items-center gap-2">
             <DragonIcon className="h-7 w-7 fill-primary" />
             <span className="font-display font-bold text-primary text-sm">Área de socios</span>
