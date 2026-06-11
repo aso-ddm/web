@@ -281,13 +281,29 @@ export class AuthService {
         telegram_linked_at: new Date(),
       },
       select: {
+        nombre: true,
         alias_telegram: true,
         telegram_chat_id: true,
         telegram_linked_at: true,
       },
     })
 
-    return { ...updated, telegram_chat_id: updated.telegram_chat_id?.toString() ?? null }
+    // Mensaje de bienvenida — fire and forget, nunca bloquea ni falla la vinculación
+    const chatId = data.id.toString()
+    const nombre = updated.nombre || data.first_name || 'socio/a'
+    const mensajeBienvenida =
+      `¡Hola, ${nombre}! 👋\n\n` +
+      `Soy el bot de Dragón de Madera 🐉\n\n` +
+      `No hace falta que respondas a este mensaje. ¡Bienvenido/a al club!`
+
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: mensajeBienvenida }),
+    }).catch(() => { /* ignorar errores del bot */ })
+
+    const { nombre: _, ...rest } = updated
+    return { ...rest, telegram_chat_id: rest.telegram_chat_id?.toString() ?? null }
   }
 
   async unlinkTelegram(userId: string) {

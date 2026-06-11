@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Key, CheckCircle2, Clock, AlertCircle, MessageCircle, Link2Off } from 'lucide-react'
+import { Loader2, Key, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
 import { authApi } from '@/services/api/auth'
-import { TelegramLoginWidget } from '@/components/TelegramLoginWidget'
 import { sociosApi } from '@/services/api/socios'
 import { useAuthStore } from '@/store/authStore'
 import { getRolLabel } from '@/lib/roles'
@@ -68,24 +67,6 @@ export function PerfilPage() {
       updateUsuario(data)
       queryClient.invalidateQueries({ queryKey: ['me'] })
       toast.success('Perfil actualizado correctamente')
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
-  const { mutate: linkTelegram, isPending: linkingTelegram } = useMutation({
-    mutationFn: authApi.linkTelegram,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] })
-      toast.success('Cuenta de Telegram vinculada correctamente')
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
-  const { mutate: unlinkTelegram, isPending: unlinkingTelegram } = useMutation({
-    mutationFn: authApi.unlinkTelegram,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] })
-      toast.success('Cuenta de Telegram desvinculada')
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -217,64 +198,6 @@ export function PerfilPage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Sección Telegram */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" /> Telegram
-            </CardTitle>
-            <CardDescription>
-              Vincula tu cuenta de Telegram para recibir notificaciones del club
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {usuario?.telegram_chat_id ? (
-              <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-                  <div>
-                    <p className="font-display font-bold text-emerald-700 text-sm">Telegram vinculado</p>
-                    {usuario.alias_telegram && (
-                      <p className="text-xs text-emerald-600 mt-0.5">{usuario.alias_telegram}</p>
-                    )}
-                    <p className="text-xs mt-1">
-                      {usuario.telegram_avisos_confirmado
-                        ? <span className="text-emerald-600 font-display font-bold">✓ Avisos confirmados</span>
-                        : <span className="text-amber-600 font-display">⏳ Pendiente de confirmar avisos</span>
-                      }
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => unlinkTelegram()}
-                  disabled={unlinkingTelegram}
-                  className="font-display font-bold flex-shrink-0 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                >
-                  {unlinkingTelegram
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <><Link2Off className="h-4 w-4 mr-1" />Desvincular</>
-                  }
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground">
-                  Conecta tu cuenta para que el bot del club pueda enviarte avisos directamente.
-                </p>
-                {linkingTelegram ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Vinculando...
-                  </div>
-                ) : (
-                  <TelegramLoginWidget onAuth={linkTelegram} />
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
 

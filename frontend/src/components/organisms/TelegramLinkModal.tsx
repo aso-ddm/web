@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { MessageCircle } from 'lucide-react'
 import { DragonIcon } from '@/components/atoms/icons'
 import { TelegramLoginWidget } from '@/components/TelegramLoginWidget'
 import { authApi, type TelegramUser } from '@/services/api/auth'
@@ -87,23 +86,14 @@ export function TelegramLinkModal() {
           </div>
         </div>
 
-        {botUsername ? (
-          <div className="flex justify-center">
-            <TelegramLoginWidget
-              onAuth={linkTelegram}
-              botUsername={botUsername}
-              size="large"
-              radius={8}
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <MessageCircle className="h-5 w-5" />
-            <p className="text-sm">
-              El bot de Telegram aún no está configurado. Contacta con la directiva.
-            </p>
-          </div>
-        )}
+        <div className="flex justify-center">
+          <TelegramLoginWidget
+            onAuth={linkTelegram}
+            botUsername={botUsername}
+            size="large"
+            radius={8}
+          />
+        </div>
 
         <p className="text-xs text-muted-foreground">
           Si tienes problemas, escribe a la directiva por Telegram o en{' '}
