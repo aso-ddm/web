@@ -6,11 +6,15 @@ const now = new Date()
 const pad = (n: number) => String(n).padStart(2, '0')
 const buildDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`
 
+const runNumber = process.env.GITHUB_RUN_NUMBER
+const appVersion = process.env.VITE_APP_VERSION
+  ?? (runNumber ? `1.0.${runNumber}` : 'dev')
+
 export default defineConfig({
   base: '/',
   plugins: [react()],
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION ?? 'dev'),
+    __APP_VERSION__: JSON.stringify(appVersion),
     __BUILD_DATE__: JSON.stringify(buildDate),
   },
   resolve: {

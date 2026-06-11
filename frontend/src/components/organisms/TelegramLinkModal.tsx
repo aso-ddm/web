@@ -89,7 +89,7 @@ export function TelegramLinkModal() {
         <div className="flex justify-center">
           <TelegramLoginWidget
             onAuth={linkTelegram}
-            botUsername={botUsername}
+            botUsername={botUsername || undefined}
             size="large"
             radius={8}
           />
