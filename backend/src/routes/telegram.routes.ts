@@ -4,9 +4,9 @@ import { requireRoles, ROLES } from '../middleware/auth'
 
 const router = Router()
 const BATCH_SIZE = 25
+const BOT_TOKEN = process.env.BOT_TOKEN
 
 async function sendBatch(
-  botToken: string,
   mensajes: Array<{ chat_id: string; text: string; parse_mode?: string }>,
 ): Promise<{ enviados: number; errores: number }> {
   let enviados = 0
@@ -15,7 +15,7 @@ async function sendBatch(
     const batch = mensajes.slice(i, i + BATCH_SIZE)
     const results = await Promise.allSettled(
       batch.map((msg) =>
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(msg),
@@ -41,8 +41,7 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
     res.status(400).json({ error: 'El mensaje no puede superar los 4000 caracteres' })
     return
   }
-  const botToken = process.env.BOT_TOKEN
-  if (!botToken) {
+  if (!BOT_TOKEN) {
     res.status(500).json({ error: 'BOT_TOKEN no configurado' })
     return
   }
@@ -62,14 +61,13 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
     .filter((s) => s.telegram_chat_id)
     .map((s) => ({ chat_id: s.telegram_chat_id!.toString(), text: mensaje.trim(), parse_mode: 'HTML' }))
 
-  const { enviados, errores } = await sendBatch(botToken, mensajes)
+  const { enviados, errores } = await sendBatch(mensajes)
   res.json({ data: { enviados, errores, total: socios.length } })
 })
 
 // POST /api/telegram/recordatorio-pago — envía recordatorio de cuota (tesorero)
 router.post('/recordatorio-pago', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  const botToken = process.env.BOT_TOKEN
-  if (!botToken) {
+  if (!BOT_TOKEN) {
     res.status(500).json({ error: 'BOT_TOKEN no configurado' })
     return
   }
@@ -106,7 +104,7 @@ router.post('/recordatorio-pago', requireRoles(...ROLES.DIRECTIVA), async (req, 
       }
     })
 
-  const { enviados, errores } = await sendBatch(botToken, mensajes)
+  const { enviados, errores } = await sendBatch(mensajes)
   res.json({ data: { enviados, errores, total: socios.length } })
 })
 
@@ -118,10 +116,9 @@ router.post('/bienvenida/:socioId', requireRoles(...ROLES.DIRECTIVA), async (req
   })
   if (!socio) { res.status(404).json({ error: 'Socio no encontrado' }); return }
   if (!socio.telegram_chat_id) { res.status(400).json({ error: 'Este socio no tiene Telegram vinculado' }); return }
-  const botToken = process.env.BOT_TOKEN
-  if (!botToken) { res.status(500).json({ error: 'BOT_TOKEN no configurado' }); return }
+  if (!BOT_TOKEN) { res.status(500).json({ error: 'BOT_TOKEN no configurado' }); return }
   const texto = `¡Hola, ${socio.nombre}! 👋\n\nGracias por vincular tu cuenta de Telegram con tu perfil de Dragón de Madera.\n\n¿Confirmas que deseas recibir los avisos del club por aquí? 🐉`
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+  const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
