@@ -82,5 +82,5 @@ export const sociosApi = {
     api.action<{ data: SocioAdmin }>(`/socios/${id}/devolver-llaves`),
 
   enviarBienvenidaTelegram: (id: string) =>
-    api.action<{ message: string }>(`/socios/${id}/telegram/bienvenida`),
+    api.action<{ message: string }>(`/telegram/bienvenida/${id}`),
 }

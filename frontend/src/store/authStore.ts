@@ -21,7 +21,6 @@ interface AuthState {
   isDirectiva: () => boolean
   isDirectivaOVocal: () => boolean
   isLudotecario: () => boolean
-  canManageGames: () => boolean
 
   // Redirect destino por rol tras login
   getRedirectPath: () => string
@@ -54,9 +53,6 @@ export const useAuthStore = create<AuthState>()(
         DIRECTIVA_Y_VOCALES.some((r) => get().usuario?.roles.includes(r)),
 
       isLudotecario: () =>
-        DIRECTIVA_Y_LUDOTECARIO.some((r) => get().usuario?.roles.includes(r)),
-
-      canManageGames: () =>
         DIRECTIVA_Y_LUDOTECARIO.some((r) => get().usuario?.roles.includes(r)),
 
       getRedirectPath: () => {

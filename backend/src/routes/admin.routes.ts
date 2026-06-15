@@ -1,14 +1,14 @@
 import { Router, Response } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
-import { requireRoles, ROLES } from '../middleware/auth'
+import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { Rol, EstadoSocio, TipoCuota, Prisma } from '@prisma/client'
 
 const router = Router()
 
 // Todos los endpoints requieren rol administrador
-router.use(requireRoles(...ROLES.ADMIN))
+router.use(requireRoles(Rol.administrador))
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
 

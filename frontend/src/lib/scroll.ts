@@ -8,7 +8,3 @@ export function scrollToElement(elementId: string, smooth = true): void {
     element.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
   }
 }
-
-export function updateUrlHash(hash: string): void {
-  window.history.pushState({}, '', hash)
-}

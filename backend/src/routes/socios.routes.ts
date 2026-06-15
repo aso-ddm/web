@@ -228,49 +228,6 @@ router.post('/:id/devolver-llaves', requireRoles(...ROLES.DIRECTIVA), async (req
   }
 })
 
-// POST /api/socios/:id/telegram/bienvenida — envía mensaje de bienvenida por Telegram
-router.post('/:id/telegram/bienvenida', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  const { id } = req.params
-  const socio = await prisma.usuario.findUnique({
-    where: { id },
-    select: { telegram_chat_id: true, nombre: true },
-  })
-  if (!socio) {
-    res.status(404).json({ error: 'Socio no encontrado' })
-    return
-  }
-  if (!socio.telegram_chat_id) {
-    res.status(400).json({ error: 'Este socio no tiene Telegram vinculado' })
-    return
-  }
-  const botToken = process.env.BOT_TOKEN
-  if (!botToken) {
-    res.status(500).json({ error: 'BOT_TOKEN no configurado' })
-    return
-  }
-  const texto = `¡Hola, ${socio.nombre}! 👋\n\nGracias por vincular tu cuenta de Telegram con tu perfil de Dragón de Madera.\n\n¿Confirmas que deseas recibir los avisos del club por aquí? 🐉`
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: socio.telegram_chat_id.toString(),
-      text: texto,
-      reply_markup: {
-        inline_keyboard: [[
-          { text: '✅ Confirmar', callback_data: `confirm_avisos:${id}` },
-          { text: '❌ Cancelar', callback_data: `cancel_avisos:${id}` },
-        ]],
-      },
-    }),
-  })
-  const data = await response.json() as { ok: boolean; description?: string }
-  if (!data.ok) {
-    res.status(502).json({ error: `Error de Telegram: ${data.description ?? 'desconocido'}` })
-    return
-  }
-  res.json({ message: 'Mensaje enviado correctamente' })
-})
-
 // POST /api/socios/grupos/:grupoId/aprobar
 router.post('/grupos/:grupoId/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { grupoId } = req.params

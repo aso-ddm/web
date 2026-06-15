@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { scrollToTop, scrollToElement, updateUrlHash } from '@/lib/scroll'
+import { scrollToTop, scrollToElement } from '@/lib/scroll'
 
 export function useScrollNavigation() {
   const navigate = useNavigate()
@@ -13,7 +13,7 @@ export function useScrollNavigation() {
 
       if (scrollTo === 'top') {
         if (isCurrentPath) {
-          updateUrlHash(to)
+          window.history.pushState({}, '', to)
           scrollToTop()
         } else {
           navigate(to)
@@ -27,7 +27,7 @@ export function useScrollNavigation() {
         const isOnTargetPath = pathname === targetPath
 
         if (isOnTargetPath) {
-          updateUrlHash(`${targetPath}#${scrollTo}`)
+          window.history.pushState({}, '', `${targetPath}#${scrollTo}`)
           scrollToElement(scrollTo)
         } else {
           navigate(`${targetPath}#${scrollTo}`)

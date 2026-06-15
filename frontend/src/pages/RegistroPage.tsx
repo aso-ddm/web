@@ -20,7 +20,6 @@ import { PdfViewerDialog } from '@/components/organisms/PdfViewerDialog'
 import { RichTextContent } from '@/components/ui/rich-text-content'
 import { authApi } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
-import { calcularPrecio } from '@/lib/cuota'
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -664,7 +663,7 @@ export function RegistroPage() {
 
             {/* 5. Miembros adicionales (solo cuota conjunta) */}
             {tipoCuota === 'conjunta' && (
-              <FormSection number={5} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Precio total: ${calcularPrecio(fields.length, precioIndividual, precioAdicional)}€/mes`} className="border-secondary/40">
+              <FormSection number={5} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Precio total: ${precioIndividual + precioAdicional * fields.length}€/mes`} className="border-secondary/40">
                 <div className="space-y-4">
                   {'miembros_adicionales' in errors && (errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message && (
                     <FieldError message={(errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message} />

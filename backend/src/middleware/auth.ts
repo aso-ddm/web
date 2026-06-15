@@ -27,29 +27,29 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
 export function requireRoles(...allowedRoles: Rol[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const auth = req.headers.authorization
-    if (!auth?.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'No autorizado' })
-      return
-    }
-    try {
-      const payload = jwt.verify(auth.slice(7), JWT_SECRET) as JwtPayload
-      req.user = payload
-      const userRoles = payload.roles as Rol[]
-      const hasRole = allowedRoles.some(role => userRoles.includes(role))
-      if (!hasRole) {
-        res.status(403).json({ error: 'No tienes permisos para esta acción' })
+    if (!req.user) {
+      const auth = req.headers.authorization
+      if (!auth?.startsWith('Bearer ')) {
+        res.status(401).json({ error: 'No autorizado' })
         return
       }
-      next()
-    } catch {
-      res.status(401).json({ error: 'No autorizado' })
+      try {
+        req.user = jwt.verify(auth.slice(7), JWT_SECRET) as JwtPayload
+      } catch {
+        res.status(401).json({ error: 'No autorizado' })
+        return
+      }
     }
+    const hasRole = allowedRoles.some(role => (req.user.roles as Rol[]).includes(role))
+    if (!hasRole) {
+      res.status(403).json({ error: 'No tienes permisos para esta acción' })
+      return
+    }
+    next()
   }
 }
 
 export const ROLES = {
-  ADMIN: [Rol.administrador] as Rol[],
   DIRECTIVA: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero] as Rol[],
   DIRECTIVA_Y_VOCALES: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal] as Rol[],
   DIRECTIVA_Y_LUDOTECARIO: [Rol.administrador, Rol.presidente, Rol.secretario, Rol.tesorero, Rol.ludotecario] as Rol[],

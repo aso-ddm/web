@@ -8,14 +8,9 @@ export interface FiltrosJuegos {
   limit?: number
 }
 
-function buildQuery(params: FiltrosJuegos): string {
-  const q = new URLSearchParams()
-  if (params.search) q.set('search', params.search)
-  if (params.estado) q.set('estado', params.estado)
-  if (params.page) q.set('page', String(params.page))
-  if (params.limit) q.set('limit', String(params.limit))
-  const str = q.toString()
-  return str ? `?${str}` : ''
+function buildQuery(p: FiltrosJuegos): string {
+  const q = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString()
+  return q ? `?${q}` : ''
 }
 
 export const juegosApi = {

@@ -9,7 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
-import { calcularPrecio } from '@/lib/cuota'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import { ROL_LABELS } from '@/lib/roles'
@@ -170,7 +169,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const precioTotal = calcularPrecio(grupo.miembros.length, precioIndividual, precioAdicional)
+  const precioTotal = precioIndividual + precioAdicional * grupo.miembros.length
 
   return (
     <div className="py-4 border-b border-border last:border-0">
