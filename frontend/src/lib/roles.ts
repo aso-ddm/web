@@ -13,3 +13,12 @@ export const ROL_LABELS: Record<Rol, string> = {
 export function getRolLabel(rol: Rol): string {
   return ROL_LABELS[rol] ?? rol
 }
+
+// Un único rol base; ludotecario se acumula. Debe coincidir con normalizarRoles del backend.
+export function toggleRol(actuales: Rol[], rol: Rol): Rol[] {
+  if (rol === 'ludotecario') {
+    return actuales.includes(rol) ? actuales.filter((r) => r !== rol) : [...actuales, rol]
+  }
+  const conservados = actuales.filter((r) => r === 'ludotecario' || r === 'administrador')
+  return [...conservados, rol]
+}

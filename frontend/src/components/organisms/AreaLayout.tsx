@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { authApi } from '@/services/api/auth'
 import {
   User,
   LogOut,
@@ -176,6 +178,13 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
 /* ── Layout principal ────────────────────────────────────────────── */
 export function AreaLayout() {
+  // Refresca roles/estado desde el backend; un 401 cierra la sesión (ver api/client)
+  const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => authApi.me() })
+  const updateUsuario = useAuthStore((s) => s.updateUsuario)
+  useEffect(() => {
+    if (me?.data) updateUsuario({ roles: me.data.roles, estado: me.data.estado })
+  }, [me, updateUsuario])
+
   return (
     <div className="h-screen flex overflow-hidden bg-muted/20">
       <TelegramLinkModal />

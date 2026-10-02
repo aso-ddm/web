@@ -25,6 +25,25 @@ const SOCIO_PUBLIC_SELECT = {
   baja_por: { select: { id: true, nombre: true, apellidos: true } },
 } as const
 
+// El rol administrador no se asigna ni se retira desde la app (solo BD/seed).
+export function comprobarCambioAdmin(actuales: Rol[], nuevos: Rol[]) {
+  if (actuales.includes(Rol.administrador) !== nuevos.includes(Rol.administrador)) {
+    throw new Error('El rol de administrador no se puede asignar ni retirar desde la aplicación')
+  }
+}
+
+// Un único rol base por persona; ludotecario es el único que se acumula. Sin rol base → socio_basico.
+const ROLES_BASE: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal, Rol.socio_basico]
+export function normalizarRoles(roles: Rol[]): Rol[] {
+  const unicos = [...new Set(roles)]
+  const base = unicos.filter((r) => ROLES_BASE.includes(r))
+  if (base.length > 1) {
+    throw new Error('Solo se puede tener un rol, además de ludotecario')
+  }
+  if (base.length === 0 && !unicos.includes(Rol.administrador)) unicos.push(Rol.socio_basico)
+  return unicos
+}
+
 export class SociosService {
   constructor(private prisma: PrismaClient) {}
 
@@ -278,6 +297,7 @@ export class SociosService {
     if (socio.estado !== EstadoSocio.pendiente) {
       throw new Error('Solo se pueden aprobar solicitudes en estado pendiente')
     }
+    comprobarCambioAdmin(socio.roles, [rol])
 
     return this.prisma.usuario.update({
       where: { id },
@@ -285,7 +305,7 @@ export class SociosService {
         estado: EstadoSocio.activo,
         fecha_alta: new Date(),
         aprobado_por_id: aprobadoPorId,
-        roles: [rol],
+        roles: normalizarRoles([rol]),
       },
       select: SOCIO_PUBLIC_SELECT,
     })
@@ -310,8 +330,12 @@ export class SociosService {
   }
 
   async darDeBaja(id: string, bajaPorId: string) {
+    if (id === bajaPorId) throw new Error('No puedes darte de baja a ti mismo')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new Error('Socio no encontrado')
+    if (socio.roles.includes(Rol.administrador)) {
+      throw new Error('Una cuenta de administrador no se puede dar de baja desde la aplicación')
+    }
     if (socio.estado === EstadoSocio.baja) {
       throw new Error('El socio ya está dado de baja')
     }
@@ -345,9 +369,12 @@ export class SociosService {
     })
   }
 
-  async updateRoles(id: string, roles: Rol[]) {
+  async updateRoles(id: string, roles: Rol[], actorId: string) {
+    if (id === actorId) throw new Error('No puedes cambiar tus propios roles')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new Error('Socio no encontrado')
+    roles = normalizarRoles(roles)
+    comprobarCambioAdmin(socio.roles, roles)
 
     return this.prisma.usuario.update({
       where: { id },

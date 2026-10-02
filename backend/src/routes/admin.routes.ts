@@ -3,6 +3,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
+import { comprobarCambioAdmin, normalizarRoles } from '../services/socios.service'
 import { Rol, EstadoSocio, TipoCuota, Prisma } from '@prisma/client'
 
 const router = Router()
@@ -127,6 +128,13 @@ router.post('/usuarios', async (req, res) => {
     return
   }
   const { password: rawPassword, ...rest } = parsed.data
+  try {
+    rest.roles = normalizarRoles(rest.roles)
+    comprobarCambioAdmin([], rest.roles)
+  } catch (err) {
+    res.status(403).json({ error: (err as Error).message })
+    return
+  }
   const existing = await prisma.usuario.findFirst({
     where: { OR: [{ email: rest.email }, { dni: rest.dni }] },
   })
@@ -164,6 +172,30 @@ router.put('/usuarios/:id', async (req, res) => {
     return
   }
   const { password: newPassword, ...rest } = parsed.data
+  if (rest.roles || rest.estado) {
+    const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true } })
+    if (!actual) {
+      res.status(404).json({ error: 'Usuario no encontrado' })
+      return
+    }
+    if (rest.estado && actual.roles.includes(Rol.administrador)) {
+      res.status(403).json({ error: 'El estado de una cuenta de administrador no se puede cambiar desde la aplicación' })
+      return
+    }
+    if (rest.roles) {
+      if (req.params.id === req.user.id) {
+        res.status(403).json({ error: 'No puedes cambiar tus propios roles' })
+        return
+      }
+      try {
+        rest.roles = normalizarRoles(rest.roles)
+        comprobarCambioAdmin(actual.roles, rest.roles)
+      } catch (err) {
+        res.status(403).json({ error: (err as Error).message })
+        return
+      }
+    }
+  }
   const updateData: Record<string, unknown> = { ...rest }
   if (newPassword) {
     updateData.password_hash = await bcrypt.hash(newPassword as string, 12)
@@ -183,6 +215,12 @@ router.put('/usuarios/:id', async (req, res) => {
 // DELETE /api/admin/usuarios/:id
 router.delete('/usuarios/:id', async (req, res) => {
   const id = req.params.id
+  const objetivo = await prisma.usuario.findUnique({ where: { id }, select: { roles: true } })
+  if (objetivo?.roles.includes(Rol.administrador)) {
+    // Incluye el autoborrado: quien llama siempre es administrador
+    res.status(403).json({ error: 'Una cuenta de administrador no se puede eliminar desde la aplicación' })
+    return
+  }
   const prestamosActivos = await prisma.prestamo.count({
     where: { socio_id: id, estado: 'activo' },
   })

@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { useAuthStore } from '@/store/authStore'
-import { ROL_LABELS } from '@/lib/roles'
+import { ROL_LABELS, toggleRol as toggleRolLista } from '@/lib/roles'
 import type { Rol, EstadoSocio } from '@/types/api'
 
 const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
@@ -56,6 +56,8 @@ function RolBadge({ rol }: { rol: Rol }) {
 function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => void }) {
   const queryClient = useQueryClient()
   const puedeEditar = useAuthStore((s) => s.isDirectiva()) // vocales: solo lectura
+  // Nadie cambia sus propios roles ni su estado, ni los de un administrador
+  const puedeGestionar = useAuthStore((s) => s.usuario?.id !== socio.id) && puedeEditar && !socio.roles.includes('administrador')
   const [rolesEditados, setRolesEditados] = useState<Rol[]>(socio.roles)
   const [confirmBaja, setConfirmBaja] = useState(false)
   const [confirmDevolucion, setConfirmDevolucion] = useState(false)
@@ -106,9 +108,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const toggleRol = (rol: Rol) => {
-    setRolesEditados([rol])
-  }
+  const toggleRol = (rol: Rol) => setRolesEditados((prev) => toggleRolLista(prev, rol))
 
   const rolesChanged = JSON.stringify([...rolesEditados].sort()) !== JSON.stringify([...socio.roles].sort())
 
@@ -211,7 +211,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
         <Separator />
 
         {/* Roles */}
-        {puedeEditar && <div className="space-y-3">
+        {puedeGestionar && <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             <p className="font-display font-bold text-sm">Roles</p>
@@ -244,8 +244,9 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
           )}
         </div>}
 
-        {puedeEditar && <Separator />}
-        {puedeEditar && <div className="space-y-2">
+        {/* Nadie se da de baja a sí mismo ni a un administrador */}
+        {puedeGestionar && <Separator />}
+        {puedeGestionar && <div className="space-y-2">
           {socio.estado === 'baja' ? (
             <>
               <p className="font-display font-bold text-sm text-emerald-700">Reactivar socio</p>

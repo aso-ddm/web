@@ -476,6 +476,7 @@ export function GestionJuegosPage() {
   const queryClient = useQueryClient()
 
   const token = useAuthStore((s) => s.token)
+  const puedeEliminar = useAuthStore((s) => s.isDirectiva()) // ludotecario: retirar sí, eliminar no
 
   const { data, isLoading } = useQuery({
     queryKey: ['juegos', search, estadoFiltro],
@@ -697,16 +698,18 @@ export function GestionJuegosPage() {
                                 </Button>
                               )}
 
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                title="Eliminar"
-                                onClick={() => setEliminando(juego)}
-                                disabled={juego.estado === 'prestado'}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              {puedeEliminar && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  title="Eliminar"
+                                  onClick={() => setEliminando(juego)}
+                                  disabled={juego.estado === 'prestado'}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
 

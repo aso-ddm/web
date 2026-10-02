@@ -18,11 +18,13 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEOHead } from '@/components/SEOHead'
 import { api } from '@/services/api/client'
-import { ROL_LABELS } from '@/lib/roles'
+import { ROL_LABELS, toggleRol as toggleRolLista } from '@/lib/roles'
+import { useAuthStore } from '@/store/authStore'
 import type { Rol, EstadoSocio } from '@/types/api'
 import type { SocioAdmin } from '@/services/api/socios'
 
-const ALL_ROLES: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+// ponytail: administrador no es asignable desde la app (solo BD/seed)
+const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 
 const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   activo: 'default',
@@ -46,6 +48,7 @@ function UsuarioDetalle({
   const [confirmEliminar, setConfirmEliminar] = useState(false)
   const [editPassword, setEditPassword] = useState('')
   const [rolesEditados, setRolesEditados] = useState<Rol[]>(usuario.roles)
+  const esUnoMismo = useAuthStore((s) => s.usuario?.id === usuario.id)
 
   const invalidar = () => {
     queryClient.invalidateQueries({ queryKey: ['admin-usuarios'] })
@@ -73,8 +76,7 @@ function UsuarioDetalle({
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const toggleRol = (rol: Rol) =>
-    setRolesEditados((prev) => prev.includes(rol) ? prev.filter(r => r !== rol) : [...prev, rol])
+  const toggleRol = (rol: Rol) => setRolesEditados((prev) => toggleRolLista(prev, rol))
 
   const rolesChanged = JSON.stringify([...rolesEditados].sort()) !== JSON.stringify([...usuario.roles].sort())
 
@@ -106,8 +108,8 @@ function UsuarioDetalle({
           </div>
         </div>
 
-        {/* Roles */}
-        <div className="space-y-3">
+        {/* Roles — nadie cambia sus propios roles */}
+        {!esUnoMismo && <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             <p className="font-display font-bold text-sm">Roles</p>
@@ -138,7 +140,7 @@ function UsuarioDetalle({
               Guardar roles
             </Button>
           )}
-        </div>
+        </div>}
 
         {/* Cambiar contraseña */}
         <div className="space-y-2">
@@ -163,8 +165,8 @@ function UsuarioDetalle({
           </div>
         </div>
 
-        {/* Eliminar */}
-        <div className="space-y-2 pt-2 border-t border-destructive/20">
+        {/* Eliminar — las cuentas de administrador no se borran desde la app */}
+        {!usuario.roles.includes('administrador') && <div className="space-y-2 pt-2 border-t border-destructive/20">
           <p className="font-display font-bold text-sm text-destructive">Zona destructiva</p>
           <Button
             variant="outline"
@@ -175,7 +177,7 @@ function UsuarioDetalle({
             <Trash2 className="h-4 w-4" />
             Eliminar usuario definitivamente
           </Button>
-        </div>
+        </div>}
       </div>
 
       <AlertDialog open={confirmEliminar} onOpenChange={setConfirmEliminar}>

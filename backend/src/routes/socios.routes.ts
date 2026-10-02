@@ -133,11 +133,12 @@ router.put('/:id/roles', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
     return
   }
   try {
-    const socio = await sociosService.updateRoles(id, parsed.data.roles)
+    const socio = await sociosService.updateRoles(id, parsed.data.roles, req.user.id)
     res.json({ data: socio })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
-    res.status(404).json({ error: message })
+    const status = message === 'Socio no encontrado' ? 404 : message.startsWith('Solo se puede') ? 400 : 403
+    res.status(status).json({ error: message })
   }
 })
 
