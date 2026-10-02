@@ -65,7 +65,7 @@ describe('PrestamosService.solicitar', () => {
     })
     const txMock = {
       prestamo: { create: vi.fn().mockResolvedValue(prestamoActivo) },
-      juego: { update: vi.fn().mockResolvedValue({ id: 'g1', estado: 'prestado' }) },
+      juego: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     }
     ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
 
@@ -82,9 +82,24 @@ describe('PrestamosService.solicitar', () => {
         }),
       }),
     )
-    expect(txMock.juego.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { estado: 'prestado' } }),
-    )
+    expect(txMock.juego.updateMany).toHaveBeenCalledWith({
+      where: { id: 'g1', estado: 'en_estanteria' },
+      data: { estado: 'prestado' },
+    })
+  })
+
+  it('otro socio se lo lleva a la vez → throws y no crea préstamo', async () => {
+    ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(juegoDisponible)
+    ;(prisma.prestamo.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    const txMock = {
+      prestamo: { create: vi.fn() },
+      juego: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+    }
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
+
+    await expect(service.solicitar('u1', { juego_id: 'g1' })).rejects.toThrow('no está disponible')
+    expect(txMock.prestamo.create).not.toHaveBeenCalled()
   })
 })
 
@@ -120,21 +135,27 @@ describe('PrestamosService.renovar', () => {
   it('éxito → extiende fecha_limite e incrementa renovaciones', async () => {
     ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
     ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-    ;(prisma.prestamo.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...prestamoActivo,
-      renovaciones: 1,
-    })
+    ;(prisma.prestamo.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
 
     await service.renovar('p1', 'u1')
 
-    expect(prisma.prestamo.update).toHaveBeenCalledWith(
+    expect(prisma.prestamo.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: { id: 'p1', estado: 'activo', renovaciones: 0 },
         data: expect.objectContaining({
           fecha_limite: expect.any(Date),
           renovaciones: { increment: 1 },
         }),
       }),
     )
+  })
+
+  it('renovación simultánea → throws', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    ;(prisma.prestamo.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 0 })
+
+    await expect(service.renovar('p1', 'u1')).rejects.toThrow('ha cambiado')
   })
 })
 
@@ -161,7 +182,10 @@ describe('PrestamosService.devolucion', () => {
     })
     ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ nombre: 'Catan' })
     const txMock = {
-      prestamo: { update: vi.fn().mockResolvedValue({ ...prestamoActivo, estado: 'devuelto' }) },
+      prestamo: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ ...prestamoActivo, estado: 'devuelto' }),
+      },
       juego: { update: vi.fn().mockResolvedValue({ id: 'g1', estado: 'en_estanteria' }) },
     }
     ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
@@ -177,15 +201,19 @@ describe('PrestamosService.devolucion', () => {
     ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
     ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ nombre: 'Catan' })
     const txMock = {
-      prestamo: { update: vi.fn().mockResolvedValue({ ...prestamoActivo, estado: 'devuelto' }) },
+      prestamo: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ ...prestamoActivo, estado: 'devuelto' }),
+      },
       juego: { update: vi.fn().mockResolvedValue({ id: 'g1', estado: 'en_estanteria' }) },
     }
     ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
 
     await service.devolucion('p1', 'u1')
 
-    expect(txMock.prestamo.update).toHaveBeenCalledWith(
+    expect(txMock.prestamo.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        where: { id: 'p1', estado: 'activo' },
         data: expect.objectContaining({
           estado: 'devuelto',
           fecha_devolucion: expect.any(Date),

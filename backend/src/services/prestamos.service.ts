@@ -12,7 +12,8 @@ export class PrestamosService {
 
   private async getConfigNum(clave: string, fallback: number): Promise<number> {
     const config = await this.prisma.configuracion.findUnique({ where: { clave } })
-    return config ? parseInt(config.valor, 10) : fallback
+    const n = config ? parseInt(config.valor, 10) : NaN
+    return Number.isNaN(n) ? fallback : n
   }
 
   private addDays(date: Date, days: number): Date {
@@ -66,7 +67,13 @@ export class PrestamosService {
     const fechaLimite = this.addDays(ahora, diasPrestamo)
 
     const prestamo = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.prestamo.create({
+      // Reserva atómica: si dos socios piden el mismo juego a la vez, solo uno lo consigue
+      const { count } = await tx.juego.updateMany({
+        where: { id: input.juego_id, estado: 'en_estanteria' },
+        data: { estado: 'prestado' },
+      })
+      if (count !== 1) throw new Error('El juego no está disponible para préstamo')
+      return tx.prestamo.create({
         data: {
           juego_id: input.juego_id,
           socio_id: socioId,
@@ -77,11 +84,6 @@ export class PrestamosService {
         },
         include: { juego: { select: { id: true, nombre: true } } },
       })
-      await tx.juego.update({
-        where: { id: input.juego_id },
-        data: { estado: 'prestado' as const },
-      })
-      return created
     })
 
     await this.logsService.crearSistema(
@@ -111,13 +113,16 @@ export class PrestamosService {
 
     const nuevaFechaLimite = this.addDays(prestamo.fecha_limite, diasRenovacion)
 
-    return this.prisma.prestamo.update({
-      where: { id: prestamoId },
+    // Condición en el where: dos renovaciones simultáneas no pueden pasar del máximo
+    const { count } = await this.prisma.prestamo.updateMany({
+      where: { id: prestamoId, estado: EstadoPrestamo.activo, renovaciones: prestamo.renovaciones },
       data: {
         fecha_limite: nuevaFechaLimite,
         renovaciones: { increment: 1 },
       },
     })
+    if (count !== 1) throw new Error('El préstamo ha cambiado, recarga e inténtalo de nuevo')
+    return this.prisma.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })
   }
 
   async devolucion(prestamoId: string, usuarioId: string, esAdmin = false) {
@@ -132,19 +137,21 @@ export class PrestamosService {
     })
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      const result = await tx.prestamo.update({
-        where: { id: prestamoId },
+      // Solo una devolución gana si se confirma dos veces a la vez
+      const { count } = await tx.prestamo.updateMany({
+        where: { id: prestamoId, estado: EstadoPrestamo.activo },
         data: {
           estado: EstadoPrestamo.devuelto,
           fecha_devolucion: new Date(),
           usuario_confirmo_dev_id: usuarioId,
         },
       })
+      if (count !== 1) throw new Error('Solo se pueden devolver préstamos activos')
       await tx.juego.update({
         where: { id: prestamo.juego_id },
         data: { estado: 'en_estanteria' as const },
       })
-      return result
+      return tx.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })
     })
 
     await this.logsService.crearSistema(

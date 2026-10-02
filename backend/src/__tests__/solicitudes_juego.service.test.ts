@@ -100,6 +100,7 @@ describe('SolicitudesJuegoService.aprobar', () => {
       juego: { create: vi.fn().mockResolvedValue(juegoCreado) },
       logJuego: { create: vi.fn().mockResolvedValue({}) },
       solicitudJuego: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         update: vi.fn().mockResolvedValue({ ...solicitudPendiente, estado: 'aprobada', juego_id: 'g99' }),
       },
     }
@@ -126,10 +127,29 @@ describe('SolicitudesJuegoService.aprobar', () => {
     expect(txMock.solicitudJuego.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 's1' },
-        data: expect.objectContaining({ estado: 'aprobada', juego_id: 'g99' }),
+        data: { juego_id: 'g99' },
       }),
     )
+    expect(txMock.solicitudJuego.updateMany).toHaveBeenCalledWith({
+      where: { id: 's1', estado: 'pendiente' },
+      data: { estado: 'aprobada' },
+    })
     expect(result).toMatchObject({ estado: 'aprobada' })
+  })
+
+  it('doble aprobación simultánea → 409 y no crea juego', async () => {
+    ;(prisma.solicitudJuego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(solicitudPendiente)
+    const txMock = {
+      juego: { create: vi.fn() },
+      logJuego: { create: vi.fn() },
+      solicitudJuego: { updateMany: vi.fn().mockResolvedValue({ count: 0 }), update: vi.fn() },
+    }
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      (fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock),
+    )
+
+    await expect(service.aprobar('s1', 'staff1')).rejects.toMatchObject({ status: 409 })
+    expect(txMock.juego.create).not.toHaveBeenCalled()
   })
 })
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, UserCheck, Euro, Gift, Loader2, RotateCcw, Users, CalendarDays } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -10,7 +10,8 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
 import { visitasApi } from '@/services/api/visitas'
-import { configuracionApi } from '@/services/api/configuracion'
+import { useConfigValor } from '@/hooks/useConfigValor'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { VisitanteSugerido, Visita } from '@/types/api'
 
 function formatDate(dateStr?: string | null) {
@@ -66,7 +67,7 @@ const PAGE_SIZE = 25
 
 function ListadoVisitas() {
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
 
   const {
     data,
@@ -82,15 +83,6 @@ function ListadoVisitas() {
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
   })
-
-  const handleSearch = (val: string) => {
-    setSearch(val)
-    clearTimeout((handleSearch as { _t?: ReturnType<typeof setTimeout> })._t)
-    ;(handleSearch as { _t?: ReturnType<typeof setTimeout> })._t = setTimeout(
-      () => setDebouncedSearch(val),
-      300,
-    )
-  }
 
   const visitas = data?.pages.flatMap((p) => p.data) ?? []
   const total = data?.pages[0]?.total
@@ -114,7 +106,7 @@ function ListadoVisitas() {
           <Input
             placeholder="Buscar por nombre..."
             value={search}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9 font-display"
           />
         </div>
@@ -194,18 +186,9 @@ export function RegistroVisitaPage() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const queryClient = useQueryClient()
 
-  const { data: configData } = useQuery({
-    queryKey: ['configuracion'],
-    queryFn: () => configuracionApi.getAll(),
-  })
-
-  const visitasGratis = parseInt(
-    configData?.data.find((c) => c.clave === 'visitas_gratuitas')?.valor ?? '3',
-    10,
-  )
-  const precioVisita = parseFloat(
-    configData?.data.find((c) => c.clave === 'precio_visita_pago')?.valor ?? '4',
-  )
+  // GET /config (listado) es solo para directiva; las claves sueltas son públicas
+  const visitasGratis = parseInt(useConfigValor('visitas_gratuitas', '3'), 10)
+  const precioVisita = parseFloat(useConfigValor('precio_visita_pago', '4'))
 
   useEffect(() => {
     if (seleccionado) return
@@ -311,7 +294,7 @@ export function RegistroVisitaPage() {
                         return (
                           <button
                             key={s.nombre_completo}
-                            onClick={() => { setSeleccionado(s.nombre_completo); setSugerencias([]) }}
+                            onClick={() => setSeleccionado(s.nombre_completo)}
                             className="w-full flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-accent/30 transition-colors text-left"
                           >
                             <div>

@@ -14,7 +14,8 @@ export const filtrosPrestamosSchema = z.object({
 export const filtrosGestionPrestamosSchema = z.object({
   estado: z.nativeEnum(EstadoPrestamo).optional(),
   socio_id: z.string().optional(),
-  vencidos: z.coerce.boolean().optional(),
+  // z.coerce.boolean() convierte "false" en true
+  vencidos: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(30),
 })

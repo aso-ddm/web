@@ -62,6 +62,13 @@ export class SolicitudesJuegoService {
     if (solicitud.estado !== 'pendiente') throw new HttpError(409, 'La solicitud ya fue procesada')
 
     return this.prisma.$transaction(async (tx) => {
+      // Marcar primero: un doble clic no crea dos juegos
+      const { count } = await tx.solicitudJuego.updateMany({
+        where: { id, estado: 'pendiente' },
+        data: { estado: 'aprobada' },
+      })
+      if (count !== 1) throw new HttpError(409, 'La solicitud ya fue procesada')
+
       const juego = await tx.juego.create({
         data: {
           nombre: solicitud.nombre,
@@ -81,7 +88,7 @@ export class SolicitudesJuegoService {
 
       const updated = await tx.solicitudJuego.update({
         where: { id },
-        data: { estado: 'aprobada', juego_id: juego.id },
+        data: { juego_id: juego.id },
         include: { socio: socioSelect },
       })
 

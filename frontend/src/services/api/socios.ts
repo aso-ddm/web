@@ -50,6 +50,8 @@ export const sociosApi = {
     )
   },
 
+  getOpciones: () => api.get<{ data: { id: string; nombre: string; apellidos: string; apodo: string | null }[] }>('/socios/opciones'),
+
   getPendientes: () => api.get<{ data: { individuales: SocioAdmin[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
 
   getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),

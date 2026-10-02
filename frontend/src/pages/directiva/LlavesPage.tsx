@@ -8,7 +8,7 @@ import { sociosApi } from '@/services/api/socios'
 export function LlavesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['socios-llaves'],
-    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 200 }),
+    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 500 }),
   })
 
   const titulares = (data?.data ?? [])

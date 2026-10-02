@@ -5,7 +5,7 @@ import { requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 
 const updateConfigSchema = z.object({
-  valor: z.string().min(1, 'El valor es obligatorio'),
+  valor: z.string().max(20000),
 })
 
 const router = Router()
@@ -34,13 +34,8 @@ router.put('/:clave', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const config = await configService.update(req.params.clave, parsed.data.valor)
-    res.json({ data: config })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(404).json({ error: message })
-  }
+  const config = await configService.update(req.params.clave, parsed.data.valor.trim())
+  res.json({ data: config })
 })
 
 export default router

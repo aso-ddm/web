@@ -132,6 +132,15 @@ export class SociosService {
     }
   }
 
+  /** Socios activos para selectores (solo id y nombre). */
+  async getOpciones() {
+    return this.prisma.usuario.findMany({
+      where: { estado: EstadoSocio.activo },
+      select: { id: true, nombre: true, apellidos: true, apodo: true },
+      orderBy: [{ nombre: 'asc' }, { apellidos: 'asc' }],
+    })
+  }
+
   async getPendientes() {
     const [individuales, grupos] = await Promise.all([
       this.prisma.usuario.findMany({

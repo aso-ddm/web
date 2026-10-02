@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, BookOpen, MapPin, Users, Plus, Loader2, Gift } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +13,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { SEOHead } from '@/components/SEOHead'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
 import { prestamosApi } from '@/services/api/prestamos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
@@ -237,23 +238,21 @@ function MisSolicitudes() {
 
 export function LudotecaPage() {
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
   const [estadoFiltro, setEstadoFiltro] = useState<string>('')
   const [selectedJuego, setSelectedJuego] = useState<Juego | null>(null)
   const [cederOpen, setCederOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['ludoteca', debouncedSearch, estadoFiltro],
-    queryFn: () => juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro || undefined, limit: 50 }),
+    queryFn: ({ pageParam }) =>
+      juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro || undefined, page: pageParam, limit: 48 }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
 
-  const juegos = data?.data ?? []
-
-  const handleSearch = (val: string) => {
-    setSearch(val)
-    clearTimeout((handleSearch as { _t?: ReturnType<typeof setTimeout> })._t)
-    ;(handleSearch as { _t?: ReturnType<typeof setTimeout> })._t = setTimeout(() => setDebouncedSearch(val), 300)
-  }
+  const juegos = data?.pages.flatMap((p) => p.data) ?? []
+  const total = data?.pages[0]?.total ?? 0
 
   return (
     <>
@@ -281,7 +280,7 @@ export function LudotecaPage() {
             <Input
               placeholder="Buscar juego..."
               value={search}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-9 font-display"
             />
           </div>
@@ -312,12 +311,20 @@ export function LudotecaPage() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-muted-foreground">{juegos.length} juego{juegos.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-muted-foreground">{total} juego{total !== 1 ? 's' : ''}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {juegos.map((j) => (
                 <JuegoCard key={j.id} juego={j} onSolicitar={setSelectedJuego} />
               ))}
             </div>
+            {hasNextPage && (
+              <div className="flex justify-center">
+                <Button variant="outline" size="sm" className="font-display gap-2" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
+                  {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Cargar más
+                </Button>
+              </div>
+            )}
           </>
         )}
 

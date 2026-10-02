@@ -28,6 +28,11 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => 
   res.json(result)
 })
 
+// GET /api/socios/opciones — id + nombre de socios activos para selectores (staff de ludoteca incluido)
+router.get('/opciones', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES, ...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (_req, res) => {
+  res.json({ data: await sociosService.getOpciones() })
+})
+
 // GET /api/socios/pendientes — directiva + vocales (vocales solo lectura)
 router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (_req, res) => {
   const pendientes = await sociosService.getPendientes()

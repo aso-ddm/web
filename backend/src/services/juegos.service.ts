@@ -114,13 +114,16 @@ export class JuegosService {
     if (juego.estado === 'retirado') throw new Error('El juego ya está retirado')
     if (juego.estado === 'prestado') throw new Error('No se puede retirar un juego prestado')
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.juego.update({
-        where: { id },
-        data: { estado: 'retirado' },
-        include: { propietario: propietarioSelect },
-      }),
-    ])
+    // Solo desde la estantería: si alguien lo presta a la vez, no queda retirado con préstamo activo
+    const { count } = await this.prisma.juego.updateMany({
+      where: { id, estado: 'en_estanteria' },
+      data: { estado: 'retirado' },
+    })
+    if (count !== 1) throw new Error('No se puede retirar un juego prestado')
+    const updated = await this.prisma.juego.findUniqueOrThrow({
+      where: { id },
+      include: { propietario: propietarioSelect },
+    })
 
     await this.logsService.crearSistema(
       id,

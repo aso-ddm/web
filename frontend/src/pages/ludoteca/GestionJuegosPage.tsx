@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,6 +32,7 @@ import { invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
 import { api } from '@/services/api/client'
 import { useAuthStore } from '@/store/authStore'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Juego, EstadoJuego, LogJuego, SolicitudJuego } from '@/types/api'
 
 const juegoSchema = z.object({
@@ -138,8 +139,8 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
   const isEdit = !!juego
 
   const { data: sociosData } = useQuery({
-    queryKey: ['socios-activos'],
-    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 200 }),
+    queryKey: ['socios-opciones'],
+    queryFn: () => sociosApi.getOpciones(),
     enabled: open,
   })
   const socios = sociosData?.data ?? []
@@ -175,9 +176,12 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: JuegoForm) => {
-      const clean = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== '' && v !== undefined))
-      if (isEdit) return api.put<{ data: Juego }>(`/juegos/${juego.id}`, clean)
-      return api.post<{ data: Juego }>('/juegos', clean)
+      // Al editar, un campo vacío se envía como null para que el backend lo borre
+      const entries = Object.entries(data).filter(([, v]) => v !== undefined)
+      if (isEdit) {
+        return api.put<{ data: Juego }>(`/juegos/${juego.id}`, Object.fromEntries(entries.map(([k, v]) => [k, v === '' ? null : v])))
+      }
+      return api.post<{ data: Juego }>('/juegos', Object.fromEntries(entries.filter(([, v]) => v !== '')))
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
@@ -475,13 +479,17 @@ export function GestionJuegosPage() {
   const [expandedLogs, setExpandedLogs] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
-  const token = useAuthStore((s) => s.token)
   const puedeEliminar = useAuthStore((s) => s.isDirectiva()) // ludotecario: retirar sí, eliminar no
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['juegos', search, estadoFiltro],
-    queryFn: () => juegosApi.getAll({ search: search || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, limit: 50 }),
+  const debouncedSearch = useDebouncedValue(search)
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['juegos', debouncedSearch, estadoFiltro],
+    queryFn: ({ pageParam }) =>
+      juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, page: pageParam, limit: 50 }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
+  const total = data?.pages[0]?.total ?? 0
 
   const { data: solicitudesData } = useQuery({
     queryKey: ['solicitudes-juego-pendientes'],
@@ -521,24 +529,20 @@ export function GestionJuegosPage() {
     onError: (err: Error) => { toast.error(err.message); setReactivando(undefined) },
   })
 
-  const handleExportCsv = () => {
-    const url = `/api/juegos/export/csv`
-    const a = document.createElement('a')
-    a.href = url
-    a.setAttribute('download', '')
-    // Token en cabecera no es posible con <a> directo; usamos fetch + blob
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.blob())
-      .then((blob) => {
-        const objUrl = URL.createObjectURL(blob)
-        a.href = objUrl
-        a.click()
-        URL.revokeObjectURL(objUrl)
-      })
-      .catch(() => toast.error('Error al exportar CSV'))
+  const handleExportCsv = async () => {
+    try {
+      const { blob } = await api.getBlob('/juegos/export/csv')
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `ludoteca-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al exportar CSV')
+    }
   }
 
-  const juegos = data?.data ?? []
+  const juegos = data?.pages.flatMap((p) => p.data) ?? []
 
   return (
     <>
@@ -549,7 +553,7 @@ export function GestionJuegosPage() {
           <div>
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Catálogo de juegos</h1>
             <p className="text-muted-foreground mt-1">
-              {data?.total ?? 0} juego{data?.total !== 1 ? 's' : ''} en el catálogo
+              {total} juego{total !== 1 ? 's' : ''} en el catálogo
             </p>
           </div>
           <div className="flex gap-2">
@@ -721,6 +725,14 @@ export function GestionJuegosPage() {
                 )}
               </CardContent>
             </Card>
+            {hasNextPage && (
+              <div className="flex justify-center mt-4">
+                <Button variant="outline" size="sm" className="font-display gap-2" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
+                  {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Cargar más
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="historial">

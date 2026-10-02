@@ -84,9 +84,19 @@ export function AppRoutes() {
           <Route path="/directiva/socios" element={<GestionSociosPage />} />
           <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
           <Route path="/directiva/llaves" element={<LlavesPage />} />
-          <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
-          <Route path="/directiva/cuotas" element={<CuotasPage />} />
           <Route path="/directiva/anuncios" element={<AnunciosPage />} />
+          {/* Cuotas y configuración: solo directiva (el backend da 403 a vocales) */}
+          <Route
+            element={
+              <RoleBasedRoute
+                allowedRoles={['administrador', 'presidente', 'secretario', 'tesorero']}
+                redirectTo="/directiva"
+              />
+            }
+          >
+            <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
+            <Route path="/directiva/cuotas" element={<CuotasPage />} />
+          </Route>
         </Route>
       </Route>
 

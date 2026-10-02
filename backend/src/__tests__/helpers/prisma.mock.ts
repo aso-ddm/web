@@ -3,6 +3,7 @@ import type { PrismaClient } from '@prisma/client'
 
 const makeModel = () => ({
   findUnique: vi.fn(),
+  findUniqueOrThrow: vi.fn(),
   findFirst: vi.fn(),
   findMany: vi.fn(),
   create: vi.fn(),
