@@ -152,7 +152,8 @@ export class SociosService {
 
     const gruposConTipoRelacion = grupos.map((grupo) => ({
       ...grupo,
-      miembros: grupo.miembros.map((miembro) => {
+      // El titular también tiene solicitud_grupal_id: aquí solo van los miembros adicionales
+      miembros: grupo.miembros.filter((m) => m.id !== grupo.titular_id).map((miembro) => {
         const relacion = miembro.relaciones_como_relacionado.find(
           (r) => r.socio_principal_id === grupo.titular_id,
         )

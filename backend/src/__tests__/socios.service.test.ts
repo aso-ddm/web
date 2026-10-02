@@ -260,3 +260,23 @@ describe('SociosService.darDeBaja — protecciones', () => {
     )
   })
 })
+
+describe('SociosService.getPendientes', () => {
+  it('grupo → miembros sin el titular (que también tiene solicitud_grupal_id)', async () => {
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(prisma.solicitudGrupal.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      {
+        id: 'g1',
+        titular_id: 't1',
+        miembros: [
+          { id: 't1', nombre: 'Titular', relaciones_como_relacionado: [] },
+          { id: 'm1', nombre: 'Pareja', relaciones_como_relacionado: [{ tipo_relacion: 'pareja', socio_principal_id: 't1' }] },
+        ],
+      },
+    ])
+
+    const { grupos } = await service.getPendientes()
+
+    expect(grupos[0].miembros).toEqual([{ id: 'm1', nombre: 'Pareja', tipo_relacion: 'pareja' }])
+  })
+})
