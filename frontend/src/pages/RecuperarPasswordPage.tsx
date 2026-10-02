@@ -37,6 +37,7 @@ export function RecuperarPasswordPage() {
   const { mutate: confirmReset, isPending: confirmando } = useMutation({
     mutationFn: () => {
       if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres')
+      if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) throw new Error('La contraseña debe contener al menos una mayúscula y un número')
       if (password !== passwordConfirm) throw new Error('Las contraseñas no coinciden')
       return authApi.confirmPasswordReset(email, token.trim(), password)
     },
@@ -81,7 +82,7 @@ export function RecuperarPasswordPage() {
                     placeholder="tu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && email && requestReset()}
+                    onKeyDown={(e) => e.key === 'Enter' && email && !requestando && requestReset()}
                   />
                 </div>
                 <Button
@@ -115,7 +116,8 @@ export function RecuperarPasswordPage() {
                     <button
                       type="button"
                       onClick={() => requestReset()}
-                      className="text-primary underline"
+                      disabled={requestando}
+                      className="text-primary underline disabled:opacity-50"
                     >
                       Reenviar
                     </button>

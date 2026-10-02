@@ -17,6 +17,9 @@ function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean 
 
 const SALT_ROUNDS = 12
 
+// Búsqueda sin distinguir mayúsculas: hay cuentas antiguas guardadas con mayúsculas
+const porEmail = (email: string) => ({ email: { equals: email.trim(), mode: 'insensitive' as const } })
+
 export class AuthService {
   constructor(private prisma: PrismaClient) {}
 
@@ -28,8 +31,8 @@ export class AuthService {
   }
 
   private async registerIndividual(data: Extract<RegisterInput, { tipo_cuota: 'individual' }>, comprobanteFilename: string) {
-    const existing = await this.prisma.usuario.findUnique({
-      where: { email: data.email },
+    const existing = await this.prisma.usuario.findFirst({
+      where: porEmail(data.email),
     })
     if (existing) {
       throw new Error(`Ya existe una cuenta con ese email: ${data.email}`)
@@ -93,7 +96,7 @@ export class AuthService {
 
     // Verificar que ningún email ni DNI ya existe en la BD
     for (const email of todosEmails) {
-      const existing = await this.prisma.usuario.findUnique({ where: { email } })
+      const existing = await this.prisma.usuario.findFirst({ where: porEmail(email) })
       if (existing) {
         throw new Error(`Ya existe una cuenta con ese email: ${email}`)
       }
@@ -182,8 +185,8 @@ export class AuthService {
   }
 
   async login(data: LoginInput) {
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { email: data.email },
+    const usuario = await this.prisma.usuario.findFirst({
+      where: porEmail(data.email),
       select: {
         id: true,
         email: true,
@@ -195,7 +198,8 @@ export class AuthService {
       },
     })
 
-    if (!usuario) {
+    // Contraseña antes que estado: no revelar si una cuenta existe sin conocer su contraseña
+    if (!usuario || !(await bcrypt.compare(data.password, usuario.password_hash))) {
       throw new Error('Credenciales incorrectas')
     }
 
@@ -205,11 +209,6 @@ export class AuthService {
 
     if (usuario.estado === 'pendiente') {
       throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
-    }
-
-    const passwordOk = await bcrypt.compare(data.password, usuario.password_hash)
-    if (!passwordOk) {
-      throw new Error('Credenciales incorrectas')
     }
 
     const { password_hash: _, ...userWithoutHash } = usuario
@@ -270,7 +269,7 @@ export class AuthService {
       where: { id: userId },
       data: {
         telegram_chat_id: BigInt(data.id),
-        alias_telegram: data.username ? `@${data.username}` : null,
+        ...(data.username ? { alias_telegram: `@${data.username}` } : {}),
         telegram_linked_at: new Date(),
       },
       select: {
@@ -308,7 +307,7 @@ export class AuthService {
 
 
   async requestPasswordReset(email: string) {
-    const usuario = await this.prisma.usuario.findUnique({ where: { email } })
+    const usuario = await this.prisma.usuario.findFirst({ where: porEmail(email) })
     if (!usuario || !usuario.telegram_chat_id || usuario.estado !== 'activo') {
       return { hasTelegram: false }
     }
@@ -340,7 +339,7 @@ export class AuthService {
   }
 
   async confirmPasswordReset(email: string, token: string, newPassword: string) {
-    const usuario = await this.prisma.usuario.findUnique({ where: { email } })
+    const usuario = await this.prisma.usuario.findFirst({ where: porEmail(email) })
     if (!usuario || !usuario.reset_token) throw new Error('Código incorrecto o expirado')
 
     if (!usuario.reset_token_expiry || usuario.reset_token_expiry < new Date()) {

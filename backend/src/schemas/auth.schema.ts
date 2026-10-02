@@ -8,13 +8,16 @@ export const passwordSchema = z
   .regex(/[A-Z]/, 'La contraseña debe contener al menos una mayúscula')
   .regex(/[0-9]/, 'La contraseña debe contener al menos un número')
 
+// Emails siempre en minúsculas: evita duplicados por mayúsculas y fallos al recuperar contraseña
+export const emailSchema = z.string().trim().toLowerCase().email('Email no válido')
+
 // ─── Campos comunes del titular ──────────────────────────────────────────────
 
 const titularFields = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
   dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/, 'DNI no válido (formato: 8 dígitos + letra)'),
-  email: z.string().email('Email no válido'),
+  email: emailSchema,
   telefono: z.string().optional(),
   fecha_nacimiento: z.string().datetime().optional().or(z.string().date().optional()),
   direccion: z.string().optional(),
@@ -30,7 +33,7 @@ export const miembroAdicionalSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
   dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/, 'DNI no válido (formato: 8 dígitos + letra)'),
-  email: z.string().email('Email no válido'),
+  email: emailSchema,
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
   fecha_nacimiento: z.string().datetime().or(z.string().date()),
   alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
@@ -60,7 +63,7 @@ export const registerSchema = z.union([
 ])
 
 export const loginSchema = z.object({
-  email: z.string().email('Email no válido'),
+  email: emailSchema,
   password: z.string().min(1, 'La contraseña es obligatoria'),
 })
 

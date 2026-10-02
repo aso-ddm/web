@@ -137,13 +137,11 @@ router.post('/bienvenida/:socioId', requireRoles(...ROLES.DIRECTIVA), async (req
 
 // POST /api/telegram/webhook — recibe updates del bot de Telegram
 router.post('/webhook', async (req, res) => {
+  // Sin secreto configurado cualquiera podría enviar updates falsos: se rechaza todo
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (secret) {
-    const header = req.headers['x-telegram-bot-api-secret-token']
-    if (header !== secret) {
-      res.status(403).json({ error: 'Forbidden' })
-      return
-    }
+  if (!secret || req.headers['x-telegram-bot-api-secret-token'] !== secret) {
+    res.status(403).json({ error: 'Forbidden' })
+    return
   }
 
   const update = req.body as TelegramUpdate
@@ -163,12 +161,8 @@ router.post('/webhook', async (req, res) => {
     return
   }
 
+  // Botones de mensajes antiguos (la columna avisos_confirmado ya no existe)
   if (data.startsWith('confirm_avisos:')) {
-    const userId = data.replace('confirm_avisos:', '')
-    await prisma.usuario.updateMany({
-      where: { id: userId, telegram_chat_id: BigInt(chatId) },
-      data: {},
-    })
     await answerCallback(botToken, callbackId, '✅ ¡Confirmado! Recibirás los avisos del club.')
   } else if (data.startsWith('cancel_avisos:')) {
     await answerCallback(botToken, callbackId, '❌ Cancelado. Puedes confirmar más adelante desde tu perfil.')

@@ -43,8 +43,11 @@ export class VisitasService {
     const visitasGratuitas = parseInt(visitas_gratuitas_cfg?.valor ?? '3', 10)
     const precio = parseFloat(precio_cfg?.valor ?? '4')
 
+    // "juan  pérez " y "Juan Pérez" son la misma persona: si no, las visitas gratis se multiplican
+    const nombre = data.nombre_completo.trim().replace(/\s+/g, ' ')
+    // ponytail: dos registros simultáneos del mismo visitante pueden salir ambos gratis; transacción Serializable si llega a pasar
     const visitasPrevias = await this.prisma.visita.count({
-      where: { nombre_completo: data.nombre_completo },
+      where: { nombre_completo: { equals: nombre, mode: 'insensitive' } },
     })
 
     const numeroVisita = visitasPrevias + 1
@@ -53,7 +56,7 @@ export class VisitasService {
 
     return this.prisma.visita.create({
       data: {
-        nombre_completo: data.nombre_completo,
+        nombre_completo: nombre,
         fecha_visita: new Date(),
         numero_visita: numeroVisita,
         es_pago: esPago,

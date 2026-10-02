@@ -5,6 +5,7 @@ import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { comprobarCambioAdmin, normalizarRoles } from '../services/socios.service'
 import { Rol, EstadoSocio, TipoCuota, Prisma } from '@prisma/client'
+import { emailSchema, passwordSchema } from '../schemas/auth.schema'
 
 const router = Router()
 
@@ -41,11 +42,16 @@ function prismaErrorResponse(res: Response, err: unknown) {
   return res.status(500).json({ error: 'Error interno del servidor' })
 }
 
+const filtrosAdminSchema = z.object({
+  search: z.string().optional(),
+  estado: z.nativeEnum(EstadoSocio).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(500).default(50),
+})
+
 // GET /api/admin/usuarios
 router.get('/usuarios', async (req, res) => {
-  const { search, estado, page = '1', limit = '50' } = req.query as Record<string, string>
-  const pageNum = parseInt(page, 10)
-  const limitNum = parseInt(limit, 10)
+  const { search, estado, page: pageNum, limit: limitNum } = filtrosAdminSchema.parse(req.query)
   const skip = (pageNum - 1) * limitNum
 
   if (search) {
@@ -107,8 +113,8 @@ router.get('/usuarios', async (req, res) => {
 })
 
 const createUsuarioSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: emailSchema,
+  password: passwordSchema,
   nombre: z.string().min(1),
   apellidos: z.string().min(1),
   dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/),
@@ -136,7 +142,7 @@ router.post('/usuarios', async (req, res) => {
     return
   }
   const existing = await prisma.usuario.findFirst({
-    where: { OR: [{ email: rest.email }, { dni: rest.dni }] },
+    where: { OR: [{ email: { equals: rest.email, mode: 'insensitive' } }, { dni: rest.dni }] },
   })
   if (existing) {
     res.status(409).json({ error: 'Ya existe un usuario con ese email o DNI' })
@@ -151,7 +157,7 @@ router.post('/usuarios', async (req, res) => {
 })
 
 const updateUsuarioSchema = z.object({
-  email: z.string().email().optional(),
+  email: emailSchema.optional(),
   nombre: z.string().min(1).optional(),
   apellidos: z.string().min(1).optional(),
   dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/).optional(),
@@ -161,7 +167,7 @@ const updateUsuarioSchema = z.object({
   tipo_cuota: z.nativeEnum(TipoCuota).optional(),
   alias_telegram: z.string().optional().nullable(),
   apodo: z.string().optional().nullable(),
-  password: z.string().min(8).optional(),
+  password: passwordSchema.optional(),
 })
 
 // PUT /api/admin/usuarios/:id
@@ -173,7 +179,7 @@ router.put('/usuarios/:id', async (req, res) => {
   }
   const { password: newPassword, ...rest } = parsed.data
   if (rest.roles || rest.estado) {
-    const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true } })
+    const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true, estado: true, fecha_alta: true } })
     if (!actual) {
       res.status(404).json({ error: 'Usuario no encontrado' })
       return
@@ -181,6 +187,14 @@ router.put('/usuarios/:id', async (req, res) => {
     if (rest.estado && actual.roles.includes(Rol.administrador)) {
       res.status(403).json({ error: 'El estado de una cuenta de administrador no se puede cambiar desde la aplicación' })
       return
+    }
+    // Mismo ciclo de vida que aprobar / dar de baja / reactivar
+    if (rest.estado && rest.estado !== actual.estado) {
+      if (rest.estado === EstadoSocio.activo) {
+        Object.assign(rest, { fecha_baja: null, baja_por_id: null, ...(actual.fecha_alta ? {} : { fecha_alta: new Date(), aprobado_por_id: req.user.id }) })
+      } else if (rest.estado === EstadoSocio.baja) {
+        Object.assign(rest, { fecha_baja: new Date(), baja_por_id: req.user.id, tiene_llaves: false })
+      }
     }
     if (rest.roles) {
       if (req.params.id === req.user.id) {

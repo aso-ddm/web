@@ -4,11 +4,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { AuthService } from '../services/auth.service'
-import { registerSchema, loginSchema } from '../schemas/auth.schema'
+import { registerSchema, loginSchema, passwordSchema } from '../schemas/auth.schema'
 import { telegramAuthSchema } from '../schemas/telegram.schema'
 import { authenticate, signToken } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { HttpError } from '../lib/httpError'
+import { rateLimit } from '../middleware/rateLimit'
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads/transferencias')
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp'])
@@ -38,10 +39,16 @@ const upload = multer({
 })
 
 const router = Router()
+
+const MIN = 60 * 1000
+// Login generoso: en el local del club muchos socios comparten IP
+const loginLimit = rateLimit({ max: 30, windowMs: 15 * MIN })
+const registerLimit = rateLimit({ max: 5, windowMs: 60 * MIN })
+const resetLimit = rateLimit({ max: 5, windowMs: 15 * MIN })
 const authService = new AuthService(prisma)
 
 // POST /api/auth/register — multipart/form-data
-router.post('/register', upload.single('comprobante'), async (req, res) => {
+router.post('/register', registerLimit, upload.single('comprobante'), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: 'Debes adjuntar el comprobante de transferencia' })
     return
@@ -87,7 +94,7 @@ router.post('/register', upload.single('comprobante'), async (req, res) => {
 })
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimit, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({
@@ -147,7 +154,7 @@ router.delete('/link-telegram', authenticate, async (req, res) => {
 })
 
 // POST /api/auth/reset-password/request — público
-router.post('/reset-password/request', async (req, res) => {
+router.post('/reset-password/request', resetLimit, async (req, res) => {
   const { email } = req.body
   if (!email || typeof email !== 'string') {
     res.status(400).json({ error: 'Email requerido' })
@@ -163,14 +170,15 @@ router.post('/reset-password/request', async (req, res) => {
 })
 
 // POST /api/auth/reset-password/confirm — público
-router.post('/reset-password/confirm', async (req, res) => {
+router.post('/reset-password/confirm', resetLimit, async (req, res) => {
   const { email, token, password } = req.body
   if (!email || !token || !password) {
     res.status(400).json({ error: 'Email, código y contraseña son obligatorios' })
     return
   }
-  if (typeof password !== 'string' || password.length < 8) {
-    res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' })
+  const passwordCheck = passwordSchema.safeParse(password)
+  if (!passwordCheck.success) {
+    res.status(400).json({ error: passwordCheck.error.issues[0].message })
     return
   }
   try {

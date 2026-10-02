@@ -321,6 +321,10 @@ export class SociosService {
     if (socio.estado !== EstadoSocio.pendiente) {
       throw new Error('Solo se pueden aprobar solicitudes en estado pendiente')
     }
+    // Los miembros de una solicitud conjunta se aprueban o rechazan juntos (la cuota va al titular)
+    if (socio.solicitud_grupal_id) {
+      throw new Error('Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
+    }
     comprobarCambioAdmin(socio.roles, [rol])
 
     const ahora = new Date()
@@ -343,6 +347,10 @@ export class SociosService {
     if (!socio) throw new Error('Socio no encontrado')
     if (socio.estado !== EstadoSocio.pendiente) {
       throw new Error('Solo se pueden rechazar solicitudes en estado pendiente')
+    }
+    // Los miembros de una solicitud conjunta se aprueban o rechazan juntos (la cuota va al titular)
+    if (socio.solicitud_grupal_id) {
+      throw new Error('Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
 
     return this.prisma.usuario.update({
@@ -373,6 +381,7 @@ export class SociosService {
         estado: EstadoSocio.baja,
         fecha_baja: new Date(),
         baja_por_id: bajaPorId,
+        tiene_llaves: false,
       },
       select: SOCIO_PUBLIC_SELECT,
     })
@@ -383,6 +392,10 @@ export class SociosService {
     if (!socio) throw new Error('Socio no encontrado')
     if (socio.estado !== EstadoSocio.baja) {
       throw new Error('Solo se pueden reactivar socios dados de baja')
+    }
+    // Un rechazado nunca fue socio: reactivarlo se saltaría la aprobación
+    if (!socio.fecha_alta) {
+      throw new Error('Solo se pueden reactivar socios que llegaron a darse de alta')
     }
 
     return this.prisma.usuario.update({

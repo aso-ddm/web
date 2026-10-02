@@ -42,7 +42,7 @@ describe('AuthService.register (individual)', () => {
   }
 
   it('email duplicado → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>)
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({ id: 'existing' })
 
     await expect(service.register(validInput)).rejects.toThrow(
@@ -51,9 +51,8 @@ describe('AuthService.register (individual)', () => {
   })
 
   it('DNI duplicado → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 'existing' })
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: 'existing' })
 
     await expect(service.register(validInput)).rejects.toThrow(
       `Ya existe una cuenta con ese DNI: ${validInput.dni}`,
@@ -61,9 +60,8 @@ describe('AuthService.register (individual)', () => {
   })
 
   it('éxito → devuelve usuario con estado=pendiente, sin password_hash', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
 
     const created = {
       id: 'u1',
@@ -86,7 +84,7 @@ describe('AuthService.register (individual)', () => {
 
 describe('AuthService.login', () => {
   it('usuario no existe → throws "Credenciales incorrectas"', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
     await expect(service.login({ email: 'x@x.com', password: 'pw' })).rejects.toThrow(
       'Credenciales incorrectas',
@@ -94,10 +92,11 @@ describe('AuthService.login', () => {
   })
 
   it('estado=baja → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...BASE_USER,
       estado: 'baja',
     })
+    mockCompare.mockResolvedValue(true)
 
     await expect(service.login({ email: BASE_USER.email, password: 'pw' })).rejects.toThrow(
       'Esta cuenta ha sido dada de baja',
@@ -105,18 +104,28 @@ describe('AuthService.login', () => {
   })
 
   it('estado=pendiente → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...BASE_USER,
       estado: 'pendiente',
     })
+    mockCompare.mockResolvedValue(true)
 
     await expect(service.login({ email: BASE_USER.email, password: 'pw' })).rejects.toThrow(
       'Tu solicitud está pendiente de aprobación por la directiva',
     )
   })
 
+  it('cuenta de baja con contraseña incorrecta → no revela el estado', async () => {
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ ...BASE_USER, estado: 'baja' })
+    mockCompare.mockResolvedValue(false)
+
+    await expect(service.login({ email: BASE_USER.email, password: 'wrong' })).rejects.toThrow(
+      'Credenciales incorrectas',
+    )
+  })
+
   it('contraseña incorrecta → throws "Credenciales incorrectas"', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(BASE_USER)
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(BASE_USER)
     mockCompare.mockResolvedValue(false)
 
     await expect(service.login({ email: BASE_USER.email, password: 'wrong' })).rejects.toThrow(
@@ -125,7 +134,7 @@ describe('AuthService.login', () => {
   })
 
   it('éxito → devuelve usuario sin password_hash', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(BASE_USER)
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(BASE_USER)
     mockCompare.mockResolvedValue(true)
 
     const result = await service.login({ email: BASE_USER.email, password: 'correct' })

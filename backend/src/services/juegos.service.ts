@@ -160,11 +160,10 @@ export class JuegosService {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
     if (!juego) throw new Error('Juego no encontrado')
 
-    const prestamosActivos = await this.prisma.prestamo.count({
-      where: { juego_id: id, estado: 'activo' },
-    })
-    if (prestamosActivos > 0) {
-      throw new Error('El juego tiene préstamos activos y no puede eliminarse')
+    // Cualquier préstamo (también devuelto) lo referencia sin onDelete: borrar daría error de FK
+    const prestamos = await this.prisma.prestamo.count({ where: { juego_id: id } })
+    if (prestamos > 0) {
+      throw new Error('El juego tiene historial de préstamos y no puede eliminarse: retíralo del catálogo')
     }
 
     return this.prisma.juego.delete({ where: { id } })
@@ -178,8 +177,9 @@ export class JuegosService {
 
     const escape = (v: string | null | undefined) => {
       if (v == null) return ''
-      const s = String(v)
-      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      // Prefijo ' para que Excel no ejecute fórmulas (=, +, -, @) escritas en nombres o notas
+      const s = /^[=+\-@\t\r]/.test(String(v)) ? `'${v}` : String(v)
+      if (/[",\r\n]/.test(s)) {
         return `"${s.replace(/"/g, '""')}"`
       }
       return s
