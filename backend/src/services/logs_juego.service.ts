@@ -1,4 +1,5 @@
 import { PrismaClient, TipoLogJuego } from '@prisma/client'
+import { HttpError } from '../lib/httpError'
 import type { FiltrosLogsInput } from '../schemas/log_juego.schema'
 
 const usuarioSelect = { select: { id: true, nombre: true, apellidos: true } }
@@ -44,7 +45,7 @@ export class LogsJuegoService {
 
   async crearManual(juego_id: string, usuario_id: string, texto: string) {
     const juego = await this.prisma.juego.findUnique({ where: { id: juego_id } })
-    if (!juego) throw new Error('Juego no encontrado')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
 
     return this.prisma.logJuego.create({
       data: { juego_id, tipo: TipoLogJuego.nota_manual, texto, usuario_id },

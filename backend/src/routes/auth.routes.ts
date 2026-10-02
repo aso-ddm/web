@@ -8,6 +8,7 @@ import { registerSchema, loginSchema } from '../schemas/auth.schema'
 import { telegramAuthSchema } from '../schemas/telegram.schema'
 import { authenticate, signToken } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
+import { HttpError } from '../lib/httpError'
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads/transferencias')
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp'])
@@ -31,7 +32,7 @@ const upload = multer({
     if (ALLOWED_EXTENSIONS.has(ext)) {
       cb(null, true)
     } else {
-      cb(new Error('Formato de archivo no permitido. Usa PDF, JPG o PNG.'))
+      cb(new HttpError(400, 'Formato de archivo no permitido. Usa PDF, JPG, PNG o WebP.'))
     }
   },
 })

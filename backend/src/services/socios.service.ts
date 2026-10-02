@@ -226,7 +226,7 @@ export class SociosService {
 
     return this.prisma.solicitudGrupal.findUnique({
       where: { id: grupoId },
-      include: { miembros: true },
+      include: { miembros: { select: SOCIO_PUBLIC_SELECT } },
     })
   }
 
@@ -262,7 +262,7 @@ export class SociosService {
 
     return this.prisma.solicitudGrupal.findUnique({
       where: { id: grupoId },
-      include: { miembros: true },
+      include: { miembros: { select: SOCIO_PUBLIC_SELECT } },
     })
   }
 

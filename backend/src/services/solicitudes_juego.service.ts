@@ -1,4 +1,5 @@
 import { PrismaClient, TipoLogJuego } from '@prisma/client'
+import { HttpError } from '../lib/httpError'
 import type {
   CrearSolicitudJuegoInput,
   RechazarSolicitudJuegoInput,
@@ -57,8 +58,8 @@ export class SolicitudesJuegoService {
 
   async aprobar(id: string, staff_id: string) {
     const solicitud = await this.prisma.solicitudJuego.findUnique({ where: { id } })
-    if (!solicitud) throw new Error('Solicitud no encontrada')
-    if (solicitud.estado !== 'pendiente') throw new Error('La solicitud ya fue procesada')
+    if (!solicitud) throw new HttpError(404, 'Solicitud no encontrada')
+    if (solicitud.estado !== 'pendiente') throw new HttpError(409, 'La solicitud ya fue procesada')
 
     return this.prisma.$transaction(async (tx) => {
       const juego = await tx.juego.create({
@@ -91,8 +92,8 @@ export class SolicitudesJuegoService {
 
   async rechazar(id: string, input: RechazarSolicitudJuegoInput) {
     const solicitud = await this.prisma.solicitudJuego.findUnique({ where: { id } })
-    if (!solicitud) throw new Error('Solicitud no encontrada')
-    if (solicitud.estado !== 'pendiente') throw new Error('La solicitud ya fue procesada')
+    if (!solicitud) throw new HttpError(404, 'Solicitud no encontrada')
+    if (solicitud.estado !== 'pendiente') throw new HttpError(409, 'La solicitud ya fue procesada')
 
     return this.prisma.solicitudJuego.update({
       where: { id },

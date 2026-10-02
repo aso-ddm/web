@@ -1,6 +1,8 @@
 import 'dotenv/config'
 import './types/index'
 import express from 'express'
+// Express 4 no captura promesas rechazadas: esto las manda al errorHandler en vez de tumbar el proceso
+import 'express-async-errors'
 import cors from 'cors'
 
 import healthRouter from './routes/health'
@@ -50,6 +52,9 @@ app.use('/api/cuotas', cuotasRouter)
 // ── Errores ───────────────────────────────────────────────────────────────────
 app.use(notFound)
 app.use(errorHandler)
+
+// Red de seguridad para promesas sueltas (p.ej. avisos de Telegram sin await)
+process.on('unhandledRejection', (err) => console.error('unhandledRejection:', err))
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT) || 3001
