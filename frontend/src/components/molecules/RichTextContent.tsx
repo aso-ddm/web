@@ -1,6 +1,15 @@
 import DOMPurify from 'dompurify'
 import { cn } from '@/lib/utils'
 
+// Todo enlace abre en pestaña nueva: el texto de bienvenida y el consentimiento del registro tienen enlaces
+// y salir de la página haría perder el formulario. DOMPurify quita target por defecto, así que se pone después.
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A') {
+    node.setAttribute('target', '_blank')
+    node.setAttribute('rel', 'noopener noreferrer')
+  }
+})
+
 interface RichTextContentProps {
   html: string
   className?: string
