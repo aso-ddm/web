@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, Loader2, UserX, Shield, Trash2, Edit2 } from 'lucide-react'
@@ -207,6 +207,10 @@ export function AdminUsuariosPage() {
 
   const usuarios = data?.data ?? []
   const pag = data?.pagination
+  // Tras una baja o un borrado la última página puede quedar vacía: volver a la última que existe
+  useEffect(() => {
+    if (pag && page > Math.max(1, pag.totalPages)) setPage(Math.max(1, pag.totalPages))
+  }, [pag, page])
 
   return (
     <>

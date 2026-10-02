@@ -18,7 +18,7 @@ export function TelegramLinkModal() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const { data: botConfig } = useQuery({
+  const { data: botConfig, isPending: cargandoBot } = useQuery({
     queryKey: ['config', 'telegram_bot_username'],
     queryFn: () => configuracionApi.getOne('telegram_bot_username'),
     enabled: !!usuario,
@@ -88,12 +88,15 @@ export function TelegramLinkModal() {
         </div>
 
         <div className="flex justify-center">
-          <TelegramLoginWidget
-            onAuth={linkTelegram}
-            botUsername={botUsername || undefined}
-            size="large"
-            radius={8}
-          />
+          {/* Hasta saber qué bot está configurado: montarlo con el de por defecto daría "Firma inválida" */}
+          {!cargandoBot && (
+            <TelegramLoginWidget
+              onAuth={linkTelegram}
+              botUsername={botUsername || undefined}
+              size="large"
+              radius={8}
+            />
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground">

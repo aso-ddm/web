@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Search, Users, ChevronRight } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -37,6 +37,10 @@ export function GestionSociosPage() {
 
   const socios = data?.data ?? []
   const pag = data?.pagination
+  // Tras una baja o un borrado la última página puede quedar vacía: volver a la última que existe
+  useEffect(() => {
+    if (pag && page > Math.max(1, pag.totalPages)) setPage(Math.max(1, pag.totalPages))
+  }, [pag, page])
 
   return (
     <>

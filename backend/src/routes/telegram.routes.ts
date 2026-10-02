@@ -80,6 +80,7 @@ router.post('/recordatorio-pago', requireRoles(...ROLES.DIRECTIVA), async (req, 
       where: {
         telegram_chat_id: { not: null },
         estado: 'activo',
+        NOT: { roles: { has: 'administrador' } }, // cuenta técnica: no recibe anuncios (el front tampoco la cuenta)
         ...(idsFiltro ? { id: { in: idsFiltro } } : {}),
       },
       select: { telegram_chat_id: true, nombre: true, tipo_cuota: true },

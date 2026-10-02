@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/atoms/SEOHead'
+import { QueryError } from '@/components/molecules/QueryError'
 import { prestamosApi } from '@/services/api/prestamos'
 import { juegosApi } from '@/services/api/juegos'
 import { configuracionApi } from '@/services/api/configuracion'
@@ -268,7 +269,7 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
 export function PrestamosPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['mis-prestamos', 1],
     queryFn: () => prestamosApi.misPrestamos(1),
   })
@@ -320,6 +321,8 @@ export function PrestamosPage() {
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
           </div>
+        ) : isError ? (
+          <QueryError onRetry={() => refetch()} />
         ) : prestamos.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">

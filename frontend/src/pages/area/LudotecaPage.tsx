@@ -13,6 +13,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { SEOHead } from '@/components/atoms/SEOHead'
+import { QueryError } from '@/components/molecules/QueryError'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
 import { prestamosApi } from '@/services/api/prestamos'
@@ -245,7 +246,7 @@ export function LudotecaPage() {
   const [selectedJuego, setSelectedJuego] = useState<Juego | null>(null)
   const [cederOpen, setCederOpen] = useState(false)
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['ludoteca', debouncedSearch, estadoFiltro],
     queryFn: ({ pageParam }) =>
       juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro || undefined, page: pageParam, limit: 48 }),
@@ -306,6 +307,8 @@ export function LudotecaPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-36 w-full" />)}
           </div>
+        ) : isError && juegos.length === 0 ? (
+          <QueryError onRetry={() => refetch()} />
         ) : juegos.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />

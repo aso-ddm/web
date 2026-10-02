@@ -36,6 +36,7 @@ function MapEmbed() {
         height="100%"
         style={{ border: 0 }}
         allowFullScreen
+        title="Mapa del local de Dragón de Madera"
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
         onLoad={() => setLoaded(true)}
