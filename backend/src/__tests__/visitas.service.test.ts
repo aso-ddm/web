@@ -124,23 +124,19 @@ describe('VisitasService.buscar', () => {
     expect(result).toEqual([])
   })
 
-  it('query válida → enriquece con total y última visita', async () => {
+  it('agrupa variantes de mayúsculas/espacios como un solo visitante (igual que registrar)', async () => {
     ;(prisma.visita.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { nombre_completo: 'Ana López' },
+      { nombre_completo: 'Ana López', fecha_visita: new Date('2025-03-01') },
+      { nombre_completo: 'ana  lópez', fecha_visita: new Date('2025-02-01') },
+      { nombre_completo: 'ANA LÓPEZ', fecha_visita: new Date('2025-01-01') },
+      { nombre_completo: 'Ana Ruiz', fecha_visita: new Date('2025-01-15') },
     ])
-    ;(prisma.visita.count as ReturnType<typeof vi.fn>).mockResolvedValue(3)
-    ;(prisma.visita.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
-      fecha_visita: new Date('2025-01-15'),
-      es_pago: false,
-    })
 
     const result = await service.buscar('Ana')
 
-    expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({
-      nombre_completo: 'Ana López',
-      total_visitas: 3,
-      ultima_visita: expect.any(Date),
-    })
+    expect(result).toEqual([
+      { nombre_completo: 'Ana López', total_visitas: 3, ultima_visita: new Date('2025-03-01') },
+      { nombre_completo: 'Ana Ruiz', total_visitas: 1, ultima_visita: new Date('2025-01-15') },
+    ])
   })
 })

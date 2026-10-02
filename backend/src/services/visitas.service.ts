@@ -1,36 +1,31 @@
 import { PrismaClient } from '@prisma/client'
 
+const normalizarNombre = (s: string) => s.trim().replace(/\s+/g, ' ')
+
 export class VisitasService {
   constructor(private prisma: PrismaClient) {}
 
-  /** Busca visitantes cuyo nombre coincida (para autocompletar) y muestra cuántas visitas tienen */
+  /** Busca visitantes cuyo nombre coincida (para autocompletar) y muestra cuántas visitas tienen.
+   *  Agrupa como cuenta `registrar`: "juan pérez" y "Juan Pérez" son el mismo visitante. */
   async buscar(nombre: string) {
     if (nombre.trim().length < 2) return []
 
-    // Obtener registros agrupados por nombre_completo
+    // ponytail: trae todas las visitas que coinciden y agrupa en memoria; groupBy en SQL si crecen mucho
     const visitas = await this.prisma.visita.findMany({
-      where: { nombre_completo: { contains: nombre, mode: 'insensitive' } },
+      where: { nombre_completo: { contains: normalizarNombre(nombre), mode: 'insensitive' } },
       orderBy: { fecha_visita: 'desc' },
-      distinct: ['nombre_completo'],
-      select: { nombre_completo: true },
+      select: { nombre_completo: true, fecha_visita: true },
     })
 
-    // Para cada nombre único, contar el total de visitas
-    const resultados = await Promise.all(
-      visitas.map(async (v) => {
-        const total = await this.prisma.visita.count({
-          where: { nombre_completo: v.nombre_completo },
-        })
-        const ultima = await this.prisma.visita.findFirst({
-          where: { nombre_completo: v.nombre_completo },
-          orderBy: { fecha_visita: 'desc' },
-          select: { fecha_visita: true, es_pago: true },
-        })
-        return { nombre_completo: v.nombre_completo, total_visitas: total, ultima_visita: ultima?.fecha_visita ?? null }
-      }),
-    )
-
-    return resultados
+    const grupos = new Map<string, { nombre_completo: string; total_visitas: number; ultima_visita: Date }>()
+    for (const v of visitas) {
+      const clave = normalizarNombre(v.nombre_completo).toLowerCase()
+      const g = grupos.get(clave)
+      // Ordenadas por fecha desc: la primera de cada grupo da el nombre y la última visita
+      if (g) g.total_visitas++
+      else grupos.set(clave, { nombre_completo: v.nombre_completo, total_visitas: 1, ultima_visita: v.fecha_visita })
+    }
+    return [...grupos.values()]
   }
 
   /** Registra una visita aplicando la lógica de gratis vs. pago */
@@ -44,7 +39,7 @@ export class VisitasService {
     const precio = parseFloat(precio_cfg?.valor ?? '4')
 
     // "juan  pérez " y "Juan Pérez" son la misma persona: si no, las visitas gratis se multiplican
-    const nombre = data.nombre_completo.trim().replace(/\s+/g, ' ')
+    const nombre = normalizarNombre(data.nombre_completo)
     // ponytail: dos registros simultáneos del mismo visitante pueden salir ambos gratis; transacción Serializable si llega a pasar
     const visitasPrevias = await this.prisma.visita.count({
       where: { nombre_completo: { equals: nombre, mode: 'insensitive' } },

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, UserCheck, Euro, Gift, Loader2, RotateCcw, Users, CalendarDays } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -12,7 +12,7 @@ import { SEOHead } from '@/components/atoms/SEOHead'
 import { visitasApi } from '@/services/api/visitas'
 import { useConfigValor } from '@/hooks/useConfigValor'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import type { VisitanteSugerido, Visita } from '@/types/api'
+import type { Visita } from '@/types/api'
 import { formatDate } from '@/lib/format'
 
 function VisitaConfirmada({ visita, onNueva }: { visita: Visita; onNueva: () => void }) {
@@ -175,39 +175,30 @@ function ListadoVisitas() {
 
 export function RegistroVisitaPage() {
   const [nombre, setNombre] = useState('')
-  const [sugerencias, setSugerencias] = useState<VisitanteSugerido[]>([])
-  const [buscando, setBuscando] = useState(false)
   const [seleccionado, setSeleccionado] = useState<string>('')
   const [visitaRegistrada, setVisitaRegistrada] = useState<Visita | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const queryClient = useQueryClient()
 
   // GET /config (listado) es solo para directiva; las claves sueltas son públicas
   const visitasGratis = parseInt(useConfigValor('visitas_gratuitas', '3'), 10)
   const precioVisita = parseFloat(useConfigValor('precio_visita_pago', '4'))
 
-  useEffect(() => {
-    if (seleccionado) return
-    if (nombre.trim().length < 2) { setSugerencias([]); return }
-
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(async () => {
-      setBuscando(true)
-      try {
-        const res = await visitasApi.buscar(nombre)
-        setSugerencias(res.data)
-      } catch {
-        setSugerencias([])
-      } finally {
-        setBuscando(false)
-      }
-    }, 350)
-
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [nombre, seleccionado])
+  // useQuery descarta las respuestas viejas: una búsqueda lenta no pisa a la siguiente
+  const nombreBuscado = useDebouncedValue(nombre.trim(), 350)
+  const { data: sugerencias = [], isFetching: buscando } = useQuery({
+    queryKey: ['visitas-buscar', nombreBuscado],
+    queryFn: () => visitasApi.buscar(nombreBuscado).then((r) => r.data),
+    enabled: nombreBuscado.length >= 2,
+    placeholderData: keepPreviousData,
+    staleTime: 0, // el recuento de visitas decide si se cobra: siempre fresco
+  })
+  // Mientras se escribe o se busca, el recuento aún no corresponde al nombre escrito
+  const recuentoPendiente = !seleccionado && (nombreBuscado !== nombre.trim() || buscando)
 
   const nombreFinal = seleccionado || nombre.trim()
-  const infoSugerido = sugerencias.find((s) => s.nombre_completo === nombreFinal)
+  // Misma normalización que el backend al contar visitas: mayúsculas y espacios no cuentan
+  const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+  const infoSugerido = sugerencias.find((s) => norm(s.nombre_completo) === norm(nombreFinal))
   const visitasPrevias = infoSugerido?.total_visitas ?? 0
   const seraGratis = visitasPrevias < visitasGratis
 
@@ -216,13 +207,13 @@ export function RegistroVisitaPage() {
     onSuccess: ({ data }) => {
       setVisitaRegistrada(data)
       queryClient.invalidateQueries({ queryKey: ['visitas-listado'] })
+      queryClient.invalidateQueries({ queryKey: ['visitas-buscar'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const handleNueva = () => {
     setNombre('')
-    setSugerencias([])
     setSeleccionado('')
     setVisitaRegistrada(null)
   }
@@ -283,7 +274,7 @@ export function RegistroVisitaPage() {
                     )}
                   </div>
 
-                  {!seleccionado && sugerencias.length > 0 && (
+                  {!seleccionado && nombre.trim().length >= 2 && sugerencias.length > 0 && (
                     <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
                       {sugerencias.map((s) => {
                         const gratisSiViene = s.total_visitas < visitasGratis
@@ -340,7 +331,7 @@ export function RegistroVisitaPage() {
 
                       <Button
                         onClick={() => registrar()}
-                        disabled={isPending}
+                        disabled={isPending || recuentoPendiente}
                         className="w-full font-display font-bold text-base gap-2"
                         size="lg"
                       >
