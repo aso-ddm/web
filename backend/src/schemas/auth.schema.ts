@@ -11,12 +11,16 @@ export const passwordSchema = z
 // Emails siempre en minúsculas: evita duplicados por mayúsculas y fallos al recuperar contraseña
 export const emailSchema = z.string().trim().toLowerCase().email('Email no válido')
 
+// DNI (12345678Z) o NIE (X1234567L). Solo formato: la letra de control la comprueba el front
+// (hay cuentas antiguas, como el admin del seed, con letra no válida que deben poder editarse)
+export const dniSchema = z.string().regex(/^([0-9]{8}|[XYZxyz][0-9]{7})[A-Za-z]$/, 'DNI/NIE no válido (ej: 12345678Z o X1234567L)')
+
 // ─── Campos comunes del titular ──────────────────────────────────────────────
 
 const titularFields = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
-  dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/, 'DNI no válido (formato: 8 dígitos + letra)'),
+  dni: dniSchema,
   email: emailSchema,
   telefono: z.string().optional(),
   fecha_nacimiento: z.string().datetime().optional().or(z.string().date().optional()),
@@ -32,7 +36,7 @@ const titularFields = {
 export const miembroAdicionalSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
-  dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/, 'DNI no válido (formato: 8 dígitos + letra)'),
+  dni: dniSchema,
   email: emailSchema,
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
   fecha_nacimiento: z.string().datetime().or(z.string().date()),

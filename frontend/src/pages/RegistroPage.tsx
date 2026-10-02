@@ -243,7 +243,7 @@ export function RegistroPage() {
                   </label>
                 ))}
               </RadioGroup>
-              {'tipo_cuota' in errors && <FieldError message={(errors as { tipo_cuota?: { message?: string } }).tipo_cuota?.message} />}
+              {/* Sin error de tipo_cuota: siempre tiene valor, y con z.union la rama que no aplica deja un error falso */}
             </FormSection>
 
             {/* 2. Datos personales */}
@@ -263,8 +263,8 @@ export function RegistroPage() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="dni" className="font-display font-bold text-sm">DNI <span className="text-destructive">*</span></Label>
-                    <Input id="dni" placeholder="12345678A" maxLength={9} {...register('dni')} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.toUpperCase(); register('dni').onChange(e) }} />
+                    <Label htmlFor="dni" className="font-display font-bold text-sm">DNI / NIE <span className="text-destructive">*</span></Label>
+                    <Input id="dni" placeholder="12345678Z" maxLength={9} {...register('dni')} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.toUpperCase(); register('dni').onChange(e) }} />
                     <FieldError message={errMsg(errors.dni)} />
                   </div>
                   <div className="space-y-1.5">

@@ -10,15 +10,16 @@ export const passwordSchema = z
   .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
   .regex(/[0-9]/, 'Debe contener al menos un número')
 
-const dniSchema = z
+// DNI (12345678Z) o NIE (X1234567L): en el NIE la X/Y/Z cuenta como 0/1/2 para calcular la letra
+export const dniSchema = z
   .string()
-  .min(9, 'El DNI debe tener 9 caracteres')
-  .max(9, 'El DNI debe tener 9 caracteres')
-  .regex(/^[0-9]{8}[A-Za-z]$/, 'Formato de DNI no válido (ej: 12345678A)')
+  .trim()
+  .toUpperCase()
+  .regex(/^([0-9]{8}|[XYZ][0-9]{7})[A-Z]$/, 'Formato no válido (ej: 12345678Z o X1234567L)')
   .refine((dni) => {
-    const num = parseInt(dni.slice(0, 8), 10)
-    return dni[8].toUpperCase() === DNI_LETTERS[num % 23]
-  }, 'La letra del DNI no es correcta')
+    const num = Number(dni.slice(0, 8).replace(/^[XYZ]/, (c) => String('XYZ'.indexOf(c))))
+    return dni[8] === DNI_LETTERS[num % 23]
+  }, 'La letra del DNI/NIE no es correcta')
 
 const fechaNacimientoSchema = z
   .string()

@@ -5,7 +5,7 @@ import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { comprobarCambioAdmin, normalizarRoles } from '../services/socios.service'
 import { Rol, EstadoSocio, TipoCuota } from '@prisma/client'
-import { emailSchema, passwordSchema } from '../schemas/auth.schema'
+import { dniSchema, emailSchema, passwordSchema } from '../schemas/auth.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 
 const router = Router()
@@ -85,7 +85,7 @@ const createUsuarioSchema = z.object({
   password: passwordSchema,
   nombre: z.string().min(1),
   apellidos: z.string().min(1),
-  dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/),
+  dni: dniSchema,
   telefono: z.string().optional(),
   roles: z.array(z.nativeEnum(Rol)).min(1),
   estado: z.nativeEnum(EstadoSocio).optional().default(EstadoSocio.activo),
@@ -128,7 +128,7 @@ const updateUsuarioSchema = z.object({
   email: emailSchema.optional(),
   nombre: z.string().min(1).optional(),
   apellidos: z.string().min(1).optional(),
-  dni: z.string().regex(/^[0-9]{8}[A-Za-z]$/).optional(),
+  dni: dniSchema.optional(),
   telefono: z.string().optional().nullable(),
   roles: z.array(z.nativeEnum(Rol)).min(1).optional(),
   estado: z.nativeEnum(EstadoSocio).optional(),

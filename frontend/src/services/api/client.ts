@@ -24,7 +24,8 @@ async function send(endpoint: string, init: RequestInit): Promise<Response> {
   if (response.status === 401) {
     useAuthStore.getState().logout() // la caché la vacía lib/queryClient al cambiar el token
   }
-  const mensaje = errorData.error || (response.status >= 500 ? 'El servidor no está disponible. Inténtalo en unos minutos.' : `Error ${response.status}`)
+  // 413 lo da nginx (HTML) antes de llegar al backend
+  const mensaje = errorData.error || (response.status === 413 ? 'El archivo supera los 10 MB.' : response.status >= 500 ? 'El servidor no está disponible. Inténtalo en unos minutos.' : `Error ${response.status}`)
   // 400 de Zod: { error: 'Datos inválidos', details: { campo: ['mensaje'] } } → se añade el primero para saber qué corregir
   const detalle = Object.values(errorData.details ?? {}).flat()[0]
   throw new ApiRequestError(detalle ? `${mensaje}: ${detalle}` : mensaje, response.status)

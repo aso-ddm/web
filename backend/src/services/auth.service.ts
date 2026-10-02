@@ -325,7 +325,7 @@ export class AuthService {
 
     const texto = `🔐 <b>Recuperación de contraseña — Dragón de Madera</b>\n\nHola ${usuario.nombre}, tu código de recuperación es:\n\n<code>${token}</code>\n\nVálido durante <b>15 minutos</b>. No lo compartas con nadie.`
 
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const enviado = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -334,6 +334,15 @@ export class AuthService {
         parse_mode: 'HTML',
       }),
     })
+      .then((r) => r.json() as Promise<{ ok?: boolean }>)
+      .then((r) => r.ok === true)
+      .catch(() => false)
+
+    // Bot bloqueado por el socio o Telegram caído: no decir "código enviado" si no ha llegado
+    if (!enviado) {
+      await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
+      throw new Error('No hemos podido enviarte el código por Telegram. Comprueba que no has bloqueado el bot o contacta con la directiva.')
+    }
 
     return { hasTelegram: true }
   }

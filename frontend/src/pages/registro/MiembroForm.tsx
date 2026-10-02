@@ -71,8 +71,8 @@ export function MiembroForm({
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="font-display font-bold text-sm">DNI <span className="text-destructive">*</span></Label>
-          <Input placeholder="12345678A" maxLength={9} {...register(`miembros_adicionales.${index}.dni` as const)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.toUpperCase(); register(`miembros_adicionales.${index}.dni` as const).onChange(e) }} />
+          <Label className="font-display font-bold text-sm">DNI / NIE <span className="text-destructive">*</span></Label>
+          <Input placeholder="12345678Z" maxLength={9} {...register(`miembros_adicionales.${index}.dni` as const)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.toUpperCase(); register(`miembros_adicionales.${index}.dni` as const).onChange(e) }} />
           <FieldError message={(err?.dni as { message?: string } | undefined)?.message} />
         </div>
         <div className="space-y-1.5">

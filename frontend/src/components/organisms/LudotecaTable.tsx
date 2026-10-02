@@ -3,6 +3,17 @@ import { X } from 'lucide-react'
 import { GOOGLE_SHEETS, SPACING } from '@/lib/constants'
 import texts from '@/data/texts.json'
 
+// Columnas de una línea CSV respetando comillas ("Catan, el juego") y comillas escapadas ("").
+// ponytail: no admite saltos de línea dentro de comillas; papaparse si la hoja llega a tenerlos
+export function columnasCsv(linea: string): string[] {
+  const columnas: string[] = []
+  for (const [, valor, separador] of linea.matchAll(/("(?:[^"]|"")*"|[^,]*)(,|$)/g)) {
+    columnas.push(valor.replace(/^"|"$/g, '').replace(/""/g, '"'))
+    if (separador === '') break // fin de línea
+  }
+  return columnas
+}
+
 export function LudotecaTable() {
   const [games, setGames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -11,7 +22,11 @@ export function LudotecaTable() {
 
   useEffect(() => {
     fetch(GOOGLE_SHEETS.ludotecaCSV)
-      .then((res) => res.text())
+      .then((res) => {
+        // Si la hoja deja de ser pública Google responde con HTML: no pintarlo como si fueran juegos
+        if (!res.ok) throw new Error(`Google Sheets respondió ${res.status}`)
+        return res.text()
+      })
       .then((csvText) => {
         const lines = csvText.split('\n')
         const gameNames: string[] = []
@@ -20,9 +35,9 @@ export function LudotecaTable() {
           const line = lines[i].trim()
           if (!line) continue
 
-          const columns = line.split(',')
+          const columns = columnasCsv(line)
           if (columns.length >= 2) {
-            const gameName = columns[1].replace(/^"|"$/g, '').trim()
+            const gameName = columns[1].trim()
             if (gameName) {
               gameNames.push(gameName.toUpperCase())
             }

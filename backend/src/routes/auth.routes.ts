@@ -44,7 +44,10 @@ const MIN = 60 * 1000
 // Login generoso: en el local del club muchos socios comparten IP
 const loginLimit = rateLimit({ max: 30, windowMs: 15 * MIN })
 const registerLimit = rateLimit({ max: 5, windowMs: 60 * MIN })
-const resetLimit = rateLimit({ max: 5, windowMs: 15 * MIN })
+// Contadores separados: pedir, fallar, reenviar y confirmar ya agotaba un límite común de 5
+// (y en el club varios socios comparten IP). Fuerza bruta no hay: el código se anula al primer fallo
+const resetRequestLimit = rateLimit({ max: 5, windowMs: 15 * MIN })
+const resetConfirmLimit = rateLimit({ max: 10, windowMs: 15 * MIN })
 const authService = new AuthService(prisma)
 
 // POST /api/auth/register — multipart/form-data
@@ -154,7 +157,7 @@ router.delete('/link-telegram', authenticate, async (req, res) => {
 })
 
 // POST /api/auth/reset-password/request — público
-router.post('/reset-password/request', resetLimit, async (req, res) => {
+router.post('/reset-password/request', resetRequestLimit, async (req, res) => {
   const { email } = req.body
   if (!email || typeof email !== 'string') {
     res.status(400).json({ error: 'Email requerido' })
@@ -170,7 +173,7 @@ router.post('/reset-password/request', resetLimit, async (req, res) => {
 })
 
 // POST /api/auth/reset-password/confirm — público
-router.post('/reset-password/confirm', resetLimit, async (req, res) => {
+router.post('/reset-password/confirm', resetConfirmLimit, async (req, res) => {
   const { email, token, password } = req.body
   if (!email || !token || !password) {
     res.status(400).json({ error: 'Email, código y contraseña son obligatorios' })
