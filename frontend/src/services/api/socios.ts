@@ -62,10 +62,18 @@ export const sociosApi = {
   reactivar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/reactivar`),
 
   getComprobante: async (id: string): Promise<void> => {
-    const { blob, contentType } = await api.getBlob(`/socios/${id}/comprobante`)
-    const url = URL.createObjectURL(new Blob([blob], { type: contentType }))
-    window.open(url, '_blank')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    // Abrir la pestaña antes del await: tras una espera los bloqueadores de popups la cancelan
+    const win = window.open('', '_blank')
+    try {
+      const { blob, contentType } = await api.getBlob(`/socios/${id}/comprobante`)
+      const url = URL.createObjectURL(new Blob([blob], { type: contentType }))
+      if (win) win.location.href = url
+      else window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      win?.close()
+      throw err
+    }
   },
 
   aprobarGrupo: (grupoId: string) => api.action(`/socios/grupos/${grupoId}/aprobar`),

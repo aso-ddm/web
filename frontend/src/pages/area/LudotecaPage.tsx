@@ -331,7 +331,8 @@ export function LudotecaPage() {
         <MisSolicitudes />
       </div>
 
-      <SolicitarDialog juego={selectedJuego} onClose={() => setSelectedJuego(null)} />
+      {/* key: cada juego abre el diálogo limpio (sin las notas del anterior) */}
+      <SolicitarDialog key={selectedJuego?.id} juego={selectedJuego} onClose={() => setSelectedJuego(null)} />
       <CederJuegoDialog open={cederOpen} onClose={() => setCederOpen(false)} />
     </>
   )

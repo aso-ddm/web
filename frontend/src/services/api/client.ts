@@ -4,6 +4,31 @@ import type { ApiError } from '@/types/api'
 
 const BASE_URL = '/api'
 
+export class ApiRequestError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
+/** fetch con errores legibles: red caída, 502 de nginx (HTML) y 401 → logout */
+async function send(endpoint: string, init: RequestInit): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(`${BASE_URL}${endpoint}`, init)
+  } catch {
+    throw new Error('No se pudo conectar con el servidor. Revisa tu conexión.')
+  }
+  if (response.ok) return response
+
+  const errorData: Partial<ApiError> = await response.json().catch(() => ({}))
+  // Token expirado o inválido → cerrar sesión
+  if (response.status === 401) {
+    useAuthStore.getState().logout()
+    queryClient.clear()
+  }
+  throw new ApiRequestError(errorData.error || (response.status >= 500 ? 'El servidor no está disponible. Inténtalo en unos minutos.' : `Error ${response.status}`), response.status)
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -19,25 +44,7 @@ async function request<T>(
     ...options.headers,
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  })
-
-  if (!response.ok) {
-    const errorData: ApiError = await response.json().catch(() => ({
-      error: 'Error de red',
-    }))
-
-    // Token expirado o inválido → cerrar sesión
-    if (response.status === 401) {
-      useAuthStore.getState().logout()
-      queryClient.clear()
-    }
-
-    throw new Error(errorData.error || `Error ${response.status}`)
-  }
-
+  const response = await send(endpoint, { ...options, headers })
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
@@ -55,14 +62,7 @@ export const api = {
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   getBlob: async (endpoint: string): Promise<{ blob: Blob; contentType: string }> => {
     const token = useAuthStore.getState().token
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    if (!response.ok) {
-      const errorData: ApiError = await response.json().catch(() => ({ error: 'Error de red' }))
-      if (response.status === 401) useAuthStore.getState().logout()
-      throw new Error(errorData.error || `Error ${response.status}`)
-    }
+    const response = await send(endpoint, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
     const blob = await response.blob()
     return { blob, contentType: response.headers.get('Content-Type') ?? 'application/octet-stream' }
   },

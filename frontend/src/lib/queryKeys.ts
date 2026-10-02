@@ -25,7 +25,10 @@ export const QK = {
   SOCIOS_GESTION: ['socios-gestion'] as const,
   SOCIOS_ACTIVOS: ['socios-activos'] as const,
   SOCIOS_LLAVES: ['socios-llaves'] as const,
+  SOCIOS_OPCIONES: ['socios-opciones'] as const,
+  SOCIOS_DESTINATARIOS: ['socios-destinatarios'] as const,
   PENDIENTES: ['pendientes'] as const,
+  CUOTAS: ['cuotas'] as const,
 
   // Admin
   ADMIN_USUARIOS: ['admin-usuarios'] as const,
@@ -57,4 +60,17 @@ export function invalidarJuegos(qc: QueryClient) {
 export function invalidarPrestamos(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: QK.MIS_PRESTAMOS })
   qc.invalidateQueries({ queryKey: QK.PRESTAMOS_GESTION })
+}
+
+/**
+ * Invalida todas las vistas que listan socios.
+ * Llamar tras aprobar, rechazar, dar de baja, reactivar, cambiar roles o llaves.
+ */
+export function invalidarSocios(qc: QueryClient) {
+  for (const queryKey of [
+    QK.PENDIENTES, QK.SOCIOS_GESTION, QK.SOCIOS_ACTIVOS, QK.SOCIOS_LLAVES,
+    QK.SOCIOS_OPCIONES, QK.SOCIOS_DESTINATARIOS, QK.CUOTAS, QK.ADMIN_USUARIOS,
+  ]) {
+    qc.invalidateQueries({ queryKey })
+  }
 }

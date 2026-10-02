@@ -1,13 +1,15 @@
-import { QueryClient, QueryCache } from '@tanstack/react-query'
-import { useAuthStore } from '@/store/authStore'
+import { QueryCache, QueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { ApiRequestError } from '@/services/api/client'
 
+// El logout por sesión caducada lo hace client.ts al recibir 401
 export const queryClient = new QueryClient({
+  // Un fallo de carga no debe parecer una lista vacía: se avisa siempre (un toast por mensaje)
   queryCache: new QueryCache({
-    onError: (_error, query) => {
-      if (query.queryKey[0] === 'me') {
-        useAuthStore.getState().logout()
-        queryClient.clear()
-      }
+    onError: (error) => {
+      // 404: claves de config opcionales; 401: ya cierra sesión client.ts
+      if (error instanceof ApiRequestError && (error.status === 404 || error.status === 401)) return
+      toast.error(error.message, { id: error.message })
     },
   }),
   defaultOptions: {

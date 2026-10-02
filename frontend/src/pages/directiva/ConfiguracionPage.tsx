@@ -41,6 +41,21 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     description: 'Número máximo de préstamos activos que puede tener un socio al mismo tiempo',
     suffix: 'préstamos',
   },
+  dias_prestamo: {
+    label: 'Duración del préstamo',
+    description: 'Días que dura un préstamo desde que el socio se lleva el juego',
+    suffix: 'días',
+  },
+  dias_renovacion: {
+    label: 'Días por renovación',
+    description: 'Días que añade cada renovación a la fecha límite',
+    suffix: 'días',
+  },
+  max_renovaciones: {
+    label: 'Renovaciones máximas',
+    description: 'Veces que un socio puede renovar el mismo préstamo',
+    suffix: 'veces',
+  },
   url_estatutos: {
     label: 'Estatutos (enlace)',
     description: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
@@ -74,6 +89,7 @@ function ConfigField({ config }: { config: ConfigItem }) {
       toast.success(`"${meta?.label ?? config.clave}" actualizado`)
       queryClient.invalidateQueries({ queryKey: ['configuracion'] })
       queryClient.invalidateQueries({ queryKey: ['config', config.clave] })
+      queryClient.invalidateQueries({ queryKey: ['config-club-links'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -142,6 +158,7 @@ function RichTextConfigField({
       toast.success(`"${label}" actualizado`)
       queryClient.invalidateQueries({ queryKey: ['configuracion'] })
       queryClient.invalidateQueries({ queryKey: ['config', clave] })
+      queryClient.invalidateQueries({ queryKey: ['config-club-links'] })
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -203,6 +220,10 @@ export function ConfiguracionPage() {
     .map((clave) => configs.find((c) => c.clave === clave))
     .filter(Boolean) as typeof configs
 
+  const configsPrestamos = ['max_prestamos_activos', 'dias_prestamo', 'dias_renovacion', 'max_renovaciones']
+    .map((clave) => configs.find((c) => c.clave === clave))
+    .filter(Boolean) as typeof configs
+
   return (
     <>
       <SEOHead title="Configuración" description="Configuración del sistema" path="/directiva/configuracion" noindex />
@@ -247,6 +268,25 @@ export function ConfiguracionPage() {
               [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
             ) : (
               configsVisitas.map((c) => <ConfigField key={c.clave} config={c} />)
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Configuración de préstamos
+            </CardTitle>
+            <CardDescription>
+              Límites y plazos de los préstamos de la ludoteca
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {isLoading ? (
+              [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-full" />)
+            ) : (
+              configsPrestamos.map((c) => <ConfigField key={c.clave} config={c} />)
             )}
           </CardContent>
         </Card>

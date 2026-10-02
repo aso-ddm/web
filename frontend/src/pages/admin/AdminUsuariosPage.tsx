@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, Loader2, UserX, UserCheck, Shield, Trash2, Plus, Edit2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,9 +16,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/SEOHead'
 import { api } from '@/services/api/client'
 import { ROL_LABELS, toggleRol as toggleRolLista } from '@/lib/roles'
+import { invalidarSocios } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
 import type { Rol, EstadoSocio } from '@/types/api'
 import type { SocioAdmin } from '@/services/api/socios'
@@ -51,7 +53,7 @@ function UsuarioDetalle({
   const esUnoMismo = useAuthStore((s) => s.usuario?.id === usuario.id)
 
   const invalidar = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-usuarios'] })
+    invalidarSocios(queryClient)
     onClose()
   }
 
@@ -213,11 +215,13 @@ export function AdminUsuariosPage() {
   const [page, setPage] = useState(1)
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<SocioAdmin | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-usuarios', search, estadoFiltro, page],
+    queryKey: ['admin-usuarios', debouncedSearch, estadoFiltro, page],
+    placeholderData: keepPreviousData,
     queryFn: () => {
       const q = new URLSearchParams()
-      if (search) q.set('search', search)
+      if (debouncedSearch) q.set('search', debouncedSearch)
       if (estadoFiltro !== 'todos') q.set('estado', estadoFiltro)
       q.set('page', String(page))
       q.set('limit', '50')

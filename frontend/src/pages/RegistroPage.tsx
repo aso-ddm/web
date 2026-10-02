@@ -335,9 +335,8 @@ function MiembroForm({
           onCheckedChange={(v) => (setValue as (name: string, value: boolean) => void)(`miembros_adicionales.${index}.consentimiento_tiendas`, Boolean(v))}
           className="mt-0.5 flex-shrink-0"
         />
-        <span className="text-sm leading-relaxed">
-          {textoConsentimiento ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'}
-        </span>
+        {/* El texto se edita con el editor enriquecido: es HTML */}
+        <RichTextContent html={textoConsentimiento ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
       </label>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -772,9 +771,7 @@ export function RegistroPage() {
                     onCheckedChange={(v) => setValue('consentimiento_tiendas', Boolean(v))}
                     className="mt-0.5 flex-shrink-0"
                   />
-                  <span className="text-sm leading-relaxed">
-                    {configConsentimiento?.data?.valor ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'}
-                  </span>
+                  <RichTextContent html={configConsentimiento?.data?.valor || 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
                 </label>
                 <Separator />
                 <p className="text-xs text-muted-foreground leading-relaxed">

@@ -12,11 +12,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/SEOHead'
 import { prestamosApi } from '@/services/api/prestamos'
 import { juegosApi } from '@/services/api/juegos'
 import { configuracionApi } from '@/services/api/configuracion'
 import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { Juego, Prestamo } from '@/types/api'
 
 function formatDate(dateStr?: string | null) {
@@ -81,6 +83,7 @@ function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => 
 
 function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
   const [juegoSeleccionado, setJuegoSeleccionado] = useState<Juego | null>(null)
   const [notas, setNotas] = useState('')
   const queryClient = useQueryClient()
@@ -93,8 +96,8 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
   const diasPrestamo = configData?.data?.valor ?? '14'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['juegos-catalogo', search],
-    queryFn: () => juegosApi.getAll({ search: search || undefined, limit: 50 }),
+    queryKey: ['juegos-catalogo', debouncedSearch],
+    queryFn: () => juegosApi.getAll({ search: debouncedSearch || undefined, limit: 50 }),
     enabled: open,
   })
 
@@ -199,14 +202,16 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
     mutationFn: () => prestamosApi.renovar(prestamo.id),
     onSuccess: () => {
       toast.success('Préstamo renovado')
-      queryClient.invalidateQueries({ queryKey: ['mis-prestamos'] })
+      invalidarPrestamos(queryClient)
     },
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const [confirmarDevolucion, setConfirmarDevolucion] = useState(false)
   const { mutate: devolver, isPending: devolviendo } = useMutation({
     mutationFn: () => prestamosApi.devolucion(prestamo.id),
     onSuccess: () => {
+      setConfirmarDevolucion(false)
       toast.success('Devolución registrada')
       invalidarPrestamos(queryClient)
       invalidarJuegos(queryClient)
@@ -247,13 +252,22 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
           )}
           <Button
             size="sm"
-            onClick={() => devolver()}
+            onClick={() => setConfirmarDevolucion(true)}
             disabled={devolviendo}
             className="font-display font-bold h-8 gap-1"
           >
             {devolviendo ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
             Devolver
           </Button>
+          <ConfirmDialog
+            open={confirmarDevolucion}
+            onOpenChange={setConfirmarDevolucion}
+            title={`¿Has devuelto ${prestamo.juego?.nombre ?? 'el juego'} a la estantería?`}
+            description="El préstamo quedará cerrado y el juego disponible para otros socios."
+            confirmLabel="Sí, lo he devuelto"
+            onConfirm={() => devolver()}
+            pending={devolviendo}
+          />
         </div>
       </div>
     </div>

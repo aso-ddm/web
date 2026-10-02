@@ -10,6 +10,7 @@ import { SEOHead } from '@/components/SEOHead'
 import { cuotasApi, type SocioCuotas } from '@/services/api/cuotas'
 import { esMoroso, mesEnPeriodo, type EstadoPago } from '@/lib/cuotas'
 import { cn } from '@/lib/utils'
+import { QK } from '@/lib/queryKeys'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 type Tab = 'todos' | 'morosos'
@@ -18,7 +19,6 @@ const ETIQUETA = { pagado: 'Pago realizado', sin_pagar: 'Pago no realizado', sin
 const SIGUIENTE = (e: EstadoPago | undefined): EstadoPago | null =>
   e === undefined ? 'pagado' : e === 'pagado' ? 'sin_pagar' : null
 
-const QK_CUOTAS = ['cuotas']
 
 export function CuotasPage() {
   const qc = useQueryClient()
@@ -28,15 +28,18 @@ export function CuotasPage() {
   // Morosos tocados en la pestaña: siguen visibles aunque se pongan al día, para poder seguir marcando
   const [fijados, setFijados] = useState<Set<string>>(new Set())
 
-  const { data, isLoading } = useQuery({ queryKey: QK_CUOTAS, queryFn: cuotasApi.getAll })
+  const { data, isLoading } = useQuery({ queryKey: QK.CUOTAS, queryFn: cuotasApi.getAll })
   const socios = data?.data ?? []
 
   const { mutate: marcar } = useMutation({
     mutationFn: (v: { socioId: string; mes: number; estado: EstadoPago | null }) =>
       cuotasApi.marcar(v.socioId, anio, v.mes, v.estado),
-    onMutate: ({ socioId, mes, estado }) => {
+    // En serie: con clics rápidos los PUT podrían llegar desordenados y dejar otro estado en el servidor
+    scope: { id: 'cuotas' },
+    onMutate: async ({ socioId, mes, estado }) => {
+      await qc.cancelQueries({ queryKey: QK.CUOTAS })
       setFijados((s) => new Set(s).add(socioId))
-      qc.setQueryData<{ data: SocioCuotas[] }>(QK_CUOTAS, (old) => old && {
+      qc.setQueryData<{ data: SocioCuotas[] }>(QK.CUOTAS, (old) => old && {
         data: old.data.map((s) => {
           if (s.id !== socioId) return s
           const resto = s.pagos_cuota.filter((p) => !(p.anio === anio && p.mes === mes))
@@ -46,7 +49,7 @@ export function CuotasPage() {
     },
     onError: (err: Error) => {
       toast.error(err.message)
-      qc.invalidateQueries({ queryKey: QK_CUOTAS })
+      qc.invalidateQueries({ queryKey: QK.CUOTAS })
     },
   })
 

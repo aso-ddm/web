@@ -5,9 +5,10 @@ import { TelegramLoginWidget } from '@/components/TelegramLoginWidget'
 import { authApi, type TelegramUser } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
+import { Button } from '@/components/ui/button'
 
 export function TelegramLinkModal() {
-  const { usuario } = useAuthStore()
+  const { usuario, logout } = useAuthStore()
   const queryClient = useQueryClient()
 
   const { data: meData } = useQuery({
@@ -99,6 +100,11 @@ export function TelegramLinkModal() {
           Si tienes problemas, escribe a la directiva por Telegram o en{' '}
           <span className="font-medium">info@dragondemadera.com</span>
         </p>
+
+        {/* Salida si el widget de Telegram no carga */}
+        <Button variant="ghost" size="sm" onClick={() => { logout(); queryClient.clear() }}>
+          Cerrar sesión
+        </Button>
       </div>
     </div>
   )

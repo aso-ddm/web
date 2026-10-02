@@ -12,26 +12,14 @@ import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import { ROL_LABELS } from '@/lib/roles'
+import { invalidarSocios } from '@/lib/queryKeys'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { SolicitudGrupal, Rol } from '@/types/api'
 
 const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 
-// Abre el comprobante en una nueva pestaña autenticado
-async function abrirComprobante(socioId: string) {
-  const token = useAuthStore.getState().token
-  try {
-    const res = await fetch(`/api/socios/${socioId}/comprobante`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    if (!res.ok) { toast.error('No se pudo cargar el comprobante'); return }
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener')
-    // Liberar la URL después de un momento
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    toast.error('Error al obtener el comprobante')
-  }
+function abrirComprobante(socioId: string) {
+  sociosApi.getComprobante(socioId).catch((err: Error) => toast.error(err.message))
 }
 
 function formatDate(dateStr?: string | null) {
@@ -56,11 +44,8 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
   const puedeEditar = useAuthStore((s) => s.isDirectiva())
   const [rolSeleccionado, setRolSeleccionado] = useState<Rol | null>(null)
 
-  const invalidar = () => {
-    queryClient.invalidateQueries({ queryKey: ['pendientes'] })
-    queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
-    queryClient.invalidateQueries({ queryKey: ['socios-activos'] })
-  }
+  const [confirmRechazo, setConfirmRechazo] = useState(false)
+  const invalidar = () => invalidarSocios(queryClient)
 
   const { mutate: aprobar, isPending: aprobando } = useMutation({
     mutationFn: () => sociosApi.aprobar(socio.id, rolSeleccionado!),
@@ -70,12 +55,22 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
 
   const { mutate: rechazar, isPending: rechazando } = useMutation({
     mutationFn: () => sociosApi.rechazar(socio.id),
-    onSuccess: () => { toast.success('Solicitud rechazada'); invalidar() },
+    onSuccess: () => { toast.success('Solicitud rechazada'); setConfirmRechazo(false); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
 
   return (
     <div className="py-4 border-b border-border last:border-0">
+      <ConfirmDialog
+        open={confirmRechazo}
+        onOpenChange={setConfirmRechazo}
+        title={`¿Rechazar la solicitud de ${socio.nombre} ${socio.apellidos}?`}
+        description="No podrá acceder al área de socios. Si fue un error, tendrá que registrarse de nuevo."
+        confirmLabel="Rechazar"
+        onConfirm={() => rechazar()}
+        pending={rechazando}
+        destructive
+      />
       <div className="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -124,7 +119,7 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
               {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Aprobar
             </Button>
-            <Button size="sm" variant="outline" onClick={() => rechazar()} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
+            <Button size="sm" variant="outline" onClick={() => setConfirmRechazo(true)} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
               {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
               Rechazar
             </Button>
@@ -153,11 +148,8 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
 function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grupo: SolicitudGrupal; precioIndividual: number; precioAdicional: number }) {
   const queryClient = useQueryClient()
   const puedeEditar = useAuthStore((s) => s.isDirectiva())
-  const invalidar = () => {
-    queryClient.invalidateQueries({ queryKey: ['pendientes'] })
-    queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
-    queryClient.invalidateQueries({ queryKey: ['socios-activos'] })
-  }
+  const [confirmRechazo, setConfirmRechazo] = useState(false)
+  const invalidar = () => invalidarSocios(queryClient)
 
   const { mutate: aprobar, isPending: aprobando } = useMutation({
     mutationFn: () => sociosApi.aprobarGrupo(grupo.id),
@@ -167,7 +159,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 
   const { mutate: rechazar, isPending: rechazando } = useMutation({
     mutationFn: () => sociosApi.rechazarGrupo(grupo.id),
-    onSuccess: () => { toast.success('Solicitud conjunta rechazada'); invalidar() },
+    onSuccess: () => { toast.success('Solicitud conjunta rechazada'); setConfirmRechazo(false); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -175,6 +167,16 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 
   return (
     <div className="py-4 border-b border-border last:border-0">
+      <ConfirmDialog
+        open={confirmRechazo}
+        onOpenChange={setConfirmRechazo}
+        title={`¿Rechazar la solicitud conjunta de ${grupo.titular.nombre} ${grupo.titular.apellidos}?`}
+        description={`Se rechazarán los ${grupo.miembros.length + 1} miembros del grupo.`}
+        confirmLabel="Rechazar"
+        onConfirm={() => rechazar()}
+        pending={rechazando}
+        destructive
+      />
       <div className="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0 space-y-3">
           {/* Titular */}
@@ -222,7 +224,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
               {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Aprobar
             </Button>
-            <Button size="sm" variant="outline" onClick={() => rechazar()} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
+            <Button size="sm" variant="outline" onClick={() => setConfirmRechazo(true)} disabled={aprobando || rechazando} className="font-display h-9 text-destructive border-destructive/30 hover:bg-destructive/10">
               {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
               Rechazar
             </Button>

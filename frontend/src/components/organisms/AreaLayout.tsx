@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { authApi } from '@/services/api/auth'
 import {
   User,
@@ -180,6 +180,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
 /* ── Layout principal ────────────────────────────────────────────── */
 export function AreaLayout() {
+  const [menuOpen, setMenuOpen] = useState(false)
   // Refresca roles/estado desde el backend; un 401 cierra la sesión (ver api/client)
   const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => authApi.me() })
   const updateUsuario = useAuthStore((s) => s.updateUsuario)
@@ -202,7 +203,7 @@ export function AreaLayout() {
             <DragonIcon className="h-7 w-7 fill-primary" />
             <span className="font-display font-bold text-primary text-sm">Área de socios</span>
           </Link>
-          <Sheet>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
@@ -210,7 +211,7 @@ export function AreaLayout() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-64">
-              <SidebarContent />
+              <SidebarContent onClose={() => setMenuOpen(false)} />
             </SheetContent>
           </Sheet>
         </header>

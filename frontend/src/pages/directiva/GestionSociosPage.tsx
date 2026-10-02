@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, Users, ChevronRight, Loader2, UserX, UserCheck, Shield, Key, CheckCircle2, FileText } from 'lucide-react'
 import {
@@ -16,8 +16,10 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
+import { invalidarSocios } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
 import { ROL_LABELS, toggleRol as toggleRolLista } from '@/lib/roles'
 import type { Rol, EstadoSocio } from '@/types/api'
@@ -65,7 +67,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
   const [abriendo, setAbriendo] = useState(false)
 
   const invalidar = () => {
-    queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
+    invalidarSocios(queryClient)
     onClose()
   }
 
@@ -96,7 +98,6 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
     mutationFn: (tiene: boolean) => sociosApi.setLlaves(socio.id, tiene),
     onSuccess: (_, tiene) => {
       toast.success(tiene ? 'Llaves asignadas' : 'Devolución de llaves registrada')
-      queryClient.invalidateQueries({ queryKey: ['socios-llaves'] })
       invalidar()
     },
     onError: (err: Error) => toast.error(err.message),
@@ -351,11 +352,13 @@ export function GestionSociosPage() {
   const [page, setPage] = useState(1)
   const [socioSeleccionado, setSocioSeleccionado] = useState<SocioAdmin | null>(null)
 
+  const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading } = useQuery({
-    queryKey: ['socios-gestion', search, estadoFiltro, page],
+    queryKey: ['socios-gestion', debouncedSearch, estadoFiltro, page],
+    placeholderData: keepPreviousData,
     queryFn: () =>
       sociosApi.getAll({
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         estado: estadoFiltro !== 'todos' ? (estadoFiltro as EstadoSocio) : undefined,
         page,
         limit: 20,

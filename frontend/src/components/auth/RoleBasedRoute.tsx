@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import type { Rol } from '@/types/api'
 
@@ -12,9 +12,10 @@ export function RoleBasedRoute({
   redirectTo = '/area',
 }: RoleBasedRouteProps) {
   const { isAuthenticated, usuario } = useAuthStore()
+  const location = useLocation()
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   const hasRole = allowedRoles.some((role) => usuario?.roles.includes(role))

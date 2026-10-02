@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { RotateCcw, Loader2, Clock, AlertTriangle } from 'lucide-react'
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { prestamosApi } from '@/services/api/prestamos'
 import type { Prestamo } from '@/types/api'
 
@@ -30,9 +32,11 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
   const dias = diasRestantes(prestamo.fecha_limite)
   const vencido = dias < 0
 
+  const [confirmar, setConfirmar] = useState(false)
   const { mutate: devolver, isPending } = useMutation({
     mutationFn: () => prestamosApi.devolucion(prestamo.id),
     onSuccess: () => {
+      setConfirmar(false)
       toast.success('Devolución confirmada')
       invalidarPrestamos(queryClient)
       invalidarJuegos(queryClient)
@@ -72,13 +76,22 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
         <Button
           size="sm"
           variant={vencido ? 'destructive' : 'outline'}
-          onClick={() => devolver()}
+          onClick={() => setConfirmar(true)}
           disabled={isPending}
           className="font-display font-bold h-8 gap-1 flex-shrink-0"
         >
           {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
           Confirmar devolución
         </Button>
+        <ConfirmDialog
+          open={confirmar}
+          onOpenChange={setConfirmar}
+          title={`¿Confirmar la devolución de ${prestamo.juego?.nombre ?? 'este juego'}?`}
+          description="El juego volverá a estar disponible en la estantería."
+          confirmLabel="Confirmar devolución"
+          onConfirm={() => devolver()}
+          pending={isPending}
+        />
       </div>
     </div>
   )
@@ -87,7 +100,8 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
 function PrestamosActivos() {
   const { data, isLoading } = useQuery({
     queryKey: ['prestamos-gestion', 'activo'],
-    queryFn: () => prestamosApi.getAll({ estado: 'activo' }),
+    // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
+    queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
   })
 
   const prestamos = data?.data ?? []
@@ -138,12 +152,14 @@ function PrestamosActivos() {
 }
 
 function HistorialPrestamos() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['prestamos-gestion', 'devuelto'],
-    queryFn: () => prestamosApi.getAll({ estado: 'devuelto' }),
+    queryFn: ({ pageParam }) => prestamosApi.getAll({ estado: 'devuelto', page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
 
-  const prestamos = data?.data ?? []
+  const prestamos = data?.pages.flatMap((p) => p.data) ?? []
 
   if (isLoading) return (
     <div className="space-y-3 pt-4">
@@ -171,6 +187,14 @@ function HistorialPrestamos() {
             <Badge variant="outline" className="font-display text-xs">Devuelto</Badge>
           </div>
         ))}
+        {hasNextPage && (
+          <div className="flex justify-center pt-3">
+            <Button variant="outline" size="sm" className="font-display gap-2" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
+              {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
+              Cargar más
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -179,7 +203,8 @@ function HistorialPrestamos() {
 export function GestionPrestamosPage() {
   const { data: activoData } = useQuery({
     queryKey: ['prestamos-gestion', 'activo'],
-    queryFn: () => prestamosApi.getAll({ estado: 'activo' }),
+    // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
+    queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
   })
   const vencidosCount = (activoData?.data ?? []).filter((p) => diasRestantes(p.fecha_limite) < 0).length
 
