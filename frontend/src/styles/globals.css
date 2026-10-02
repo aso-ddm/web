@@ -15,19 +15,35 @@ html {
   color: var(--primary-foreground);
 }
 
-/* ─── Custom scrollbar ─── */
+/* ─── Custom scrollbar (único estilo para toda la web) ─── */
+:root {
+  --scrollbar-thumb: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
+  --scrollbar-thumb-active: color-mix(in oklch, var(--muted-foreground) 30%, transparent);
+}
 ::-webkit-scrollbar {
   width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox (sin ::-webkit-scrollbar). En Chrome scrollbar-color anularía los estilos de arriba. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
 }
 
 /* ─── Entrance animation keyframes ─── */
