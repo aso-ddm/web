@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -42,23 +41,23 @@ export function PerfilPage() {
     handleSubmit,
     reset,
     formState: { errors, isDirty },
-  } = useForm<PerfilForm>({ resolver: zodResolver(perfilSchema) })
-
-  useEffect(() => {
-    if (usuario) {
-      reset({
-        nombre: usuario.nombre,
-        apellidos: usuario.apellidos,
-        telefono: usuario.telefono ?? '',
-        direccion: usuario.direccion ?? '',
-        apodo: usuario.apodo ?? '',
-      })
-    }
-  }, [usuario, reset])
+  } = useForm<PerfilForm>({
+    resolver: zodResolver(perfilSchema),
+    // Si ['me'] se recarga mientras se edita (foco de pestaña, invalidaciones), lo tocado no se pierde
+    values: usuario && {
+      nombre: usuario.nombre,
+      apellidos: usuario.apellidos,
+      telefono: usuario.telefono ?? '',
+      direccion: usuario.direccion ?? '',
+      apodo: usuario.apodo ?? '',
+    },
+    resetOptions: { keepDirtyValues: true },
+  })
 
   const { mutate: guardar, isPending: guardando } = useMutation({
     mutationFn: (data: PerfilForm) => sociosApi.update(authUsuario!.id, data),
-    onSuccess: ({ data }) => {
+    onSuccess: ({ data }, enviado) => {
+      reset(enviado) // lo guardado pasa a ser el estado limpio del formulario
       updateUsuario(data)
       queryClient.invalidateQueries({ queryKey: ['me'] })
       toast.success('Perfil actualizado correctamente')
