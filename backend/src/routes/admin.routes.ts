@@ -4,8 +4,9 @@ import bcrypt from 'bcryptjs'
 import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { comprobarCambioAdmin, normalizarRoles } from '../services/socios.service'
-import { Rol, EstadoSocio, TipoCuota, Prisma } from '@prisma/client'
+import { Rol, EstadoSocio, TipoCuota } from '@prisma/client'
 import { emailSchema, passwordSchema } from '../schemas/auth.schema'
+import { buscarIdsUsuarios } from '../lib/search'
 
 const router = Router()
 
@@ -55,40 +56,7 @@ router.get('/usuarios', async (req, res) => {
   const skip = (pageNum - 1) * limitNum
 
   if (search) {
-    const pattern = `%${search}%`
-    const estadoClause = estado
-      ? Prisma.sql`AND estado::text = ${estado}`
-      : Prisma.sql``
-
-    const [rows, countRows] = await Promise.all([
-      prisma.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Usuario"
-        WHERE (
-          unaccent(nombre) ILIKE unaccent(${pattern})
-          OR unaccent(apellidos) ILIKE unaccent(${pattern})
-          OR email ILIKE ${pattern}
-          OR dni ILIKE ${pattern}
-          OR unaccent(apodo) ILIKE unaccent(${pattern})
-        )
-        ${estadoClause}
-        ORDER BY created_at DESC
-        LIMIT ${limitNum} OFFSET ${skip}
-      `,
-      prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count FROM "Usuario"
-        WHERE (
-          unaccent(nombre) ILIKE unaccent(${pattern})
-          OR unaccent(apellidos) ILIKE unaccent(${pattern})
-          OR email ILIKE ${pattern}
-          OR dni ILIKE ${pattern}
-          OR unaccent(apodo) ILIKE unaccent(${pattern})
-        )
-        ${estadoClause}
-      `,
-    ])
-
-    const ids = rows.map((r) => r.id)
-    const total = Number(countRows[0]?.count ?? 0)
+    const { ids, total } = await buscarIdsUsuarios(prisma, { search, estado, limit: limitNum, skip })
     const usuarios = ids.length > 0
       ? await prisma.usuario.findMany({ where: { id: { in: ids } }, select: USUARIO_SELECT, orderBy: { created_at: 'desc' } })
       : []

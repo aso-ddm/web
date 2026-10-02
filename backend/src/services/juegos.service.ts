@@ -1,6 +1,7 @@
 import { PrismaClient, TipoLogJuego, Prisma } from '@prisma/client'
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 import type { LogsJuegoService } from './logs_juego.service'
+import { likePattern } from '../lib/search'
 
 const propietarioSelect = { select: { id: true, nombre: true, apellidos: true } }
 
@@ -15,7 +16,7 @@ export class JuegosService {
     const skip = (page - 1) * limit
 
     if (search) {
-      const pattern = `%${search}%`
+      const pattern = likePattern(search)
       const estadoClause = estado
         ? Prisma.sql`AND estado::text = ${estado}`
         : Prisma.sql``

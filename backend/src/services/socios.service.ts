@@ -1,5 +1,6 @@
-import { PrismaClient, Rol, EstadoSocio, Prisma, EstadoPago } from '@prisma/client'
+import { PrismaClient, Rol, EstadoSocio, EstadoPago } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
+import { buscarIdsUsuarios } from '../lib/search'
 
 // Campos públicos que se devuelven en listados (sin datos sensibles)
 const SOCIO_PUBLIC_SELECT = {
@@ -64,40 +65,7 @@ export class SociosService {
     const skip = (page - 1) * limit
 
     if (search) {
-      const pattern = `%${search}%`
-      const estadoClause = estado
-        ? Prisma.sql`AND estado::text = ${estado}`
-        : Prisma.sql``
-
-      const [rows, countRows] = await Promise.all([
-        this.prisma.$queryRaw<{ id: string }[]>`
-          SELECT id FROM "Usuario"
-          WHERE (
-            unaccent(nombre) ILIKE unaccent(${pattern})
-            OR unaccent(apellidos) ILIKE unaccent(${pattern})
-            OR email ILIKE ${pattern}
-            OR dni ILIKE ${pattern}
-            OR unaccent(apodo) ILIKE unaccent(${pattern})
-          )
-          ${estadoClause}
-          ORDER BY created_at DESC
-          LIMIT ${limit} OFFSET ${skip}
-        `,
-        this.prisma.$queryRaw<{ count: bigint }[]>`
-          SELECT COUNT(*) as count FROM "Usuario"
-          WHERE (
-            unaccent(nombre) ILIKE unaccent(${pattern})
-            OR unaccent(apellidos) ILIKE unaccent(${pattern})
-            OR email ILIKE ${pattern}
-            OR dni ILIKE ${pattern}
-            OR unaccent(apodo) ILIKE unaccent(${pattern})
-          )
-          ${estadoClause}
-        `,
-      ])
-
-      const ids = rows.map((r) => r.id)
-      const total = Number(countRows[0]?.count ?? 0)
+      const { ids, total } = await buscarIdsUsuarios(this.prisma, { search, estado, limit, skip })
 
       const socios = ids.length > 0
         ? await this.prisma.usuario.findMany({
