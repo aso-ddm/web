@@ -16,7 +16,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      retry: 1,
+      // Un reintento solo para red caída o 5xx: un 4xx (404 de config opcional, 403) no cambia al repetir
+      retry: (fallos, error) => fallos < 1 && !(error instanceof ApiRequestError && error.status < 500),
     },
   },
 })

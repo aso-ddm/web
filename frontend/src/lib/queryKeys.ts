@@ -45,12 +45,15 @@ export const QK = {
 /**
  * Invalida TODAS las queries del catálogo de juegos.
  * Llamar tras cualquier operación que cambie el estado o disponibilidad de un juego:
- * crear, editar, retirar, reactivar, eliminar, prestar, devolver.
+ * crear, editar, retirar, reactivar, eliminar, prestar, devolver. Incluye el historial: esas operaciones
+ * generan logs (prestamo_activo, prestamo_devuelto, retirado...).
  */
 export function invalidarJuegos(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: QK.JUEGOS })
   qc.invalidateQueries({ queryKey: QK.JUEGOS_CATALOGO })
   qc.invalidateQueries({ queryKey: QK.LUDOTECA })
+  qc.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
+  qc.invalidateQueries({ queryKey: ['juego-logs'] }) // QK.LOGS_JUEGO de todos los juegos
 }
 
 /**
@@ -65,11 +68,12 @@ export function invalidarPrestamos(qc: QueryClient) {
 /**
  * Invalida todas las vistas que listan socios.
  * Llamar tras aprobar, rechazar, dar de baja, reactivar, cambiar roles o llaves.
+ * Incluye ['me']: la directiva puede cambiarse sus propias llaves.
  */
 export function invalidarSocios(qc: QueryClient) {
   for (const queryKey of [
     QK.PENDIENTES, QK.SOCIOS_GESTION, QK.SOCIOS_ACTIVOS, QK.SOCIOS_LLAVES,
-    QK.SOCIOS_OPCIONES, QK.SOCIOS_DESTINATARIOS, QK.CUOTAS, QK.ADMIN_USUARIOS,
+    QK.SOCIOS_OPCIONES, QK.SOCIOS_DESTINATARIOS, QK.CUOTAS, QK.ADMIN_USUARIOS, QK.ME,
   ]) {
     qc.invalidateQueries({ queryKey })
   }

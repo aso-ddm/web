@@ -54,7 +54,7 @@ export function GestionJuegosPage() {
     queryKey: ['solicitudes-juego-pendientes'],
     queryFn: () => solicitudesJuegoApi.getPendientes(),
   })
-  const pendientesCount = solicitudesData?.data.length ?? 0
+  const pendientesCount = solicitudesData?.total ?? 0 // total, no data.length: la página trae como mucho 50
 
   const { mutate: eliminar, isPending: eliminandoPending } = useMutation({
     mutationFn: (id: string) => juegosApi.delete(id),
@@ -71,7 +71,6 @@ export function GestionJuegosPage() {
     onSuccess: () => {
       toast.success('Juego retirado del catálogo')
       invalidarJuegos(queryClient)
-      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setRetirando(undefined)
     },
     onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
@@ -82,7 +81,6 @@ export function GestionJuegosPage() {
     onSuccess: () => {
       toast.success('Juego reactivado y disponible en la estantería')
       invalidarJuegos(queryClient)
-      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setReactivando(undefined)
     },
     onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
