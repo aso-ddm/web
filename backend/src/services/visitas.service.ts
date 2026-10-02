@@ -66,16 +66,6 @@ export class VisitasService {
     })
   }
 
-  /** Historial reciente de visitas (para el panel de directiva) */
-  async getRecientes(limit = 50) {
-    return this.prisma.visita.findMany({
-      orderBy: { fecha_visita: 'desc' },
-      take: limit,
-      include: {
-        socio_registro: { select: { id: true, nombre: true, apellidos: true } },
-      },
-    })
-  }
 
   async getAll(filtros: { page: number; limit: number; search?: string }) {
     const { page, limit, search } = filtros

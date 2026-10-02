@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, BookOpen, MapPin, Users, Plus, Loader2, Gift } from 'lucide-react'
+import { Search, BookOpen, MapPin, Users, Loader2, Gift } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

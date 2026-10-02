@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Usuario, Rol, EstadoSocio, SolicitudGrupal, PaginatedResponse } from '@/types/api'
+import type { Usuario, Rol, EstadoSocio, SolicitudGrupal } from '@/types/api'
 
 export interface UpdateSocioPayload {
   nombre?: string
@@ -33,8 +33,6 @@ export interface GetSociosParams {
 }
 
 export const sociosApi = {
-  // Socio — perfil propio
-  getMe: () => api.get<{ data: Usuario }>('/socios/me'),
   update: (id: string, payload: UpdateSocioPayload) =>
     api.put<{ data: Usuario }>(`/socios/${id}`, payload),
 
@@ -53,8 +51,6 @@ export const sociosApi = {
   getOpciones: () => api.get<{ data: { id: string; nombre: string; apellidos: string; apodo: string | null }[] }>('/socios/opciones'),
 
   getPendientes: () => api.get<{ data: { individuales: SocioAdmin[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
-
-  getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 
   aprobar: (id: string, rol: Rol) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, { rol }),
   rechazar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/rechazar`),
@@ -84,7 +80,4 @@ export const sociosApi = {
 
   setLlaves: (id: string, tiene_llaves: boolean) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/llaves`, { tiene_llaves }),
-
-  enviarBienvenidaTelegram: (id: string) =>
-    api.action<{ message: string }>(`/telegram/bienvenida/${id}`),
 }

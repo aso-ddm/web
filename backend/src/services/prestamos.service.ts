@@ -193,34 +193,4 @@ export class PrestamosService {
 
     return { data: prestamos, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
-
-  // ── Notificaciones ────────────────────────────────────────────────────────
-  // TODO: Implementar sistema de notificaciones (Telegram bot / email)
-  // Llamar desde un cron job periódico (p.ej. backend/src/jobs/prestamos.cron.ts)
-  //
-  // async enviarAvisosVencimiento(): Promise<void> {
-  //   const diasAviso = await this.getConfigNum('dias_aviso_devolucion', 3)
-  //   const ahora = new Date()
-  //   const fechaLimiteAviso = this.addDays(ahora, diasAviso)
-  //
-  //   const proximos = await this.prisma.prestamo.findMany({
-  //     where: {
-  //       estado: EstadoPrestamo.activo,
-  //       fecha_limite: { lte: fechaLimiteAviso, gte: ahora },
-  //     },
-  //     include: {
-  //       socio: { select: { id: true, nombre: true, apellidos: true, email: true, alias_telegram: true } },
-  //       juego: { select: { id: true, nombre: true } },
-  //     },
-  //   })
-  //
-  //   for (const prestamo of proximos) {
-  //     // await notificacionService.enviar({
-  //     //   socio: prestamo.socio,
-  //     //   juego: prestamo.juego,
-  //     //   fecha_limite: prestamo.fecha_limite,
-  //     //   renovaciones_restantes: maxRenovaciones - prestamo.renovaciones,
-  //     // })
-  //   }
-  // }
 }

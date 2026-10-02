@@ -72,7 +72,6 @@ export function DashboardPage() {
   const prestamosActivos = prestamosData?.data.filter(
     (p) => p.estado === 'activo',
   ) ?? []
-  const prestamosPendientes: typeof prestamosActivos = []
   const ultimosPrestamos = prestamosData?.data.slice(0, 3) ?? []
 
   return (

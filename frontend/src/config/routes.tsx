@@ -37,17 +37,6 @@ import { AdminUsuariosPage } from '@/pages/admin/AdminUsuariosPage'
 // Visitas — Sprint 6
 import { RegistroVisitaPage } from '@/pages/area/RegistroVisitaPage'
 
-// Placeholder para sprints futuros
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
-      <p className="text-5xl">🐉</p>
-      <h2 className="font-display font-bold text-2xl text-primary">{label}</h2>
-      <p className="text-muted-foreground">Esta sección se implementa en el próximo sprint</p>
-    </div>
-  )
-}
-
 export function AppRoutes() {
   return (
     <Routes>

@@ -4,6 +4,7 @@ import { LogsJuegoService } from '../services/logs_juego.service'
 import { crearJuegoSchema, updateJuegoSchema, filtrosJuegosSchema } from '../schemas/juego.schema'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
+import { filtrosLogsSchema } from '../schemas/log_juego.schema'
 
 const router = Router()
 const logsService = new LogsJuegoService(prisma)
@@ -11,15 +12,8 @@ const juegosService = new JuegosService(prisma, logsService)
 
 // GET /api/juegos/logs — todos los logs (staff)
 router.get('/logs', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
-  try {
-    const { filtrosLogsSchema } = await import('../schemas/log_juego.schema')
-    const filtros = filtrosLogsSchema.parse(req.query)
-    const result = await logsService.getAll(filtros)
-    res.json(result)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  // ZodError → 400 en el errorHandler
+  res.json(await logsService.getAll(filtrosLogsSchema.parse(req.query)))
 })
 
 // GET /api/juegos/export/csv — exportar catálogo (staff)

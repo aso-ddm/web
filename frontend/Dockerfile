@@ -1,17 +1,22 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
+# Mismo lockfile que el backend (pnpm-lock.yaml de la raíz): builds reproducibles
 FROM node:20-alpine AS builder
-WORKDIR /app/frontend
+WORKDIR /app
 
-COPY frontend/package.json ./
+RUN npm install -g pnpm
 
-RUN npm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
 
-COPY frontend/ ./
+RUN pnpm install --frozen-lockfile --filter dragon-de-madera...
+
+COPY frontend/ ./frontend/
 
 ARG VITE_APP_VERSION=dev
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
-RUN npm run build
+RUN pnpm -C frontend build
 
 # ── Production stage ───────────────────────────────────────────────────────────
 FROM nginx:alpine AS production
