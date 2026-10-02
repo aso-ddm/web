@@ -1,44 +1,51 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-
-// Páginas públicas
-import { HomePage } from '@/pages/HomePage'
-import { ClubPage } from '@/pages/ClubPage'
-import { SocioPage } from '@/pages/SocioPage'
-import { NotFoundPage } from '@/pages/NotFoundPage'
-import { LoginPage } from '@/pages/LoginPage'
-import { RegistroPage } from '@/pages/RegistroPage'
-import { RgpdPage } from '@/pages/RgpdPage'
-import { RecuperarPasswordPage } from '@/pages/RecuperarPasswordPage'
+import { PageLoader } from '@/components/atoms/PageLoader'
 
 // Layouts y guards
 import { AreaLayout } from '@/components/organisms/AreaLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute'
 
-// Área de socio — Sprint 3
-import { DashboardPage } from '@/pages/area/DashboardPage'
-import { PerfilPage } from '@/pages/area/PerfilPage'
-import { PrestamosPage } from '@/pages/area/PrestamosPage'
-import { LudotecaPage } from '@/pages/area/LudotecaPage'
+// Páginas públicas: van en el bundle inicial
+import { HomePage } from '@/pages/HomePage'
+import { ClubPage } from '@/pages/ClubPage'
+import { SocioPage } from '@/pages/SocioPage'
+import { NotFoundPage } from '@/pages/NotFoundPage'
+import { LoginPage } from '@/pages/LoginPage'
 
-// Panel ludotecario — Sprint 4
-import { GestionJuegosPage } from '@/pages/ludoteca/GestionJuegosPage'
-import { GestionPrestamosPage } from '@/pages/ludoteca/GestionPrestamosPage'
+// El resto se descarga al entrar en la página
+function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })))
+}
 
-// Panel directiva — Sprint 5
-import { SolicitudesPage } from '@/pages/directiva/SolicitudesPage'
-import { GestionSociosPage } from '@/pages/directiva/GestionSociosPage'
-import { ConfiguracionPage } from '@/pages/directiva/ConfiguracionPage'
-import { LlavesPage } from '@/pages/directiva/LlavesPage'
-import { CuotasPage } from '@/pages/directiva/CuotasPage'
-import { AnunciosPage } from '@/pages/directiva/AnunciosPage'
-import { AdminUsuariosPage } from '@/pages/admin/AdminUsuariosPage'
+const RegistroPage = lazyPage(() => import('@/pages/RegistroPage'), 'RegistroPage')
+const RgpdPage = lazyPage(() => import('@/pages/RgpdPage'), 'RgpdPage')
+const RecuperarPasswordPage = lazyPage(() => import('@/pages/RecuperarPasswordPage'), 'RecuperarPasswordPage')
 
-// Visitas — Sprint 6
-import { RegistroVisitaPage } from '@/pages/area/RegistroVisitaPage'
+// Área de socio
+const DashboardPage = lazyPage(() => import('@/pages/area/DashboardPage'), 'DashboardPage')
+const PerfilPage = lazyPage(() => import('@/pages/area/PerfilPage'), 'PerfilPage')
+const PrestamosPage = lazyPage(() => import('@/pages/area/PrestamosPage'), 'PrestamosPage')
+const LudotecaPage = lazyPage(() => import('@/pages/area/LudotecaPage'), 'LudotecaPage')
+const RegistroVisitaPage = lazyPage(() => import('@/pages/area/RegistroVisitaPage'), 'RegistroVisitaPage')
+
+// Panel ludotecario
+const GestionJuegosPage = lazyPage(() => import('@/pages/ludoteca/GestionJuegosPage'), 'GestionJuegosPage')
+const GestionPrestamosPage = lazyPage(() => import('@/pages/ludoteca/GestionPrestamosPage'), 'GestionPrestamosPage')
+
+// Panel directiva y administración
+const SolicitudesPage = lazyPage(() => import('@/pages/directiva/SolicitudesPage'), 'SolicitudesPage')
+const GestionSociosPage = lazyPage(() => import('@/pages/directiva/GestionSociosPage'), 'GestionSociosPage')
+const ConfiguracionPage = lazyPage(() => import('@/pages/directiva/ConfiguracionPage'), 'ConfiguracionPage')
+const LlavesPage = lazyPage(() => import('@/pages/directiva/LlavesPage'), 'LlavesPage')
+const CuotasPage = lazyPage(() => import('@/pages/directiva/CuotasPage'), 'CuotasPage')
+const AnunciosPage = lazyPage(() => import('@/pages/directiva/AnunciosPage'), 'AnunciosPage')
+const AdminUsuariosPage = lazyPage(() => import('@/pages/admin/AdminUsuariosPage'), 'AdminUsuariosPage')
 
 export function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* ── Rutas públicas ──────────────────────────────────────────── */}
       <Route path="/" element={<HomePage />} />
@@ -119,5 +126,6 @@ export function AppRoutes() {
       {/* ── 404 ─────────────────────────────────────────────────────── */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </Suspense>
   )
 }

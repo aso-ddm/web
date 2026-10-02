@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { authApi } from '@/services/api/auth'
 import {
   User,
@@ -26,6 +26,7 @@ import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 import { getRolLabel } from '@/lib/roles'
 import { TelegramLinkModal } from './TelegramLinkModal'
+import { PageLoader } from '@/components/atoms/PageLoader'
 
 /* ── Tipos ───────────────────────────────────────────────────────── */
 type NavItem    = { type: 'item';    label: string; to: string; icon: React.ReactNode }
@@ -218,7 +219,10 @@ export function AreaLayout() {
 
         {/* Contenido */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          {/* Suspense aquí: la barra lateral sigue visible mientras carga la página */}
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>
