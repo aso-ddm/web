@@ -25,6 +25,7 @@ import type { Rol, EstadoSocio } from '@/types/api'
 import type { SocioAdmin } from '@/services/api/socios'
 import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
+import { passwordSchema } from '@/pages/registro/schema'
 
 // ponytail: administrador no es asignable desde la app (solo BD/seed)
 function UsuarioDetalle({
@@ -59,7 +60,9 @@ function UsuarioDetalle({
 
   const { mutate: cambiarPassword, isPending: cambiandoPassword } = useMutation({
     mutationFn: () => {
-      if (editPassword.length < 8) throw new Error('Mínimo 8 caracteres')
+      // Mismas reglas que el backend: 8 caracteres, una mayúscula y un número
+      const valida = passwordSchema.safeParse(editPassword)
+      if (!valida.success) throw new Error(valida.error.issues[0].message)
       return adminApi.updateUsuario(usuario.id, { password: editPassword })
     },
     onSuccess: () => { toast.success('Contraseña actualizada'); setEditPassword('') },

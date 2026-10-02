@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 const DNI_LETTERS = 'TRWAGMYFPDXBNJZSQVHLCKE'
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(8, 'Mínimo 8 caracteres')
   .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')

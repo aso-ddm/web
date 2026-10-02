@@ -21,8 +21,8 @@ import type { Juego } from '@/types/api'
 const juegoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   localizacion: z.string().optional(),
-  num_jugadores_min: z.coerce.number().int().positive().optional().or(z.literal('')),
-  num_jugadores_max: z.coerce.number().int().positive().optional().or(z.literal('')),
+  num_jugadores_min: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor que 0').optional().or(z.literal('')),
+  num_jugadores_max: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor que 0').optional().or(z.literal('')),
   notas: z.string().optional(),
   propietario_id: z.string().uuid().optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
@@ -121,10 +121,13 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
           <div className="space-y-1.5">
             <Label className="font-display font-bold text-xs">Nº jugadores</Label>
             <div className="flex items-center gap-2">
-              <Input type="number" {...register('num_jugadores_min')} placeholder="Mín" />
+              <Input type="number" {...register('num_jugadores_min')} placeholder="Mín" className={errors.num_jugadores_min ? 'border-destructive' : ''} />
               <span className="text-muted-foreground">—</span>
-              <Input type="number" {...register('num_jugadores_max')} placeholder="Máx" />
+              <Input type="number" {...register('num_jugadores_max')} placeholder="Máx" className={errors.num_jugadores_max ? 'border-destructive' : ''} />
             </div>
+            {(errors.num_jugadores_min || errors.num_jugadores_max) && (
+              <p className="text-xs text-destructive">{(errors.num_jugadores_min ?? errors.num_jugadores_max)?.message}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="font-display font-bold text-xs">Propietario</Label>

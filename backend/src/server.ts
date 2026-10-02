@@ -3,6 +3,8 @@ import './types/index'
 import express from 'express'
 // Express 4 no captura promesas rechazadas: esto las manda al errorHandler en vez de tumbar el proceso
 import 'express-async-errors'
+// Mensajes de validación de Zod en español (global): antes que cualquier schema se use
+import './lib/zodEs'
 import cors from 'cors'
 
 import healthRouter from './routes/health'

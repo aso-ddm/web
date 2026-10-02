@@ -26,6 +26,13 @@ describe('api client', () => {
     expect(logout).toHaveBeenCalled()
   })
 
+  it('400 con details de Zod → añade el primer mensaje', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      Response.json({ error: 'Datos inválidos', details: { password: ['Debe contener una mayúscula'] } }, { status: 400 }),
+    )
+    await expect(api.post('/x', {})).rejects.toThrow('Datos inválidos: Debe contener una mayúscula')
+  })
+
   it('204 → undefined', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
     await expect(api.delete('/x')).resolves.toBeUndefined()

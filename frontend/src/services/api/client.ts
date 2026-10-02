@@ -26,7 +26,10 @@ async function send(endpoint: string, init: RequestInit): Promise<Response> {
     useAuthStore.getState().logout()
     queryClient.clear()
   }
-  throw new ApiRequestError(errorData.error || (response.status >= 500 ? 'El servidor no está disponible. Inténtalo en unos minutos.' : `Error ${response.status}`), response.status)
+  const mensaje = errorData.error || (response.status >= 500 ? 'El servidor no está disponible. Inténtalo en unos minutos.' : `Error ${response.status}`)
+  // 400 de Zod: { error: 'Datos inválidos', details: { campo: ['mensaje'] } } → se añade el primero para saber qué corregir
+  const detalle = Object.values(errorData.details ?? {}).flat()[0]
+  throw new ApiRequestError(detalle ? `${mensaje}: ${detalle}` : mensaje, response.status)
 }
 
 async function request<T>(
