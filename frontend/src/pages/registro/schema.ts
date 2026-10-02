@@ -37,7 +37,7 @@ const miembroAdicionalSchema = z
     nombre: z.string().min(1, 'El nombre es obligatorio'),
     apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
     dni: dniSchema,
-    email: z.string().email('Introduce un email válido'),
+    email: z.string().trim().toLowerCase().email('Introduce un email válido'), // como el backend: Ana@x y ana@x son el mismo
     telefono: z.string().min(1, 'El teléfono es obligatorio'),
     fecha_nacimiento: fechaNacimientoSchema,
     alias_telegram: z.string().min(1, 'El alias de Telegram es obligatorio'),
@@ -59,7 +59,7 @@ const camposTitular = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
   dni: dniSchema,
-  email: z.string().email('Introduce un email válido'),
+  email: z.string().trim().toLowerCase().email('Introduce un email válido'), // como el backend: Ana@x y ana@x son el mismo
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
   fecha_nacimiento: fechaNacimientoSchema,
   direccion: z.string().min(1, 'La dirección es obligatoria'),

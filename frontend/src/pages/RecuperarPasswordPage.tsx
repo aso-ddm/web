@@ -36,6 +36,8 @@ export function RecuperarPasswordPage() {
 
   const { mutate: confirmReset, isPending: confirmando } = useMutation({
     mutationFn: () => {
+      // El backend anula el código al primer intento fallido: uno mal tecleado no se llega a enviar
+      if (!/^\d{6}$/.test(token.trim())) throw new Error('El código son 6 dígitos')
       if (password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres')
       if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) throw new Error('La contraseña debe contener al menos una mayúscula y un número')
       if (password !== passwordConfirm) throw new Error('Las contraseñas no coinciden')
@@ -109,6 +111,7 @@ export function RecuperarPasswordPage() {
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
                     maxLength={6}
+                    inputMode="numeric"
                     className="text-center text-xl tracking-widest font-display"
                   />
                   <p className="text-xs text-muted-foreground">

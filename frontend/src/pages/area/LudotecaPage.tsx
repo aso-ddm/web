@@ -144,7 +144,7 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const [notas, setNotas] = useState('')
 
   const { mutate, isPending } = useMutation({
-    mutationFn: () => solicitudesJuegoApi.crear({ nombre, notas: notas || undefined }),
+    mutationFn: () => solicitudesJuegoApi.crear({ nombre: nombre.trim(), notas: notas.trim() || undefined }),
     onSuccess: () => {
       toast.success('Solicitud enviada al ludotecario')
       queryClient.invalidateQueries({ queryKey: ['mis-solicitudes-juego'] })
@@ -171,6 +171,7 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               placeholder="Nombre del juego"
+              maxLength={200}
               className="mt-1"
             />
           </div>
@@ -181,6 +182,7 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
               onChange={(e) => setNotas(e.target.value)}
               placeholder="Estado del juego, número de expansiones, etc."
               rows={3}
+              maxLength={1000}
               className="mt-1"
             />
           </div>

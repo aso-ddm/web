@@ -104,9 +104,10 @@ export function RegistroPage() {
     const file = e.target.files?.[0] ?? null
     setComprobanteError(undefined)
     if (!file) { setComprobante(null); return }
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      setComprobanteError('Formato no permitido. Usa PDF, JPG o PNG.')
+    // Por extensión, como el backend (file.type viene vacío o distinto según sistema y navegador)
+    const extension = file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ''
+    if (!['.pdf', '.jpg', '.jpeg', '.png', '.webp'].includes(extension)) {
+      setComprobanteError('Formato no permitido. Usa PDF, JPG, PNG o WebP.')
       setComprobante(null)
       return
     }
