@@ -32,7 +32,10 @@ export function comprobarCambioAdmin(actuales: Rol[], nuevos: Rol[]) {
   }
 }
 
-// Un único rol base por persona; ludotecario es el único que se acumula. Sin rol base → socio_basico.
+// Un único rol base por persona; ludotecario es el único que se acumula sobre cualquiera.
+// Socio o vocal + ludotecario → gana los permisos de ludoteca. Presidente, secretario o
+// tesorero + ludotecario → solo queda marcado (la directiva ya tiene esos permisos).
+// Sin rol base → socio_basico. Orden: rol base primero, ludotecario al final.
 const ROLES_BASE: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal, Rol.socio_basico]
 export function normalizarRoles(roles: Rol[]): Rol[] {
   const unicos = [...new Set(roles)]
@@ -40,8 +43,13 @@ export function normalizarRoles(roles: Rol[]): Rol[] {
   if (base.length > 1) {
     throw new Error('Solo se puede tener un rol, además de ludotecario')
   }
-  if (base.length === 0 && !unicos.includes(Rol.administrador)) unicos.push(Rol.socio_basico)
-  return unicos
+  const esAdmin = unicos.includes(Rol.administrador)
+  if (base.length === 0 && !esAdmin) base.push(Rol.socio_basico)
+  return [
+    ...(esAdmin ? [Rol.administrador] : []),
+    ...base,
+    ...(unicos.includes(Rol.ludotecario) ? [Rol.ludotecario] : []),
+  ]
 }
 
 export class SociosService {

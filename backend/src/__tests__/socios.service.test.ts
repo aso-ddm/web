@@ -231,7 +231,10 @@ describe('normalizarRoles', () => {
     expect(normalizarRoles([Rol.vocal, Rol.ludotecario])).toEqual([Rol.vocal, Rol.ludotecario])
   })
   it('solo ludotecario → añade socio_basico', () => {
-    expect(normalizarRoles([Rol.ludotecario])).toEqual([Rol.ludotecario, Rol.socio_basico])
+    expect(normalizarRoles([Rol.ludotecario])).toEqual([Rol.socio_basico, Rol.ludotecario])
+  })
+  it('tesorero + ludotecario → válido, rol base primero', () => {
+    expect(normalizarRoles([Rol.ludotecario, Rol.tesorero])).toEqual([Rol.tesorero, Rol.ludotecario])
   })
   it('dos roles base → throws', () => {
     expect(() => normalizarRoles([Rol.vocal, Rol.tesorero])).toThrow('Solo se puede tener un rol')

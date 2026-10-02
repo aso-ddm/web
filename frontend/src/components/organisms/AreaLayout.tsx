@@ -123,7 +123,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               {usuario?.nombre} {usuario?.apellidos}
             </p>
             <p className="text-xs text-muted-foreground capitalize truncate mt-0.5">
-              {usuario?.roles?.[0] ? getRolLabel(usuario.roles[0]) : 'Socio'}
+              {usuario?.roles?.length ? usuario.roles.map(getRolLabel).join(' · ') : 'Socio'}
             </p>
           </div>
         </div>

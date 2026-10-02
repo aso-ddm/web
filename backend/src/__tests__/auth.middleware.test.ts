@@ -34,3 +34,29 @@ describe('requireRoles con roles desde BD', () => {
     expect(await run(['presidente'], ['socio_basico'])).toEqual({ status: 200, next: true })
   })
 })
+
+describe('ludotecario como rol acumulable', () => {
+  const LUDOTECA = ['administrador', 'presidente', 'secretario', 'tesorero', 'ludotecario'] as Parameters<typeof requireRoles>
+  const VOCALIA = ['administrador', 'presidente', 'secretario', 'tesorero', 'vocal'] as Parameters<typeof requireRoles>
+  const conRoles = (roles: string[]) =>
+    findUnique.mockResolvedValue({ id: 'u1', email: 'a@a.es', roles, estado: 'activo' })
+
+  it('socio sin ludotecario → sin permisos de ludoteca', async () => {
+    conRoles(['socio_basico'])
+    expect((await run(LUDOTECA, [])).status).toBe(403)
+  })
+  it('socio + ludotecario → permisos de ludoteca', async () => {
+    conRoles(['socio_basico', 'ludotecario'])
+    expect((await run(LUDOTECA, [])).next).toBe(true)
+  })
+  it('vocal + ludotecario → permisos de vocal y de ludoteca', async () => {
+    conRoles(['vocal', 'ludotecario'])
+    expect((await run(VOCALIA, [])).next).toBe(true)
+    conRoles(['vocal', 'ludotecario'])
+    expect((await run(LUDOTECA, [])).next).toBe(true)
+  })
+  it('vocal sin ludotecario → sin permisos de ludoteca', async () => {
+    conRoles(['vocal'])
+    expect((await run(LUDOTECA, [])).status).toBe(403)
+  })
+})

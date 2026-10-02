@@ -19,6 +19,7 @@ export function toggleRol(actuales: Rol[], rol: Rol): Rol[] {
   if (rol === 'ludotecario') {
     return actuales.includes(rol) ? actuales.filter((r) => r !== rol) : [...actuales, rol]
   }
+  // Rol base primero: se lee "Vocal · Ludotecario"
   const conservados = actuales.filter((r) => r === 'ludotecario' || r === 'administrador')
-  return [...conservados, rol]
+  return [rol, ...conservados]
 }
