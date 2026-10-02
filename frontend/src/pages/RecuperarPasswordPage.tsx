@@ -48,7 +48,7 @@ export function RecuperarPasswordPage() {
   return (
     <>
       <SEOHead
-        title="Recuperar contraseña — Dragón de Madera"
+        title="Recuperar contraseña"
         description="Recupera tu contraseña mediante Telegram"
         path="/recuperar-password"
         noindex

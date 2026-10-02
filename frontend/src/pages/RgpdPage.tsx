@@ -8,7 +8,7 @@ export function RgpdPage() {
   return (
     <>
       <SEOHead
-        title="Política de privacidad y protección de datos — Dragón de Madera"
+        title="Política de privacidad y protección de datos"
         description="Información sobre el tratamiento de datos personales de los socios de Dragón de Madera conforme al RGPD."
         path="/rgpd"
       />
