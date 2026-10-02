@@ -18,101 +18,47 @@ const socioActivo = {
   estado: 'activo',
   roles: ['socio_basico'],
   tiene_llaves: false,
-  fecha_solicitud_llaves: null,
-  fecha_aprobacion_llaves: null,
   fecha_alta: new Date('2020-01-01'),
 }
 
-describe('SociosService.solicitarLlaves', () => {
+describe('SociosService.setLlaves', () => {
   it('socio no encontrado → throws', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(service.solicitarLlaves('u1')).rejects.toThrow('Socio no encontrado')
+    await expect(service.setLlaves('u1', true)).rejects.toThrow('Socio no encontrado')
   })
 
-  it('estado !== activo → throws', async () => {
+  it('asignar a socio no activo → throws', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...socioActivo,
-      estado: 'pendiente',
+      estado: 'baja',
     })
 
-    await expect(service.solicitarLlaves('u1')).rejects.toThrow(
-      'Solo los socios activos pueden solicitar llaves',
+    await expect(service.setLlaves('u1', true)).rejects.toThrow(
+      'Solo se pueden asignar llaves a socios activos',
     )
   })
 
-  it('ya tiene llaves → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      tiene_llaves: true,
-    })
+  it('activo → asigna llaves', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(socioActivo)
+    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, tiene_llaves: true })
 
-    await expect(service.solicitarLlaves('u1')).rejects.toThrow('Ya tienes llaves del club')
-  })
-
-  it('solicitud pendiente sin aprobar → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      fecha_solicitud_llaves: new Date(),
-      fecha_aprobacion_llaves: null,
-    })
-
-    await expect(service.solicitarLlaves('u1')).rejects.toThrow(
-      'Ya tienes una solicitud de llaves pendiente',
-    )
-  })
-
-  it('no admin con < 6 meses de antigüedad → throws con fecha', async () => {
-    const reciente = new Date()
-    reciente.setMonth(reciente.getMonth() - 2)
-
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      fecha_alta: reciente,
-    })
-
-    await expect(service.solicitarLlaves('u1')).rejects.toThrow('Podrás solicitar llaves a partir del')
-  })
-
-  it('no admin con ≥ 6 meses → éxito', async () => {
-    const antigua = new Date()
-    antigua.setMonth(antigua.getMonth() - 7)
-
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      fecha_alta: antigua,
-    })
-    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      fecha_solicitud_llaves: new Date(),
-    })
-
-    const result = await service.solicitarLlaves('u1')
+    await service.setLlaves('u1', true)
 
     expect(prisma.usuario.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'u1' },
-        data: { fecha_solicitud_llaves: expect.any(Date) },
-      }),
+      expect.objectContaining({ where: { id: 'u1' }, data: { tiene_llaves: true } }),
     )
-    expect(result).toHaveProperty('fecha_solicitud_llaves')
   })
 
-  it('admin (presidente) exento del requisito de 6 meses', async () => {
-    const reciente = new Date()
-    reciente.setMonth(reciente.getMonth() - 1)
-
+  it('socio de baja → se le pueden retirar las llaves', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...socioActivo,
-      roles: ['presidente'],
-      fecha_alta: reciente,
+      estado: 'baja',
+      tiene_llaves: true,
     })
-    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      fecha_solicitud_llaves: new Date(),
-    })
+    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue(socioActivo)
 
-    await expect(service.solicitarLlaves('u1')).resolves.toBeDefined()
+    await expect(service.setLlaves('u1', false)).resolves.toBeDefined()
   })
 })
 

@@ -21,7 +21,6 @@ export type SocioAdmin = Usuario & {
   created_at: string
   comprobante_transferencia?: string | null
   aprobado_por?: { id: string; nombre: string; apellidos: string } | null
-  aprobado_llaves_por?: { id: string; nombre: string; apellidos: string } | null
   baja_por?: { id: string; nombre: string; apellidos: string } | null
 }
 
@@ -38,8 +37,6 @@ export const sociosApi = {
   getMe: () => api.get<{ data: Usuario }>('/socios/me'),
   update: (id: string, payload: UpdateSocioPayload) =>
     api.put<{ data: Usuario }>(`/socios/${id}`, payload),
-  solicitarLlaves: (id: string) =>
-    api.action<{ data: Usuario }>(`/socios/${id}/solicitar-llaves`),
 
   // Directiva — gestión
   getAll: (params: GetSociosParams = {}) => {
@@ -75,11 +72,8 @@ export const sociosApi = {
   updateRoles: (id: string, roles: Rol[]) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/roles`, { roles }),
 
-  aprobarLlaves: (id: string) =>
-    api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar-llaves`),
-
-  devolverLlaves: (id: string) =>
-    api.action<{ data: SocioAdmin }>(`/socios/${id}/devolver-llaves`),
+  setLlaves: (id: string, tiene_llaves: boolean) =>
+    api.put<{ data: SocioAdmin }>(`/socios/${id}/llaves`, { tiene_llaves }),
 
   enviarBienvenidaTelegram: (id: string) =>
     api.action<{ message: string }>(`/telegram/bienvenida/${id}`),

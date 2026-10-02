@@ -23,8 +23,8 @@ export const aprobarSocioSchema = z.object({
 
 export type AprobarSocioInput = z.infer<typeof aprobarSocioSchema>
 
-export const bajaSchema = z.object({
-  motivo: z.string().optional(),
+export const llavesSchema = z.object({
+  tiene_llaves: z.boolean(),
 })
 
 export const filtrosSociosSchema = z.object({

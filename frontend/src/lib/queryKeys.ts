@@ -24,7 +24,6 @@ export const QK = {
   // Socios
   SOCIOS_GESTION: ['socios-gestion'] as const,
   SOCIOS_ACTIVOS: ['socios-activos'] as const,
-  SOCIOS_ACTIVOS_LLAVES: ['socios-activos-llaves'] as const,
   SOCIOS_LLAVES: ['socios-llaves'] as const,
   PENDIENTES: ['pendientes'] as const,
 

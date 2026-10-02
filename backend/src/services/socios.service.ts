@@ -19,12 +19,9 @@ const SOCIO_PUBLIC_SELECT = {
   fecha_alta: true,
   fecha_baja: true,
   tiene_llaves: true,
-  fecha_solicitud_llaves: true,
-  fecha_aprobacion_llaves: true,
   comprobante_transferencia: true,
   created_at: true,
   aprobado_por: { select: { id: true, nombre: true, apellidos: true } },
-  aprobado_llaves_por: { select: { id: true, nombre: true, apellidos: true } },
   baja_por: { select: { id: true, nombre: true, apellidos: true } },
 } as const
 
@@ -359,76 +356,17 @@ export class SociosService {
     })
   }
 
-  async solicitarLlaves(socioId: string) {
+  // Llaves: solo se registra si el socio las tiene o no.
+  async setLlaves(socioId: string, tieneLlaves: boolean) {
     const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
     if (!socio) throw new Error('Socio no encontrado')
-    if (socio.estado !== EstadoSocio.activo) {
-      throw new Error('Solo los socios activos pueden solicitar llaves')
-    }
-    if (socio.tiene_llaves) {
-      throw new Error('Ya tienes llaves del club')
-    }
-    if (socio.fecha_solicitud_llaves && !socio.fecha_aprobacion_llaves) {
-      throw new Error('Ya tienes una solicitud de llaves pendiente')
-    }
-
-    // Los roles de administración están exentos del requisito de antigüedad
-    const ROLES_ADMIN: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero]
-    const esAdmin = socio.roles.some((r) => ROLES_ADMIN.includes(r))
-
-    if (!esAdmin) {
-      // Verificar 6 meses de antigüedad
-      if (!socio.fecha_alta) throw new Error('Fecha de alta no registrada')
-      const seisM = new Date(socio.fecha_alta)
-      seisM.setMonth(seisM.getMonth() + 6)
-      if (new Date() < seisM) {
-        throw new Error(`Podrás solicitar llaves a partir del ${seisM.toLocaleDateString('es-ES')}`)
-      }
+    if (tieneLlaves && socio.estado !== EstadoSocio.activo) {
+      throw new Error('Solo se pueden asignar llaves a socios activos')
     }
 
     return this.prisma.usuario.update({
       where: { id: socioId },
-      data: { fecha_solicitud_llaves: new Date() },
-      select: SOCIO_PUBLIC_SELECT,
-    })
-  }
-
-  async aprobarLlaves(socioId: string, aprobadoPorId: string) {
-    const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
-    if (!socio) throw new Error('Socio no encontrado')
-    if (!socio.fecha_solicitud_llaves) {
-      throw new Error('El socio no ha solicitado llaves')
-    }
-    if (socio.tiene_llaves) {
-      throw new Error('El socio ya tiene llaves')
-    }
-
-    return this.prisma.usuario.update({
-      where: { id: socioId },
-      data: {
-        tiene_llaves: true,
-        fecha_aprobacion_llaves: new Date(),
-        aprobado_llaves_por_id: aprobadoPorId,
-      },
-      select: SOCIO_PUBLIC_SELECT,
-    })
-  }
-
-  async devolverLlaves(socioId: string, _adminId: string) {
-    const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
-    if (!socio) throw new Error('Socio no encontrado')
-    if (!socio.tiene_llaves) {
-      throw new Error('El socio no tiene ninguna llave asignada')
-    }
-
-    return this.prisma.usuario.update({
-      where: { id: socioId },
-      data: {
-        tiene_llaves: false,
-        fecha_solicitud_llaves: null,
-        fecha_aprobacion_llaves: null,
-        aprobado_llaves_por_id: null,
-      },
+      data: { tiene_llaves: tieneLlaves },
       select: SOCIO_PUBLIC_SELECT,
     })
   }

@@ -7,6 +7,7 @@ import {
   updateRolesSchema,
   filtrosSociosSchema,
   aprobarSocioSchema,
+  llavesSchema,
 } from '../schemas/socio.schema'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -27,8 +28,8 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => 
   res.json(result)
 })
 
-// GET /api/socios/pendientes — solo directiva
-router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA), async (_req, res) => {
+// GET /api/socios/pendientes — directiva + vocales (vocales solo lectura)
+router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (_req, res) => {
   const pendientes = await sociosService.getPendientes()
   res.json({ data: pendientes })
 })
@@ -107,6 +108,11 @@ router.put('/:id', authenticate, async (req, res) => {
   const parsed = updateSocioSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  // El tipo de cuota afecta al precio: solo la directiva puede cambiarlo
+  if (!isDirectiva && parsed.data.tipo_cuota !== undefined) {
+    res.status(403).json({ error: 'Solo la directiva puede cambiar el tipo de cuota' })
     return
   }
   try {
@@ -188,40 +194,17 @@ router.post('/:id/reactivar', requireRoles(...ROLES.DIRECTIVA), async (req, res)
   }
 })
 
-// POST /api/socios/:id/solicitar-llaves
-router.post('/:id/solicitar-llaves', authenticate, async (req, res) => {
+// PUT /api/socios/:id/llaves — directiva registra si el socio tiene llaves
+router.put('/:id/llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
-  if (req.user.id !== id) {
-    res.status(403).json({ error: 'Solo puedes solicitar llaves para tu propia cuenta' })
+  const parsed = llavesSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
   try {
-    const socio = await sociosService.solicitarLlaves(id)
-    res.json({ message: 'Solicitud de llaves enviada', data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
-})
-
-// POST /api/socios/:id/aprobar-llaves
-router.post('/:id/aprobar-llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  const { id } = req.params
-  try {
-    const socio = await sociosService.aprobarLlaves(id, req.user.id)
-    res.json({ message: 'Llaves aprobadas correctamente', data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
-})
-
-// POST /api/socios/:id/devolver-llaves
-router.post('/:id/devolver-llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  const { id } = req.params
-  try {
-    const socio = await sociosService.devolverLlaves(id, req.user.id)
-    res.json({ message: 'Llave devuelta correctamente', data: socio })
+    const socio = await sociosService.setLlaves(id, parsed.data.tiene_llaves)
+    res.json({ data: socio })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     res.status(400).json({ error: message })

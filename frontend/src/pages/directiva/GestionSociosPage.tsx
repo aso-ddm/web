@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, Users, ChevronRight, Loader2, UserX, UserCheck, Shield, Key, CheckCircle2, Clock, FileText } from 'lucide-react'
+import { Search, Users, ChevronRight, Loader2, UserX, UserCheck, Shield, Key, CheckCircle2, FileText } from 'lucide-react'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
-import { getEstadoLlaves } from '@/lib/llaves'
+import { useAuthStore } from '@/store/authStore'
 import { ROL_LABELS } from '@/lib/roles'
 import type { Rol, EstadoSocio } from '@/types/api'
 
@@ -27,7 +27,6 @@ const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludo
 const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   activo: 'default',
   pendiente: 'secondary',
-  inactivo: 'outline',
   baja: 'destructive',
 }
 
@@ -56,6 +55,7 @@ function RolBadge({ rol }: { rol: Rol }) {
 
 function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const puedeEditar = useAuthStore((s) => s.isDirectiva()) // vocales: solo lectura
   const [rolesEditados, setRolesEditados] = useState<Rol[]>(socio.roles)
   const [confirmBaja, setConfirmBaja] = useState(false)
   const [confirmDevolucion, setConfirmDevolucion] = useState(false)
@@ -90,19 +90,15 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
     }
   }
 
-  const { mutate: devolverLlaves, isPending: devolviendo } = useMutation({
-    mutationFn: () => sociosApi.devolverLlaves(socio.id),
-    onSuccess: () => { toast.success('Llave devuelta correctamente'); invalidar() },
+  const { mutate: setLlaves, isPending: guardandoLlaves } = useMutation({
+    mutationFn: (tiene: boolean) => sociosApi.setLlaves(socio.id, tiene),
+    onSuccess: (_, tiene) => {
+      toast.success(tiene ? 'Llaves asignadas' : 'Devolución de llaves registrada')
+      queryClient.invalidateQueries({ queryKey: ['socios-llaves'] })
+      invalidar()
+    },
     onError: (err: Error) => toast.error(err.message),
   })
-
-  const { mutate: aprobarLlaves, isPending: aprobandoLlaves } = useMutation({
-    mutationFn: () => sociosApi.aprobarLlaves(socio.id),
-    onSuccess: () => { toast.success('Llaves aprobadas correctamente'); invalidar() },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
-  const estadoLlaves = getEstadoLlaves(socio)
 
   const { mutate: guardarRoles, isPending: guardandoRoles } = useMutation({
     mutationFn: () => sociosApi.updateRoles(socio.id, rolesEditados),
@@ -190,45 +186,32 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
             <Key className="h-4 w-4 text-primary" />
             <p className="font-display font-bold text-sm">Llaves del club</p>
           </div>
-          {estadoLlaves.tipo === 'titular' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-display font-bold text-emerald-700">Tiene llaves</p>
-                  <p className="text-xs text-emerald-600">Desde {formatDate(socio.fecha_aprobacion_llaves)}{estadoLlaves.aprobadoPor ? ` · Aprobado por ${estadoLlaves.aprobadoPor}` : ''}</p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setConfirmDevolucion(true)} disabled={devolviendo} className="font-display gap-2 text-amber-700 border-amber-300 hover:bg-amber-50">
-                <Key className="h-3.5 w-3.5" />
-                Registrar devolución
-              </Button>
+          {socio.tiene_llaves ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-sm font-display font-bold text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Tiene llaves
+              </span>
+              {puedeEditar && (
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDevolucion(true)} disabled={guardandoLlaves} className="font-display text-xs text-muted-foreground">
+                  Registrar devolución
+                </Button>
+              )}
             </div>
-          )}
-          {estadoLlaves.tipo === 'pendiente' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
-                <Clock className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-display font-bold text-amber-700">Solicitud pendiente</p>
-                  <p className="text-xs text-amber-600">Solicitadas el {formatDate(socio.fecha_solicitud_llaves)}</p>
-                </div>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => aprobarLlaves()} disabled={aprobandoLlaves} className="font-display gap-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                {aprobandoLlaves ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                Aprobar llaves
-              </Button>
-            </div>
-          )}
-          {estadoLlaves.tipo === 'sin_llave' && (
-            <p className="text-sm text-muted-foreground">Sin llaves asignadas</p>
+          ) : puedeEditar && socio.estado === 'activo' ? (
+            <Button size="sm" variant="outline" onClick={() => setLlaves(true)} disabled={guardandoLlaves} className="font-display gap-2">
+              {guardandoLlaves ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Key className="h-3.5 w-3.5" />}
+              Asignar llaves
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin llaves</p>
           )}
         </div>
 
         <Separator />
 
         {/* Roles */}
-        <div className="space-y-3">
+        {puedeEditar && <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-primary" />
             <p className="font-display font-bold text-sm">Roles</p>
@@ -259,10 +242,10 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
               Guardar roles
             </Button>
           )}
-        </div>
+        </div>}
 
-        <Separator />
-        <div className="space-y-2">
+        {puedeEditar && <Separator />}
+        {puedeEditar && <div className="space-y-2">
           {socio.estado === 'baja' ? (
             <>
               <p className="font-display font-bold text-sm text-emerald-700">Reactivar socio</p>
@@ -290,7 +273,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
               </Button>
             </>
           )}
-        </div>
+        </div>}
       </div>
 
       <AlertDialog open={confirmBaja} onOpenChange={setConfirmBaja}>
@@ -328,8 +311,8 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => devolverLlaves()} disabled={devolviendo} className="font-display font-bold">
-              {devolviendo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmar devolución'}
+            <AlertDialogAction onClick={() => setLlaves(false)} disabled={guardandoLlaves} className="font-display font-bold">
+              {guardandoLlaves ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmar devolución'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -415,7 +398,6 @@ export function GestionSociosPage() {
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="activo">Activos</SelectItem>
               <SelectItem value="pendiente">Pendientes</SelectItem>
-              <SelectItem value="inactivo">Inactivos</SelectItem>
               <SelectItem value="baja">Baja</SelectItem>
             </SelectContent>
           </Select>

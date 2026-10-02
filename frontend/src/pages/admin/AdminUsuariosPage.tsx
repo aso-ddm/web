@@ -27,7 +27,6 @@ const ALL_ROLES: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero
 const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   activo: 'default',
   pendiente: 'secondary',
-  inactivo: 'outline',
   baja: 'destructive',
 }
 
@@ -262,7 +261,6 @@ export function AdminUsuariosPage() {
               <SelectItem value="activo" className="font-display">Activos</SelectItem>
               <SelectItem value="pendiente" className="font-display">Pendientes</SelectItem>
               <SelectItem value="baja" className="font-display">Baja</SelectItem>
-              <SelectItem value="inactivo" className="font-display">Inactivos</SelectItem>
             </SelectContent>
           </Select>
         </div>

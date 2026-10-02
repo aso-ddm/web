@@ -115,17 +115,6 @@ describe('AuthService.login', () => {
     )
   })
 
-  it('estado=inactivo → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...BASE_USER,
-      estado: 'inactivo',
-    })
-
-    await expect(service.login({ email: BASE_USER.email, password: 'pw' })).rejects.toThrow(
-      'Esta cuenta está inactiva. Contacta con la directiva',
-    )
-  })
-
   it('contraseña incorrecta → throws "Credenciales incorrectas"', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(BASE_USER)
     mockCompare.mockResolvedValue(false)

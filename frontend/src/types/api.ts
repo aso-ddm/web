@@ -8,7 +8,7 @@ export type Rol =
   | 'ludotecario'
   | 'socio_basico'
 
-export type EstadoSocio = 'pendiente' | 'activo' | 'inactivo' | 'baja'
+export type EstadoSocio = 'pendiente' | 'activo' | 'baja'
 export type TipoCuota = 'individual' | 'conjunta'
 export type TipoRelacion = 'pareja' | 'familiar_directo'
 export type EstadoSolicitud = 'pendiente' | 'aprobada' | 'rechazada'
@@ -33,8 +33,6 @@ export interface Usuario {
   estado: EstadoSocio
   fecha_alta?: string | null
   tiene_llaves: boolean
-  fecha_solicitud_llaves?: string | null
-  fecha_aprobacion_llaves?: string | null
 }
 
 // ── Auth payloads ────────────────────────────────────────────────────────────

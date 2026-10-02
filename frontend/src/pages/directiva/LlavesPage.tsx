@@ -5,11 +5,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/SEOHead'
 import { sociosApi } from '@/services/api/socios'
 
-function formatDate(d?: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
 export function LlavesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['socios-llaves'],
@@ -17,12 +12,8 @@ export function LlavesPage() {
   })
 
   const titulares = (data?.data ?? [])
-    .filter((s) => s.tiene_llaves === true)
-    .sort((a, b) => {
-      const fa = a.fecha_aprobacion_llaves ?? ''
-      const fb = b.fecha_aprobacion_llaves ?? ''
-      return fa < fb ? -1 : fa > fb ? 1 : 0
-    })
+    .filter((s) => s.tiene_llaves)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
   return (
     <>
@@ -58,12 +49,6 @@ export function LlavesPage() {
                       <th className="text-left px-4 py-3 font-display font-bold text-muted-foreground text-xs uppercase tracking-wide">
                         Socio
                       </th>
-                      <th className="text-left px-4 py-3 font-display font-bold text-muted-foreground text-xs uppercase tracking-wide">
-                        Fecha de aprobación
-                      </th>
-                      <th className="text-left px-4 py-3 font-display font-bold text-muted-foreground text-xs uppercase tracking-wide">
-                        Aprobado por
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -76,14 +61,6 @@ export function LlavesPage() {
                           {socio.apodo && (
                             <p className="text-xs text-muted-foreground">({socio.apodo})</p>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {formatDate(socio.fecha_aprobacion_llaves)}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {socio.aprobado_llaves_por
-                            ? `${socio.aprobado_llaves_por.nombre} ${socio.aprobado_llaves_por.apellidos}`
-                            : '—'}
                         </td>
                       </tr>
                     ))}

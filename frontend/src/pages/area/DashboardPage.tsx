@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { User, BookOpen, Key, CheckCircle2, AlertCircle, Clock, ExternalLink, FileText, MessageCircle } from 'lucide-react'
+import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,14 +15,12 @@ import type { EstadoSocio, EstadoPrestamo } from '@/types/api'
 const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
   pendiente: 'Pendiente de aprobación',
-  inactivo: 'Inactivo',
   baja: 'Dado de baja',
 }
 
 const estadoVariants: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   activo: 'default',
   pendiente: 'secondary',
-  inactivo: 'outline',
   baja: 'destructive',
 }
 
@@ -76,18 +74,6 @@ export function DashboardPage() {
   ) ?? []
   const prestamosPendientes: typeof prestamosActivos = []
   const ultimosPrestamos = prestamosData?.data.slice(0, 3) ?? []
-
-  // Lógica de llaves — admins exentos del requisito de 6 meses
-  const esAdmin = usuario?.roles.some((r) => ['presidente', 'secretario', 'tesorero'].includes(r))
-  const puedesolicitarLlaves =
-    usuario?.estado === 'activo' &&
-    !usuario.tiene_llaves &&
-    !usuario.fecha_solicitud_llaves &&
-    (esAdmin || (
-      !!usuario.fecha_alta
-        ? new Date().getTime() - new Date(usuario.fecha_alta).getTime() >= 180 * 24 * 60 * 60 * 1000
-        : false
-    ))
 
   return (
     <>
@@ -174,11 +160,6 @@ export function DashboardPage() {
                       <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       <span className="text-sm font-display font-bold text-emerald-600">Tienes llaves</span>
                     </div>
-                  ) : usuario?.fecha_solicitud_llaves ? (
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                      <span className="text-sm font-display text-amber-600">Pendiente</span>
-                    </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
                       <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -190,9 +171,6 @@ export function DashboardPage() {
                   <Key className="h-4 w-4 text-primary" />
                 </div>
               </div>
-              {puedesolicitarLlaves && (
-                <p className="text-xs text-secondary mt-3 font-display font-bold">¡Ya puedes solicitarlas!</p>
-              )}
             </CardContent>
           </Card>
 
@@ -241,14 +219,6 @@ export function DashboardPage() {
                   Mis préstamos
                 </Link>
               </Button>
-              {(puedesolicitarLlaves || usuario?.fecha_solicitud_llaves) && (
-                <Button asChild variant="outline" className="w-full justify-start gap-3 font-display">
-                  <Link to="/area/perfil">
-                    <Key className="h-4 w-4" />
-                    {puedesolicitarLlaves ? 'Solicitar llaves del club' : 'Ver estado de llaves'}
-                  </Link>
-                </Button>
-              )}
             </CardContent>
           </Card>
 

@@ -207,10 +207,6 @@ export class AuthService {
       throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
     }
 
-    if (usuario.estado === 'inactivo') {
-      throw new Error('Esta cuenta está inactiva. Contacta con la directiva')
-    }
-
     const passwordOk = await bcrypt.compare(data.password, usuario.password_hash)
     if (!passwordOk) {
       throw new Error('Credenciales incorrectas')
@@ -239,8 +235,6 @@ export class AuthService {
         estado: true,
         fecha_alta: true,
         tiene_llaves: true,
-        fecha_solicitud_llaves: true,
-        fecha_aprobacion_llaves: true,
         telegram_chat_id: true,
         telegram_linked_at: true,
       },

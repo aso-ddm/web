@@ -25,7 +25,6 @@ enum Rol {
 enum EstadoSocio {
   pendiente
   activo
-  inactivo
   baja
 }
 
@@ -98,18 +97,13 @@ model Usuario {
   fecha_alta              DateTime?
   fecha_baja              DateTime?
   tiene_llaves            Boolean     @default(false)
-  fecha_solicitud_llaves  DateTime?
-  fecha_aprobacion_llaves DateTime?
 
-  // Trazabilidad — quién aprobó el alta, las llaves, quién dio de baja
+  // Trazabilidad — quién aprobó el alta, quién dio de baja
   aprobado_por_id        String?
-  aprobado_llaves_por_id String?
   baja_por_id            String?
 
   aprobado_por            Usuario?  @relation("AproboAlta",   fields: [aprobado_por_id],        references: [id])
   socios_aprobados        Usuario[] @relation("AproboAlta")
-  aprobado_llaves_por     Usuario?  @relation("AproboLlaves", fields: [aprobado_llaves_por_id],  references: [id])
-  socios_llaves_aprobadas Usuario[] @relation("AproboLlaves")
   baja_por                Usuario?  @relation("DioBaja",      fields: [baja_por_id],             references: [id])
   socios_dados_baja       Usuario[] @relation("DioBaja")
 

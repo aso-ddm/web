@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle2, XCircle, Key, User, Users, Loader2, FileText } from 'lucide-react'
+import { CheckCircle2, XCircle, User, Users, Loader2, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,6 +53,7 @@ function tipoRelacionLabel(tipo: string | null) {
 
 function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; precioIndividual: number }) {
   const queryClient = useQueryClient()
+  const puedeEditar = useAuthStore((s) => s.isDirectiva())
   const [rolSeleccionado, setRolSeleccionado] = useState<Rol | null>(null)
 
   const invalidar = () => {
@@ -92,7 +93,7 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
               <span>Telegram: {socio.alias_telegram}</span>
             </div>
           )}
-          <div className="pt-2 space-y-1.5">
+          {puedeEditar && <div className="pt-2 space-y-1.5">
             <p className="text-xs text-muted-foreground font-display">Asignar rol <span className="text-destructive">*</span></p>
             <div className="flex flex-wrap gap-1.5">
               {ROLES_ASIGNABLES.map((rol) => (
@@ -109,10 +110,10 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
                 </button>
               ))}
             </div>
-          </div>
+          </div>}
         </div>
         <div className="flex flex-col gap-2 flex-shrink-0 items-end">
-          <div className="flex gap-2">
+          {puedeEditar && <div className="flex gap-2">
             <Button
               size="sm"
               onClick={() => aprobar()}
@@ -127,7 +128,7 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
               {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
               Rechazar
             </Button>
-          </div>
+          </div>}
           {socio.comprobante_transferencia ? (
             <Button
               size="sm"
@@ -151,6 +152,7 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
 
 function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grupo: SolicitudGrupal; precioIndividual: number; precioAdicional: number }) {
   const queryClient = useQueryClient()
+  const puedeEditar = useAuthStore((s) => s.isDirectiva())
   const invalidar = () => {
     queryClient.invalidateQueries({ queryKey: ['pendientes'] })
     queryClient.invalidateQueries({ queryKey: ['socios-gestion'] })
@@ -215,7 +217,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 
         {/* Acciones */}
         <div className="flex flex-col gap-2 flex-shrink-0 items-end">
-          <div className="flex gap-2">
+          {puedeEditar && <div className="flex gap-2">
             <Button size="sm" onClick={() => aprobar()} disabled={aprobando || rechazando} className="font-display font-bold gap-1 h-9">
               {aprobando ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Aprobar
@@ -224,7 +226,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
               {rechazando ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
               Rechazar
             </Button>
-          </div>
+          </div>}
           {grupo.titular.comprobante_transferencia ? (
             <Button
               size="sm"
@@ -244,55 +246,12 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
   )
 }
 
-// ── Tarjeta solicitud de llaves ───────────────────────────────────────────────
-
-function LlavesSolicitudCard({ socio }: { socio: SocioAdmin }) {
-  const queryClient = useQueryClient()
-
-  const { mutate: aprobar, isPending } = useMutation({
-    mutationFn: () => sociosApi.aprobarLlaves(socio.id),
-    onSuccess: () => {
-      toast.success(`Llaves aprobadas para ${socio.nombre} ${socio.apellidos}`)
-      queryClient.invalidateQueries({ queryKey: ['socios-activos-llaves'] })
-      queryClient.invalidateQueries({ queryKey: ['socios-llaves'] })
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
-  return (
-    <div className="py-4 border-b border-border last:border-0">
-      <div className="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
-        <div className="flex-1 min-w-0 space-y-1">
-          <p className="font-display font-bold">
-            {socio.nombre} {socio.apellidos}
-            {socio.apodo && <span className="text-xs text-muted-foreground ml-1">({socio.apodo})</span>}
-          </p>
-          <p className="text-sm text-muted-foreground">{socio.email}</p>
-          <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground">
-            <span>Solicitud: {formatDate(socio.fecha_solicitud_llaves)}</span>
-            <span>Socio desde: {formatDate(socio.fecha_alta)}</span>
-          </div>
-        </div>
-        <Button size="sm" onClick={() => aprobar()} disabled={isPending} className="font-display font-bold gap-1 h-9 flex-shrink-0">
-          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Key className="h-3 w-3" />}
-          Aprobar llaves
-        </Button>
-      </div>
-    </div>
-  )
-}
-
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export function SolicitudesPage() {
   const { data: pendientesData, isLoading: loadingAltas } = useQuery({
     queryKey: ['pendientes'],
     queryFn: () => sociosApi.getPendientes(),
-  })
-
-  const { data: sociosData, isLoading: loadingLlaves } = useQuery({
-    queryKey: ['socios-activos-llaves'],
-    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 100 }),
   })
 
   const { data: configPrecioIndividual } = useQuery({
@@ -312,11 +271,7 @@ export function SolicitudesPage() {
   const precioAdicional = Number(configPrecioAdicional?.data?.valor ?? 5)
 
   const { individuales = [], grupos = [] } = pendientesData?.data ?? {}
-  const pendientesLlaves = (sociosData?.data ?? [] as SocioAdmin[]).filter(
-    (s: SocioAdmin) => s.fecha_solicitud_llaves && !s.tiene_llaves,
-  )
-
-  const totalPendiente = individuales.length + grupos.length + pendientesLlaves.length
+  const totalPendiente = individuales.length + grupos.length
 
   return (
     <>
@@ -376,27 +331,6 @@ export function SolicitudesPage() {
           </CardContent>
         </Card>
 
-        {/* Solicitudes de llaves */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              Solicitudes de llaves ({loadingLlaves ? '…' : pendientesLlaves.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingLlaves ? (
-              <div className="space-y-4">{[1].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
-            ) : pendientesLlaves.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No hay solicitudes de llaves pendientes</p>
-              </div>
-            ) : (
-              pendientesLlaves.map((s: SocioAdmin) => <LlavesSolicitudCard key={s.id} socio={s} />)
-            )}
-          </CardContent>
-        </Card>
       </div>
     </>
   )

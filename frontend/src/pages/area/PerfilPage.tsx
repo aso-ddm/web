@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2, Key, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { Loader2, Key, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -70,26 +70,6 @@ export function PerfilPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
-
-  const { mutate: solicitarLlaves, isPending: solicitando } = useMutation({
-    mutationFn: () => sociosApi.solicitarLlaves(authUsuario!.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] })
-      toast.success('Solicitud de llaves enviada correctamente')
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
-  // Calcular si puede solicitar llaves (≥ 6 meses como socio, o rol de admin)
-  const esAdmin = usuario?.roles.some((r) => ['presidente', 'secretario', 'tesorero'].includes(r))
-  const puedesolicitarLlaves =
-    usuario?.estado === 'activo' &&
-    !usuario.tiene_llaves &&
-    !usuario.fecha_solicitud_llaves &&
-    (esAdmin || (
-      !!usuario.fecha_alta &&
-      new Date().getTime() - new Date(usuario.fecha_alta).getTime() >= 180 * 24 * 60 * 60 * 1000
-    ))
 
   if (isLoading) {
     return (
@@ -208,60 +188,19 @@ export function PerfilPage() {
               <Key className="h-4 w-4" /> Llaves del club
             </CardTitle>
             <CardDescription>
-              Puedes solicitar un juego de llaves cuando llevas al menos 6 meses como socio activo
+              La directiva registra la entrega de llaves. Consulta el reglamento para los requisitos
             </CardDescription>
           </CardHeader>
           <CardContent>
             {usuario?.tiene_llaves ? (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-                <div>
-                  <p className="font-display font-bold text-emerald-700 text-sm">Tienes llaves del club</p>
-                  {usuario.fecha_aprobacion_llaves && (
-                    <p className="text-xs text-emerald-600 mt-0.5">
-                      Aprobadas el {formatDate(usuario.fecha_aprobacion_llaves)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : usuario?.fecha_solicitud_llaves ? (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                <Clock className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                <div>
-                  <p className="font-display font-bold text-amber-700 text-sm">Solicitud pendiente</p>
-                  <p className="text-xs text-amber-600 mt-0.5">
-                    Solicitadas el {formatDate(usuario.fecha_solicitud_llaves)} — esperando aprobación de la directiva
-                  </p>
-                </div>
-              </div>
-            ) : puedesolicitarLlaves ? (
-              <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-accent/40 border border-border">
-                <div className="flex items-center gap-3">
-                  <Key className="h-5 w-5 text-primary flex-shrink-0" />
-                  <div>
-                    <p className="font-display font-bold text-sm">¡Ya puedes solicitar las llaves!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Llevas más de 6 meses como socio activo</p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => solicitarLlaves()}
-                  disabled={solicitando}
-                  className="font-display font-bold flex-shrink-0"
-                >
-                  {solicitando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Solicitar'}
-                </Button>
+                <p className="font-display font-bold text-emerald-700 text-sm">Tienes llaves del club</p>
               </div>
             ) : (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
                 <AlertCircle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="font-display font-bold text-sm text-muted-foreground">Aún no disponible</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Necesitas al menos 6 meses como socio activo
-                    {usuario?.fecha_alta && ` (alta: ${formatDate(usuario.fecha_alta)})`}
-                  </p>
-                </div>
+                <p className="font-display font-bold text-sm text-muted-foreground">No tienes llaves del club</p>
               </div>
             )}
           </CardContent>
