@@ -102,7 +102,7 @@ export function TelegramLinkModal() {
         </p>
 
         {/* Salida si el widget de Telegram no carga */}
-        <Button variant="ghost" size="sm" onClick={() => { logout(); queryClient.clear() }}>
+        <Button variant="ghost" size="sm" onClick={logout}>
           Cerrar sesión
         </Button>
       </div>

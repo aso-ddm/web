@@ -1,5 +1,4 @@
 import { useAuthStore } from '@/store/authStore'
-import { queryClient } from '@/lib/queryClient'
 import type { ApiError } from '@/types/api'
 
 const BASE_URL = '/api'
@@ -23,8 +22,7 @@ async function send(endpoint: string, init: RequestInit): Promise<Response> {
   const errorData: Partial<ApiError> = await response.json().catch(() => ({}))
   // Token expirado o inválido → cerrar sesión
   if (response.status === 401) {
-    useAuthStore.getState().logout()
-    queryClient.clear()
+    useAuthStore.getState().logout() // la caché la vacía lib/queryClient al cambiar el token
   }
   const mensaje = errorData.error || (response.status >= 500 ? 'El servidor no está disponible. Inténtalo en unos minutos.' : `Error ${response.status}`)
   // 400 de Zod: { error: 'Datos inválidos', details: { campo: ['mensaje'] } } → se añade el primero para saber qué corregir

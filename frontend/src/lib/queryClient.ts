@@ -1,6 +1,7 @@
 import { QueryCache, QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ApiRequestError } from '@/services/api/client'
+import { useAuthStore } from '@/store/authStore'
 
 // El logout por sesión caducada lo hace client.ts al recibir 401
 export const queryClient = new QueryClient({
@@ -18,4 +19,9 @@ export const queryClient = new QueryClient({
       retry: 1,
     },
   },
+})
+
+// Cambio de sesión (logout, 401, otra cuenta, otra pestaña): nada cacheado del usuario anterior se reutiliza
+useAuthStore.subscribe((s, prev) => {
+  if (s.token !== prev.token) queryClient.clear()
 })
