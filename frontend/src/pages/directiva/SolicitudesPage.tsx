@@ -10,20 +10,14 @@ import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
-import { ROL_LABELS } from '@/lib/roles'
+import { ROL_LABELS, ROLES_ASIGNABLES } from '@/lib/roles'
 import { invalidarSocios } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { SolicitudGrupal, Rol } from '@/types/api'
-
-const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+import { formatDate } from '@/lib/format'
 
 function abrirComprobante(socioId: string) {
   sociosApi.getComprobante(socioId).catch((err: Error) => toast.error(err.message))
-}
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function tipoCuotaLabel(tipo: string, precioIndividual: number) {

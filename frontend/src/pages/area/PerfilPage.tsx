@@ -16,6 +16,7 @@ import { authApi } from '@/services/api/auth'
 import { sociosApi } from '@/services/api/socios'
 import { useAuthStore } from '@/store/authStore'
 import { getRolLabel } from '@/lib/roles'
+import { formatDate } from '@/lib/format'
 
 const perfilSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -25,11 +26,6 @@ const perfilSchema = z.object({
   apodo: z.string().optional(),
 })
 type PerfilForm = z.infer<typeof perfilSchema>
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
-}
 
 export function PerfilPage() {
   const { usuario: authUsuario, updateUsuario } = useAuthStore()
@@ -121,7 +117,7 @@ export function PerfilPage() {
             </div>
             <div>
               <p className="text-muted-foreground text-xs font-display mb-0.5">Socio desde</p>
-              <p className="font-medium">{formatDate(usuario?.fecha_alta)}</p>
+              <p className="font-medium">{formatDate(usuario?.fecha_alta, 'long')}</p>
             </div>
           </CardContent>
         </Card>

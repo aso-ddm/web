@@ -21,21 +21,10 @@ import { SEOHead } from '@/components/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { invalidarSocios } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
-import { ROL_LABELS, toggleRol as toggleRolLista } from '@/lib/roles'
+import { ROL_LABELS, toggleRol as toggleRolLista, ROLES_ASIGNABLES } from '@/lib/roles'
 import type { Rol, EstadoSocio } from '@/types/api'
-
-const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
-
-const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  activo: 'default',
-  pendiente: 'secondary',
-  baja: 'destructive',
-}
-
-function formatDate(d?: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+import { formatDate } from '@/lib/format'
+import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 
 function RolBadge({ rol }: { rol: Rol }) {
   const colors: Record<Rol, string> = {
@@ -120,7 +109,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground font-display">Estado</p>
-            <Badge variant={estadoVariant[socio.estado]} className="mt-0.5 font-display capitalize">
+            <Badge variant={ESTADO_SOCIO_VARIANT[socio.estado]} className="mt-0.5 font-display capitalize">
               {socio.estado}
             </Badge>
           </div>
@@ -218,7 +207,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
             <p className="font-display font-bold text-sm">Roles</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {ALL_ROLES.map((rol) => (
+            {ROLES_ASIGNABLES.map((rol) => (
               <button
                 key={rol}
                 onClick={() => toggleRol(rol)}
@@ -435,7 +424,7 @@ export function GestionSociosPage() {
                           {socio.apodo && (
                             <span className="text-xs text-muted-foreground">({socio.apodo})</span>
                           )}
-                          <Badge variant={estadoVariant[socio.estado]} className="text-xs font-display capitalize">
+                          <Badge variant={ESTADO_SOCIO_VARIANT[socio.estado]} className="text-xs font-display capitalize">
                             {socio.estado}
                           </Badge>
                         </div>

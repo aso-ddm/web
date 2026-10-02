@@ -11,17 +11,13 @@ import { prestamosApi } from '@/services/api/prestamos'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import type { EstadoSocio, EstadoPrestamo } from '@/types/api'
+import { formatDate } from '@/lib/format'
+import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 
 const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
   pendiente: 'Pendiente de aprobación',
   baja: 'Dado de baja',
-}
-
-const estadoVariants: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  activo: 'default',
-  pendiente: 'secondary',
-  baja: 'destructive',
 }
 
 const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
@@ -32,11 +28,6 @@ const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
 const prestamoEstadoLabel: Record<EstadoPrestamo, string> = {
   activo: 'Activo',
   devuelto: 'Devuelto',
-}
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 export function DashboardPage() {
@@ -103,7 +94,7 @@ export function DashboardPage() {
                     <Skeleton className="h-6 w-20" />
                   ) : (
                     <Badge
-                      variant={estadoVariants[usuario?.estado ?? 'pendiente']}
+                      variant={ESTADO_SOCIO_VARIANT[usuario?.estado ?? 'pendiente']}
                       className="font-display"
                     >
                       {estadoLabels[usuario?.estado ?? 'pendiente']}

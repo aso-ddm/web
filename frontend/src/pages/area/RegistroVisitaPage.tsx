@@ -13,11 +13,7 @@ import { visitasApi } from '@/services/api/visitas'
 import { useConfigValor } from '@/hooks/useConfigValor'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { VisitanteSugerido, Visita } from '@/types/api'
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+import { formatDate } from '@/lib/format'
 
 function VisitaConfirmada({ visita, onNueva }: { visita: Visita; onNueva: () => void }) {
   return (

@@ -30,10 +30,10 @@ import { logsJuegoApi } from '@/services/api/logs_juego'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
 import { invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
-import { api } from '@/services/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Juego, EstadoJuego, LogJuego, SolicitudJuego } from '@/types/api'
+import { formatDate } from '@/lib/format'
 
 const juegoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -63,10 +63,6 @@ const tipoLogLabel: Record<string, string> = {
   prestamo_activo: '📤 Prestado',
   prestamo_devuelto: '📥 Devuelto',
   nota_manual: '📝 Nota',
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 // ── Logs panel ────────────────────────────────────────────────────────────────
@@ -179,9 +175,9 @@ function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () 
       // Al editar, un campo vacío se envía como null para que el backend lo borre
       const entries = Object.entries(data).filter(([, v]) => v !== undefined)
       if (isEdit) {
-        return api.put<{ data: Juego }>(`/juegos/${juego.id}`, Object.fromEntries(entries.map(([k, v]) => [k, v === '' ? null : v])))
+        return juegosApi.update(juego.id, Object.fromEntries(entries.map(([k, v]) => [k, v === '' ? null : v])))
       }
-      return api.post<{ data: Juego }>('/juegos', Object.fromEntries(entries.filter(([, v]) => v !== '')))
+      return juegosApi.create(Object.fromEntries(entries.filter(([, v]) => v !== '')))
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
@@ -498,7 +494,7 @@ export function GestionJuegosPage() {
   const pendientesCount = solicitudesData?.data.length ?? 0
 
   const { mutate: eliminar, isPending: eliminandoPending } = useMutation({
-    mutationFn: (id: string) => api.delete<void>(`/juegos/${id}`),
+    mutationFn: (id: string) => juegosApi.delete(id),
     onSuccess: () => {
       toast.success('Juego eliminado del catálogo')
       invalidarJuegos(queryClient)
@@ -531,7 +527,7 @@ export function GestionJuegosPage() {
 
   const handleExportCsv = async () => {
     try {
-      const { blob } = await api.getBlob('/juegos/export/csv')
+      const { blob } = await juegosApi.exportCsv()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
       a.download = `ludoteca-${new Date().toISOString().slice(0, 10)}.csv`

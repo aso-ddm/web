@@ -17,27 +17,16 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/SEOHead'
-import { api } from '@/services/api/client'
-import { ROL_LABELS, toggleRol as toggleRolLista } from '@/lib/roles'
+import { adminApi } from '@/services/api/admin'
+import { ROL_LABELS, toggleRol as toggleRolLista, ROLES_ASIGNABLES } from '@/lib/roles'
 import { invalidarSocios } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
 import type { Rol, EstadoSocio } from '@/types/api'
 import type { SocioAdmin } from '@/services/api/socios'
+import { formatDate } from '@/lib/format'
+import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 
 // ponytail: administrador no es asignable desde la app (solo BD/seed)
-const ALL_ROLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
-
-const estadoVariant: Record<EstadoSocio, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  activo: 'default',
-  pendiente: 'secondary',
-  baja: 'destructive',
-}
-
-function formatDate(d?: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
 function UsuarioDetalle({
   usuario,
   onClose,
@@ -57,13 +46,13 @@ function UsuarioDetalle({
   }
 
   const { mutate: eliminar, isPending: eliminando } = useMutation({
-    mutationFn: () => api.delete(`/admin/usuarios/${usuario.id}`),
+    mutationFn: () => adminApi.deleteUsuario(usuario.id),
     onSuccess: () => { toast.success(`${usuario.nombre} eliminado`); invalidar() },
     onError: (err: Error) => { toast.error(err.message); setConfirmEliminar(false) },
   })
 
   const { mutate: cambiarRoles, isPending: cambiandoRoles } = useMutation({
-    mutationFn: () => api.put(`/admin/usuarios/${usuario.id}`, { roles: rolesEditados }),
+    mutationFn: () => adminApi.updateUsuario(usuario.id, { roles: rolesEditados }),
     onSuccess: () => { toast.success('Roles actualizados'); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -71,7 +60,7 @@ function UsuarioDetalle({
   const { mutate: cambiarPassword, isPending: cambiandoPassword } = useMutation({
     mutationFn: () => {
       if (editPassword.length < 8) throw new Error('Mínimo 8 caracteres')
-      return api.put(`/admin/usuarios/${usuario.id}`, { password: editPassword })
+      return adminApi.updateUsuario(usuario.id, { password: editPassword })
     },
     onSuccess: () => { toast.success('Contraseña actualizada'); setEditPassword('') },
     onError: (err: Error) => toast.error(err.message),
@@ -87,7 +76,7 @@ function UsuarioDetalle({
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-xs text-muted-foreground font-display">Estado</p>
-            <Badge variant={estadoVariant[usuario.estado]} className="mt-0.5 font-display capitalize">
+            <Badge variant={ESTADO_SOCIO_VARIANT[usuario.estado]} className="mt-0.5 font-display capitalize">
               {usuario.estado}
             </Badge>
           </div>
@@ -116,7 +105,7 @@ function UsuarioDetalle({
             <p className="font-display font-bold text-sm">Roles</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {ALL_ROLES.map((rol) => (
+            {ROLES_ASIGNABLES.map((rol) => (
               <button
                 key={rol}
                 onClick={() => toggleRol(rol)}
@@ -218,14 +207,12 @@ export function AdminUsuariosPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-usuarios', debouncedSearch, estadoFiltro, page],
     placeholderData: keepPreviousData,
-    queryFn: () => {
-      const q = new URLSearchParams()
-      if (debouncedSearch) q.set('search', debouncedSearch)
-      if (estadoFiltro !== 'todos') q.set('estado', estadoFiltro)
-      q.set('page', String(page))
-      q.set('limit', '50')
-      return api.get<{ data: SocioAdmin[]; pagination: { total: number; page: number; limit: number; totalPages: number } }>(`/admin/usuarios?${q.toString()}`)
-    },
+    queryFn: () => adminApi.getUsuarios({
+      search: debouncedSearch || undefined,
+      estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined,
+      page,
+      limit: 50,
+    }),
   })
 
   const usuarios = data?.data ?? []
@@ -302,7 +289,7 @@ export function AdminUsuariosPage() {
                   <p className="text-xs text-muted-foreground truncate">{usuario.email}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Badge variant={estadoVariant[usuario.estado]} className="font-display capitalize text-xs hidden sm:flex">
+                  <Badge variant={ESTADO_SOCIO_VARIANT[usuario.estado]} className="font-display capitalize text-xs hidden sm:flex">
                     {usuario.estado}
                   </Badge>
                   {usuario.roles.includes('administrador') && (

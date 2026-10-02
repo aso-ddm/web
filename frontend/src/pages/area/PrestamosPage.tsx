@@ -20,16 +20,7 @@ import { configuracionApi } from '@/services/api/configuracion'
 import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { Juego, Prestamo } from '@/types/api'
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function diasRestantes(fechaLimite: string): number {
-  const diff = new Date(fechaLimite).getTime() - Date.now()
-  return Math.ceil(diff / (1000 * 60 * 60 * 24))
-}
+import { formatDate, diasRestantes } from '@/lib/format'
 
 function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
   const dias = diasRestantes(fechaLimite)

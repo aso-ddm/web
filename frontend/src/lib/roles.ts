@@ -10,6 +10,9 @@ export const ROL_LABELS: Record<Rol, string> = {
   socio_basico: 'Socio/a',
 }
 
+/** Roles que la directiva puede asignar (administrador solo por BD/seed) */
+export const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+
 export function getRolLabel(rol: Rol): string {
   return ROL_LABELS[rol] ?? rol
 }

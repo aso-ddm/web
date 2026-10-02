@@ -12,15 +12,7 @@ import { SEOHead } from '@/components/SEOHead'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { prestamosApi } from '@/services/api/prestamos'
 import type { Prestamo } from '@/types/api'
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function diasRestantes(fechaLimite: string): number {
-  return Math.ceil((new Date(fechaLimite).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-}
+import { formatDate, diasRestantes } from '@/lib/format'
 
 function nombreSocio(p: Prestamo) {
   if (!p.socio) return 'Socio desconocido'

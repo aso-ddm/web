@@ -14,14 +14,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { SEOHead } from '@/components/SEOHead'
-import { api } from '@/services/api/client'
+import { telegramApi } from '@/services/api/telegram'
 import { sociosApi } from '@/services/api/socios'
-
-interface AnuncioResult {
-  enviados: number
-  errores: number
-  total: number
-}
 
 export function AnunciosPage() {
   const [mensaje, setMensaje] = useState('')
@@ -95,11 +89,7 @@ export function AnunciosPage() {
       : `Se enviará a ${selectedIds.size} destinatario${selectedIds.size !== 1 ? 's' : ''} seleccionado${selectedIds.size !== 1 ? 's' : ''}.`
 
   const { mutate: enviarAnuncio, isPending: enviandoAnuncio } = useMutation({
-    mutationFn: () =>
-      api.post<{ data: AnuncioResult }>('/telegram/anuncio', {
-        mensaje,
-        ...(destinatariosParaEnvio ? { destinatarios: destinatariosParaEnvio } : {}),
-      }),
+    mutationFn: () => telegramApi.enviarAnuncio(mensaje, destinatariosParaEnvio),
     onSuccess: ({ data }) => {
       toast.success(`Anuncio enviado: ${data.enviados} socios recibieron el mensaje`)
       if (data.errores > 0) toast.error(`${data.errores} envíos fallaron`)
