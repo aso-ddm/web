@@ -27,7 +27,8 @@ No hay ESLint configurado: `tsc` con `strict`, `noUnusedLocals` y `noUnusedParam
 
 ## Convenciones
 
-- Rutas en `config/routes.tsx`. La web pública va en el bundle inicial; el resto de páginas con `lazyPage()`.
+- Rutas en `config/routes.tsx`. La web pública va en el bundle inicial; el resto de páginas con `lazyPage()`,
+  que recarga una vez si el chunk ya no existe (tras un deploy); si vuelve a fallar, lo pinta `ErrorBoundary`.
 - Rutas protegidas: `ProtectedRoute` (autenticado) y `RoleBasedRoute` (roles); deben coincidir con los
   `requireRoles` del backend o el usuario verá la página y recibirá 403.
 - `client.ts` añade `/api`: `api.get('/socios')`, no `api.get('/api/socios')`. Un 401 cierra sesión;

@@ -4,6 +4,7 @@ import { PageLoader } from '@/components/atoms/PageLoader'
 
 // Layouts y guards
 import { AreaLayout } from '@/components/organisms/AreaLayout'
+import { ErrorBoundary } from '@/components/organisms/ErrorBoundary'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute'
 
@@ -14,9 +15,29 @@ import { SocioPage } from '@/pages/SocioPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { LoginPage } from '@/pages/LoginPage'
 
-// El resto se descarga al entrar en la página
+// El resto se descarga al entrar en la página. Tras un deploy los chunks antiguos ya no existen:
+// se recarga una vez para traer el index.html nuevo; si vuelve a fallar, lo muestra el ErrorBoundary.
+const RELOAD_FLAG = 'chunk-reload'
+
 function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) {
-  return lazy(() => load().then((m) => ({ default: m[name] })))
+  return lazy(() =>
+    load().then(
+      (m) => {
+        try { sessionStorage.removeItem(RELOAD_FLAG) } catch { /* sin storage */ }
+        return { default: m[name] }
+      },
+      (err) => {
+        try {
+          if (!sessionStorage.getItem(RELOAD_FLAG)) {
+            sessionStorage.setItem(RELOAD_FLAG, '1')
+            window.location.reload()
+            return new Promise<never>(() => {}) // se queda en el loader hasta que recarga
+          }
+        } catch { /* sin storage: no hay forma segura de evitar el bucle, mejor mostrar el error */ }
+        throw err
+      },
+    ),
+  )
 }
 
 const RegistroPage = lazyPage(() => import('@/pages/RegistroPage'), 'RegistroPage')
@@ -45,6 +66,7 @@ const AdminUsuariosPage = lazyPage(() => import('@/pages/admin/AdminUsuariosPage
 
 export function AppRoutes() {
   return (
+    <ErrorBoundary>
     <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* ── Rutas públicas ──────────────────────────────────────────── */}
@@ -127,5 +149,6 @@ export function AppRoutes() {
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
     </Suspense>
+    </ErrorBoundary>
   )
 }
