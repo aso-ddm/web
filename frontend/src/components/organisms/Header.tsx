@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +23,9 @@ export function Header() {
   const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore()
   const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
+  // Controlado: los enlaces de la misma página (scroll a una sección) no cambian de ruta y el menú no se cerraría solo
+  const [menuOpen, setMenuOpen] = useState(false)
+  const cerrarMenu = () => setMenuOpen(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30)
@@ -37,11 +39,9 @@ export function Header() {
     handleNavigation('/', 'top')
   }
 
-  const queryClient = useQueryClient()
-
   const handleLogout = () => {
-    queryClient.clear()
-    logout()
+    setMenuOpen(false)
+    logout() // la caché la vacía lib/queryClient al cambiar el token
     navigate('/')
   }
 
@@ -104,20 +104,22 @@ export function Header() {
           </nav>
 
           {/* Mobile Navigation */}
-          <Sheet>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
               <Button variant="ghost" size="icon" className="lg:hidden hover:text-primary">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle menu</span>
+                <span className="sr-only">Abrir menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="right" className="w-[300px] sm:w-[400px]" aria-describedby={undefined}>
+              <SheetTitle className="sr-only">Menú</SheetTitle>
               <nav className={`flex flex-col ${SPACING.gapSm} ${SPACING.marginTopMd} px-5 pb-6`}>
                 {navigationItems.map((item) => (
                   <NavLink
                     key={item.label}
                     to={item.to}
                     scrollTo={item.scrollTo}
+                    onClick={cerrarMenu}
                     className="text-xl font-medium text-foreground hover:text-primary transition-colors"
                   >
                     {item.label}
@@ -127,7 +129,7 @@ export function Header() {
                 {isAuthenticated && usuario ? (
                   <>
                     <Button asChild className="mt-2">
-                      <Link to={areaPath}>
+                      <Link to={areaPath} onClick={cerrarMenu}>
                         <LayoutDashboard className="h-4 w-4 mr-2" />
                         Mi área ({usuario.nombre})
                       </Link>
@@ -143,7 +145,7 @@ export function Header() {
                   </>
                 ) : (
                   <Button asChild className="mt-2">
-                    <Link to={memberAreaItem.to}>{memberAreaItem.label}</Link>
+                    <Link to={memberAreaItem.to} onClick={cerrarMenu}>{memberAreaItem.label}</Link>
                   </Button>
                 )}
               </nav>

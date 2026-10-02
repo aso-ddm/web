@@ -13,7 +13,7 @@ export function useScrollNavigation() {
 
       if (scrollTo === 'top') {
         if (isCurrentPath) {
-          window.history.pushState({}, '', to)
+          navigate(to) // por el router (no pushState), para que Atrás funcione
           scrollToTop()
         } else {
           navigate(to)
@@ -27,7 +27,7 @@ export function useScrollNavigation() {
         const isOnTargetPath = pathname === targetPath
 
         if (isOnTargetPath) {
-          window.history.pushState({}, '', `${targetPath}#${scrollTo}`)
+          navigate(`${targetPath}#${scrollTo}`)
           scrollToElement(scrollTo)
         } else {
           navigate(`${targetPath}#${scrollTo}`)
