@@ -8,11 +8,15 @@ La **Fase 1** es la web pública estática de Dragón de Madera (presentación d
 ### Fase 2 — EN DESARROLLO ACTIVO
 La **Fase 2** añade las **áreas de gestión para socios**: registro, login, gestión de préstamos, ludoteca con inventario, panel de administración, etc.
 
-**Backend — DESARROLLADO:** Lógica de negocio completa para las 6 entidades principales:
+**Backend — DESARROLLADO:** Lógica de negocio completa para las entidades principales:
 - `auth`: registro individual y grupal (multipart/form-data + comprobante), login JWT, perfil propio
 - `socios`: CRUD, aprobación/rechazo (individual y grupal), roles, ciclo de vida, llaves
 - `juegos`: catálogo con filtros y paginación
-- `préstamos`: flujo completo (solicitud → aprobación → activación → devolución)
+- `préstamos`: préstamo directo (reserva atómica del juego) → renovación → devolución
+- `cuotas`: control mensual de pagos (directiva)
+- `solicitudes-juego` y `logs de juego`: cesiones de socios e historial de cada juego
+- `telegram`: vinculación, anuncios, recordatorios y webhook del bot
+- `admin`: gestión completa de usuarios (rol administrador)
 - `visitas`: registro con visitas gratuitas configurables y cobro automático
 - `configuración`: parámetros de negocio ajustables por directiva
 
@@ -107,7 +111,7 @@ pnpm prisma:migrate
 pnpm prisma:studio
 
 # Tests
-pnpm -C backend test:run   # 52 tests unitarios (vitest)
+pnpm -C backend test:run   # tests unitarios + errorHandler sobre Express real (vitest)
 pnpm -C frontend test      # vitest + jsdom
 
 # Docker
@@ -136,7 +140,7 @@ router.get('/me', authenticate, handler)
 router.post('/', requireRoles(...ROLES.DIRECTIVA), handler)
 
 // Sets predefinidos:
-// ROLES.DIRECTIVA → presidente, secretario, tesorero
+// ROLES.DIRECTIVA → administrador, presidente, secretario, tesorero
 // ROLES.DIRECTIVA_Y_VOCALES → + vocal
 // ROLES.DIRECTIVA_Y_LUDOTECARIO → + ludotecario
 // ROLES.TODOS_LOS_ROLES → todos
@@ -152,6 +156,12 @@ import { prisma } from '../lib/prisma'
 const service = new MiService(prisma)
 ```
 
+### Errores
+- Handlers async sin try/catch: `express-async-errors` manda el error al `errorHandler`.
+- Errores de dominio: `throw new HttpError(409, 'mensaje')` (`lib/httpError.ts`).
+- `errorHandler` traduce Zod → 400, multer → 400/413, Prisma P2002/P2003 → 409, P2025 → 404.
+- Rate limiting en `/auth` (login, registro, reset): `middleware/rateLimit.ts`, por `X-Real-IP`.
+
 ### Upload de archivos
 Rutas multipart usan `multer` con `diskStorage`. Comprobantes en `uploads/transferencias/`.
 
@@ -163,12 +173,18 @@ Rutas multipart usan `multer` con `diskStorage`. Comprobantes en `uploads/transf
 // frontend/src/services/api/client.ts — fetch tipado
 import { api } from '@/services/api/client'
 
-const usuarios = await api.get<User[]>('/api/socios')
-await api.post('/api/auth/login', { email, password })
+// BASE_URL ya es '/api': las rutas van sin prefijo
+const usuarios = await api.get<User[]>('/socios')
+await api.post('/auth/login', { email, password })
 ```
 
 Servicios individuales por entidad en `frontend/src/services/api/`:
-`auth.ts`, `socios.ts`, `juegos.ts`, `prestamos.ts`, `visitas.ts`, `configuracion.ts`
+`auth.ts`, `socios.ts`, `juegos.ts`, `prestamos.ts`, `visitas.ts`, `configuracion.ts`, `cuotas.ts`,
+`logs_juego.ts`, `solicitudes_juego.ts`, `telegram.ts`, `admin.ts`. Las páginas no llaman a `api.*` directamente.
+
+Compartido: `lib/format.ts` (fechas), `lib/estados.ts`, `lib/roles.ts`, `lib/queryKeys.ts`
+(`invalidarSocios`, `invalidarJuegos`, `invalidarPrestamos`), `hooks/useDebouncedValue`, `hooks/useConfigValor`,
+`organisms/ConfirmDialog`. Los errores de carga se muestran con un toast global (`lib/queryClient.ts`).
 
 ---
 
@@ -178,7 +194,6 @@ Servicios individuales por entidad en `frontend/src/services/api/`:
 - Nginx hace proxy de `/api/` → `localhost:3001`
 - PM2 gestiona el proceso backend (`dragon-backend`)
 - PostgreSQL escucha solo en localhost
-- **Nota:** tras la migración, actualizar nginx proxy de `:3000` a `:3001`
 
 ```nginx
 location /api/ {
@@ -196,12 +211,17 @@ location /api/ {
 ```bash
 # Variables en .env junto al docker-compose.yml:
 POSTGRES_USER=dragondemadera
-POSTGRES_PASSWORD=password_seguro
+POSTGRES_PASSWORD=...           # obligatorio, sin valor por defecto
 POSTGRES_DB=dragondb
 APP_PORT=8080
-JWT_SECRET=secreto_muy_seguro
+JWT_SECRET=...                  # obligatorio, mínimo 32 caracteres
+BOT_TOKEN=...
+TELEGRAM_WEBHOOK_SECRET=...     # sin él, el webhook rechaza todo
 FRONTEND_URL=https://dragondemadera.com
 ```
+
+El seed (admin + configuración inicial) ya no corre al arrancar el contenedor; se ejecuta una vez a mano con
+`SEED_ADMIN_PASSWORD` (ver `backend/Dockerfile`).
 
 IPs en proxy_network: `.110` (db) · `.111` (backend) · `.112` (frontend)
 

@@ -4,7 +4,7 @@ import { Header, Footer, PageHero, SectionHeading, LudotecaTable } from '@/compo
 import { MeepleIcon } from '@/components/atoms/icons'
 import { Button } from '@/components/ui/button'
 import { SPACING, SOCIAL_URLS } from '@/lib/constants'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import texts from '@/data/texts.json'
 import images from '@/data/images.json'
 

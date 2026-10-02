@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Header, Footer } from '@/components/organisms'
 import { Button } from '@/components/ui/button'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 
 export function NotFoundPage() {
   return (

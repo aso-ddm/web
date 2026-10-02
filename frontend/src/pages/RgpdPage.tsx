@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Header, Footer } from '@/components/organisms'
 import { SPACING } from '@/lib/constants'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import texts from '@/data/texts.json'
 
 export function RgpdPage() {

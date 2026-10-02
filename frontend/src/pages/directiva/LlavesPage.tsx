@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Key, Users } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi } from '@/services/api/socios'
 
 export function LlavesPage() {

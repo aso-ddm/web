@@ -2,7 +2,7 @@ import { Header, Footer, PageHero, SectionHeading, WhatsAppButton } from '@/comp
 import { MeepleIcon } from '@/components/atoms/icons'
 import { Card, CardContent } from '@/components/ui/card'
 import { SPACING } from '@/lib/constants'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import texts from '@/data/texts.json'
 
 export function SocioPage() {

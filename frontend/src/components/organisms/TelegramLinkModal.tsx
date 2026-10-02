@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { DragonIcon } from '@/components/atoms/icons'
-import { TelegramLoginWidget } from '@/components/TelegramLoginWidget'
+import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
 import { authApi, type TelegramUser } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'

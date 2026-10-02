@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
 import { prestamosApi } from '@/services/api/prestamos'

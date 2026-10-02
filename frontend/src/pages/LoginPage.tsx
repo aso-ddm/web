@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import { authApi } from '@/services/api/auth'
 import { useAuthStore } from '@/store/authStore'
 

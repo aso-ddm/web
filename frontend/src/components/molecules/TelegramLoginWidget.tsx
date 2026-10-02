@@ -1,6 +1,13 @@
 import { useEffect, useRef } from 'react'
 import type { TelegramUser } from '@/services/api/auth'
 
+// Callback global que invoca el script del widget de Telegram (data-onauth)
+declare global {
+  interface Window {
+    onTelegramAuth?: (user: TelegramUser) => void
+  }
+}
+
 interface TelegramLoginWidgetProps {
   onAuth: (user: TelegramUser) => void
   botUsername?: string
@@ -19,7 +26,7 @@ export function TelegramLoginWidget({
   onAuthRef.current = onAuth
 
   useEffect(() => {
-    ;(window as any).onTelegramAuth = (user: TelegramUser) => onAuthRef.current(user)
+    window.onTelegramAuth = (user: TelegramUser) => onAuthRef.current(user)
 
     const script = document.createElement('script')
     script.src = 'https://telegram.org/js/telegram-widget.js?22'
@@ -33,7 +40,7 @@ export function TelegramLoginWidget({
     containerRef.current?.appendChild(script)
 
     return () => {
-      delete (window as any).onTelegramAuth
+      delete window.onTelegramAuth
       if (containerRef.current) containerRef.current.innerHTML = ''
     }
   }, [botUsername, size, radius])

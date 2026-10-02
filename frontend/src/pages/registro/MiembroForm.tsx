@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { RichTextContent } from '@/components/ui/rich-text-content'
+import { RichTextContent } from '@/components/molecules/RichTextContent'
 import type { RegistroForm } from './schema'
 import { FieldError } from './FormParts'
 

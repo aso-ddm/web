@@ -4,7 +4,7 @@ import { FeatureItem } from '@/components/molecules'
 import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { SOCIAL_URLS, SPACING } from '@/lib/constants'
-import { SEOHead } from '@/components/SEOHead'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import texts from '@/data/texts.json'
 import images from '@/data/images.json'
 

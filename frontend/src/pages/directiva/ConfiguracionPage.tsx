@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { RichTextEditor } from '@/components/ui/rich-text-editor'
-import { SEOHead } from '@/components/SEOHead'
+import { RichTextEditor } from '@/components/molecules/RichTextEditor'
+import { SEOHead } from '@/components/atoms/SEOHead'
 import { configuracionApi, type ConfigItem } from '@/services/api/configuracion'
 
 const configLabels: Record<string, { label: string; description: string; suffix?: string }> = {
