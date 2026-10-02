@@ -24,6 +24,7 @@ export function createPrismaMock() {
     relacionSocio: makeModel(),
     logJuego: makeModel(),
     solicitudJuego: makeModel(),
+    pagoCuota: makeModel(),
   }
 
   mock.$transaction = vi.fn().mockImplementation((ops: unknown) => {

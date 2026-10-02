@@ -161,7 +161,7 @@ function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => vo
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary" />
-                <p className="font-display font-bold text-sm">Comprobante de pago</p>
+                <p className="font-display font-bold text-sm">Comprobante de alta</p>
               </div>
               <Button
                 size="sm"

@@ -63,6 +63,11 @@ enum TipoLogJuego {
   nota_manual
 }
 
+enum EstadoPago {
+  pagado
+  sin_pagar
+}
+
 enum EstadoSolicitudJuego {
   pendiente
   aprobada
@@ -131,6 +136,10 @@ model Usuario {
 
   // Visitas registradas por este socio
   visitas_registradas    Visita[]
+
+  // Cuotas mensuales
+  pagos_cuota            PagoCuota[] @relation("PagosSocio")
+  pagos_revisados        PagoCuota[] @relation("PagosRevisados")
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -273,4 +282,22 @@ model Configuracion {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+}
+
+// Estado de la cuota de un mes. Sin fila = mes sin revisar.
+// Cuota conjunta: solo se registra en el titular del grupo.
+model PagoCuota {
+  id              String     @id @default(uuid())
+  socio_id        String
+  anio            Int
+  mes             Int        // 1-12
+  estado          EstadoPago
+  revisado_por_id String?    // null = marcado automáticamente al aprobar el alta
+
+  socio        Usuario  @relation("PagosSocio",     fields: [socio_id],        references: [id], onDelete: Cascade)
+  revisado_por Usuario? @relation("PagosRevisados", fields: [revisado_por_id], references: [id], onDelete: SetNull)
+
+  updated_at DateTime @updatedAt
+
+  @@unique([socio_id, anio, mes])
 }

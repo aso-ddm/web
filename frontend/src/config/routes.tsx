@@ -30,6 +30,7 @@ import { SolicitudesPage } from '@/pages/directiva/SolicitudesPage'
 import { GestionSociosPage } from '@/pages/directiva/GestionSociosPage'
 import { ConfiguracionPage } from '@/pages/directiva/ConfiguracionPage'
 import { LlavesPage } from '@/pages/directiva/LlavesPage'
+import { CuotasPage } from '@/pages/directiva/CuotasPage'
 import { AnunciosPage } from '@/pages/directiva/AnunciosPage'
 import { AdminUsuariosPage } from '@/pages/admin/AdminUsuariosPage'
 
@@ -84,6 +85,7 @@ export function AppRoutes() {
           <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
           <Route path="/directiva/llaves" element={<LlavesPage />} />
           <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
+          <Route path="/directiva/cuotas" element={<CuotasPage />} />
           <Route path="/directiva/anuncios" element={<AnunciosPage />} />
         </Route>
       </Route>

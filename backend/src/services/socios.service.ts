@@ -1,4 +1,4 @@
-import { PrismaClient, Rol, EstadoSocio, Prisma } from '@prisma/client'
+import { PrismaClient, Rol, EstadoSocio, Prisma, EstadoPago } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 
 // Campos públicos que se devuelven en listados (sin datos sensibles)
@@ -50,6 +50,10 @@ export function normalizarRoles(roles: Rol[]): Rol[] {
     ...base,
     ...(unicos.includes(Rol.ludotecario) ? [Rol.ludotecario] : []),
   ]
+}
+
+function mesPagadoAlAlta(fecha: Date) {
+  return { anio: fecha.getFullYear(), mes: fecha.getMonth() + 1, estado: EstadoPago.pagado }
 }
 
 export class SociosService {
@@ -201,12 +205,13 @@ export class SociosService {
       }
     }
 
+    const ahora = new Date()
     await this.prisma.$transaction([
       this.prisma.usuario.updateMany({
         where: { solicitud_grupal_id: grupoId },
         data: {
           estado: EstadoSocio.activo,
-          fecha_alta: new Date(),
+          fecha_alta: ahora,
           aprobado_por_id: aprobadoPorId,
           roles: [Rol.socio_basico],
         },
@@ -215,6 +220,8 @@ export class SociosService {
         where: { id: grupoId },
         data: { estado: 'aprobada' },
       }),
+      // El comprobante de alta cubre el mes de alta; la cuota conjunta se registra en el titular
+      this.prisma.pagoCuota.create({ data: { socio_id: grupo.titular_id, ...mesPagadoAlAlta(ahora) } }),
     ])
 
     return this.prisma.solicitudGrupal.findUnique({
@@ -307,13 +314,16 @@ export class SociosService {
     }
     comprobarCambioAdmin(socio.roles, [rol])
 
+    const ahora = new Date()
     return this.prisma.usuario.update({
       where: { id },
       data: {
         estado: EstadoSocio.activo,
-        fecha_alta: new Date(),
+        fecha_alta: ahora,
         aprobado_por_id: aprobadoPorId,
         roles: normalizarRoles([rol]),
+        // El comprobante de alta cubre el mes de alta
+        pagos_cuota: { create: mesPagadoAlAlta(ahora) },
       },
       select: SOCIO_PUBLIC_SELECT,
     })

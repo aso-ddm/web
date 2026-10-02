@@ -100,6 +100,7 @@ describe('SociosService.aprobar', () => {
           fecha_alta: expect.any(Date),
           aprobado_por_id: 'admin1',
           roles: [Rol.socio_basico],
+          pagos_cuota: { create: expect.objectContaining({ estado: 'pagado' }) },
         }),
       }),
     )

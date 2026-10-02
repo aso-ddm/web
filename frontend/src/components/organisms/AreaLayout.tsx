@@ -17,6 +17,7 @@ import {
   Menu,
   Megaphone,
   ShieldAlert,
+  Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -56,6 +57,7 @@ function useSidebarItems(): NavEntry[] {
 
   if (isDirectiva()) {
     items.push(
+      { type: 'item', label: 'Cuotas',        to: '/directiva/cuotas',        icon: <Wallet   className="h-4 w-4" /> },
       { type: 'item', label: 'Configuración', to: '/directiva/configuracion', icon: <Settings className="h-4 w-4" /> },
     )
   }
