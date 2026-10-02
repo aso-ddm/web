@@ -34,4 +34,5 @@ COPY backend/package.json ./backend/
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && NODE_PATH=/app/backend/node_modules node prisma/seed.js && node backend/dist/server.js"]
+# Seed manual (una vez): docker exec -e SEED_ADMIN_PASSWORD=... dragondemadera_backend sh -c "NODE_PATH=/app/backend/node_modules node prisma/seed.js"
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node backend/dist/server.js"]

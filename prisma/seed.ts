@@ -1,10 +1,8 @@
 /**
- * Seed: crea el usuario administrador base si no existe.
- * Ejecutar: npm run seed
+ * Seed: crea el usuario administrador base (si no existe) y la configuración inicial.
+ * Ejecutar una sola vez: SEED_ADMIN_PASSWORD='...' npm run seed
  *
- * Credenciales por defecto (CAMBIAR EN PRODUCCIÓN):
- *   Email:    admin@dragondemadera.com
- *   Password: DragonAdmin2026!
+ * El admin (admin@dragondemadera.com) solo se crea si SEED_ADMIN_PASSWORD está definida.
  */
 import 'dotenv/config'
 import { PrismaClient, Rol, EstadoSocio, TipoCuota } from '@prisma/client'
@@ -17,11 +15,15 @@ async function main() {
 
   const existing = await prisma.usuario.findUnique({ where: { email } })
 
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD
+
   if (existing) {
     console.log(`✓ Usuario admin ya existe (${email}) — no se modifica`)
+  } else if (!adminPassword) {
+    console.log('⚠️  SEED_ADMIN_PASSWORD no definida — no se crea el usuario admin')
   } else {
 
-  const password_hash = await bcrypt.hash('DragonAdmin2026!', 12)
+  const password_hash = await bcrypt.hash(adminPassword, 12)
 
   const admin = await prisma.usuario.create({
     data: {

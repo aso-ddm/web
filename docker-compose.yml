@@ -14,7 +14,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dragondemadera}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Jp45sarCgNvc958g}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
       POSTGRES_DB: ${POSTGRES_DB:-dragondb}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -31,12 +31,13 @@ services:
     container_name: dragondemadera_backend
     image: asoddm/dragondemadera-backend:latest
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-dragondemadera}:${POSTGRES_PASSWORD:-Jp45sarCgNvc958g}@dragondemadera_db:5432/${POSTGRES_DB:-dragondb}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dragondemadera}:${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}@dragondemadera_db:5432/${POSTGRES_DB:-dragondb}
       NODE_ENV: production
       PORT: 3001
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env (min. 32 caracteres)}
       FRONTEND_URL: ${FRONTEND_URL:-https://test.dragondemadera.com}
-      BOT_TOKEN: ${BOT_TOKEN:-8895560407:AAE-prede2NeNvvoXcPkpv0T6gLPb4TuqysK}
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
     volumes:
       - uploads_data:/app/uploads
     depends_on:

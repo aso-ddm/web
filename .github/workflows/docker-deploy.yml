@@ -60,10 +60,7 @@ jobs:
             set -e
             cd /opt/web
 
-            docker compose down
-
-            docker rmi asoddm/dragondemadera-backend:latest \
-                       asoddm/dragondemadera-frontend:latest 2>/dev/null || true
-
+            # pull antes de parar nada: si falla, lo que está corriendo sigue en pie
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
+            docker image prune -f

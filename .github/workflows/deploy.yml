@@ -19,12 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Detectar cambios
         id: filter
         run: |
-          CHANGED=$(git diff --name-only HEAD~1 HEAD)
+          # Todos los commits del push, no solo el último
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then BEFORE=HEAD~1; fi
+          CHANGED=$(git diff --name-only "$BEFORE" HEAD)
           echo "$CHANGED"
 
           if echo "$CHANGED" | grep -qE "^frontend/|^prisma/"; then
@@ -112,7 +115,8 @@ jobs:
         run: npm ci
 
       - name: Generar cliente Prisma (CI)
-        run: npx prisma generate --schema=prisma/schema.prisma
+        working-directory: backend
+        run: npx prisma generate --schema=../prisma/schema.prisma
 
       - name: Compilar TypeScript
         working-directory: backend
@@ -131,6 +135,7 @@ jobs:
             cp -r "$DEPLOY_PATH/backend/dist" "$DEPLOY_PATH/backend/dist.backup"
           fi
           cp "$DEPLOY_PATH/backend/package.json" "$DEPLOY_PATH/backend/package.json.backup" 2>/dev/null || true
+          cp "$DEPLOY_PATH/backend/package-lock.json" "$DEPLOY_PATH/backend/package-lock.json.backup" 2>/dev/null || true
 
       - name: Desplegar código compilado
         run: |
@@ -145,30 +150,15 @@ jobs:
         working-directory: ${{ env.DEPLOY_PATH }}/backend
         run: npm ci --omit=dev
 
+      # prisma es dependencia de producción del backend: se usa la versión fijada en el lockfile.
+      # Las migraciones son solo hacia delante; si una falla, se resuelve a mano (prisma migrate resolve).
       - name: Generar cliente Prisma
-        working-directory: ${{ env.DEPLOY_PATH }}
-        run: npx prisma generate --schema=prisma/schema.prisma
-
-      - name: Resolver migraciones fallidas
-        working-directory: ${{ env.DEPLOY_PATH }}
-        run: |
-          source backend/.env 2>/dev/null || true
-          FAILED=$(psql "$DATABASE_URL" -t -c \
-            "SELECT migration_name FROM _prisma_migrations WHERE rolled_back_at IS NULL AND finished_at IS NULL AND started_at IS NOT NULL;" \
-            2>/dev/null | tr -d ' ' | grep -v '^$' || true)
-          if [ -n "$FAILED" ]; then
-            echo "Migraciones fallidas: $FAILED"
-            for m in $FAILED; do
-              echo "Marcando $m como rolled-back..."
-              npx prisma migrate resolve --rolled-back "$m" --schema=prisma/schema.prisma
-            done
-          else
-            echo "No hay migraciones fallidas"
-          fi
+        working-directory: ${{ env.DEPLOY_PATH }}/backend
+        run: npx prisma generate --schema=../prisma/schema.prisma
 
       - name: Ejecutar migraciones
-        working-directory: ${{ env.DEPLOY_PATH }}
-        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+        working-directory: ${{ env.DEPLOY_PATH }}/backend
+        run: npx prisma migrate deploy --schema=../prisma/schema.prisma
 
       - name: Reiniciar backend con PM2
         run: |
@@ -187,11 +177,18 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)
           if [ "$STATUS" != "200" ]; then
             echo "ERROR: backend devuelve $STATUS — ejecutando rollback"
+            if [ ! -d "$DEPLOY_PATH/backend/dist.backup" ]; then
+              echo "No hay backup previo: rollback imposible"
+              exit 1
+            fi
             rm -rf "$DEPLOY_PATH/backend/dist"
             cp -r "$DEPLOY_PATH/backend/dist.backup" "$DEPLOY_PATH/backend/dist"
             cp "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package.json" 2>/dev/null || true
-            npm ci --prefix "$DEPLOY_PATH/backend"
+            cp "$DEPLOY_PATH/backend/package-lock.json.backup" "$DEPLOY_PATH/backend/package-lock.json" 2>/dev/null || true
+            (cd "$DEPLOY_PATH/backend" && npm ci --omit=dev && npx prisma generate --schema=../prisma/schema.prisma) || true
             pm2 restart dragon-backend --update-env
+            sleep 3
+            echo "Health tras rollback: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)"
             exit 1
           fi
           echo "OK: backend responde con 200"
@@ -200,4 +197,4 @@ jobs:
         if: success()
         run: |
           rm -rf "$DEPLOY_PATH/backend/dist.backup"
-          rm -f "$DEPLOY_PATH/backend/package.json.backup"
+          rm -f "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package-lock.json.backup"
