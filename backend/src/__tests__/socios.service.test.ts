@@ -280,3 +280,19 @@ describe('SociosService.getPendientes', () => {
     expect(grupos[0].miembros).toEqual([{ id: 'm1', nombre: 'Pareja', tipo_relacion: 'pareja' }])
   })
 })
+
+describe('SociosService — socios pendientes', () => {
+  beforeEach(() => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, estado: 'pendiente' })
+  })
+
+  it('darDeBaja → throws (rompería la aprobación del grupo)', async () => {
+    await expect(service.darDeBaja('u1', 'admin')).rejects.toThrow('pendiente')
+    expect(prisma.usuario.update).not.toHaveBeenCalled()
+  })
+
+  it('updateRoles → throws', async () => {
+    await expect(service.updateRoles('u1', [Rol.vocal], 'admin')).rejects.toThrow('pendiente')
+    expect(prisma.usuario.update).not.toHaveBeenCalled()
+  })
+})

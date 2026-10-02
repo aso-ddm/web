@@ -33,6 +33,8 @@ export function comprobarCambioAdmin(actuales: Rol[], nuevos: Rol[]) {
   }
 }
 
+const PENDIENTE_EN_SOLICITUDES = 'Este socio está pendiente: apruébalo o recházalo desde Solicitudes'
+
 // Un único rol base por persona; ludotecario es el único que se acumula sobre cualquiera.
 // Socio o vocal + ludotecario → gana los permisos de ludoteca. Presidente, secretario o
 // tesorero + ludotecario → solo queda marcado (la directiva ya tiene esos permisos).
@@ -343,6 +345,7 @@ export class SociosService {
     if (socio.estado === EstadoSocio.baja) {
       throw new Error('El socio ya está dado de baja')
     }
+    if (socio.estado === EstadoSocio.pendiente) throw new Error(PENDIENTE_EN_SOLICITUDES)
 
     return this.prisma.usuario.update({
       where: { id },
@@ -382,6 +385,7 @@ export class SociosService {
     if (id === actorId) throw new Error('No puedes cambiar tus propios roles')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new Error('Socio no encontrado')
+    if (socio.estado === EstadoSocio.pendiente) throw new Error(PENDIENTE_EN_SOLICITUDES)
     roles = normalizarRoles(roles)
     comprobarCambioAdmin(socio.roles, roles)
 

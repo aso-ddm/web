@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, UserX, UserCheck, Shield, Key, CheckCircle2, FileText } from 'lucide-react'
@@ -19,8 +20,9 @@ import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => void }) {
   const queryClient = useQueryClient()
   const puedeEditar = useAuthStore((s) => s.isDirectiva()) // vocales: solo lectura
-  // Nadie cambia sus propios roles ni su estado, ni los de un administrador
-  const puedeGestionar = useAuthStore((s) => s.usuario?.id !== socio.id) && puedeEditar && !socio.roles.includes('administrador')
+  const pendiente = socio.estado === 'pendiente' // se aprueba o rechaza en Solicitudes
+  // Nadie cambia sus propios roles ni su estado, ni los de un administrador o un pendiente
+  const puedeGestionar = useAuthStore((s) => s.usuario?.id !== socio.id) && puedeEditar && !socio.roles.includes('administrador') && !pendiente
   const [rolesEditados, setRolesEditados] = useState<Rol[]>(socio.roles)
   const [confirmBaja, setConfirmBaja] = useState(false)
   const [confirmDevolucion, setConfirmDevolucion] = useState(false)
@@ -171,6 +173,13 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
         </div>
 
         <Separator />
+
+        {pendiente && puedeEditar && <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Solicitud pendiente de revisar.</p>
+          <Button asChild variant="outline" size="sm" className="font-display">
+            <Link to="/directiva/solicitudes" onClick={onClose}>Ir a Solicitudes →</Link>
+          </Button>
+        </div>}
 
         {/* Roles */}
         {puedeGestionar && <div className="space-y-3">
