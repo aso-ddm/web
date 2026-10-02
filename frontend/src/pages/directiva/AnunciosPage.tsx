@@ -1,18 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Send, Loader2, MessageCircle, Search, X, Users } from 'lucide-react'
+import { Send, MessageCircle, Search, X, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { telegramApi } from '@/services/api/telegram'
 import { sociosApi } from '@/services/api/socios'
@@ -96,10 +93,7 @@ export function AnunciosPage() {
       setMensaje('')
       setConfirmAnuncio(false)
     },
-    onError: (err: Error) => {
-      toast.error(err.message)
-      setConfirmAnuncio(false)
-    },
+    onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
   })
 
   return (
@@ -267,28 +261,15 @@ export function AnunciosPage() {
       </div>
 
       {/* ── Confirmar anuncio ── */}
-      <AlertDialog open={confirmAnuncio} onOpenChange={setConfirmAnuncio}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Enviar este anuncio?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {descConfirm} Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => enviarAnuncio()}
-              disabled={enviandoAnuncio}
-              className="font-display font-bold"
-            >
-              {enviandoAnuncio ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmAnuncio}
+        onOpenChange={setConfirmAnuncio}
+        title="¿Enviar este anuncio?"
+        description={`${descConfirm} Esta acción no se puede deshacer.`}
+        confirmLabel="Enviar"
+        onConfirm={() => enviarAnuncio()}
+        pending={enviandoAnuncio}
+      />
     </>
   )
 }

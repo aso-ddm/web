@@ -57,7 +57,8 @@ export function LogsPanel({ juego }: { juego: Juego }) {
           value={nota}
           onChange={(e) => setNota(e.target.value)}
           className="h-7 text-xs"
-          onKeyDown={(e) => e.key === 'Enter' && nota.trim() && addNota()}
+          maxLength={500}
+          onKeyDown={(e) => e.key === 'Enter' && nota.trim() && !isPending && addNota()}
         />
         <Button
           size="sm"

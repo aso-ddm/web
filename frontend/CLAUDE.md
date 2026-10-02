@@ -35,7 +35,8 @@ No hay ESLint configurado: `tsc` con `strict`, `noUnusedLocals` y `noUnusedParam
   los errores llegan como `ApiRequestError` con `status`.
 - Los fallos de carga ya se muestran con un toast global (`lib/queryClient.ts`); en mutaciones, `onError` → `toast.error`.
 - Tras mutar, invalidar con los helpers de `lib/queryKeys.ts` (`invalidarSocios`, `invalidarJuegos`, `invalidarPrestamos`).
-- Acciones destructivas o irreversibles: `ConfirmDialog`.
+- Acciones destructivas o irreversibles: `ConfirmDialog`. No se cierra al confirmar: ciérralo en `onSuccess`
+  (en `onError` déjalo abierto para reintentar).
 - Búsquedas: `useDebouncedValue` + `placeholderData: keepPreviousData` (o `useInfiniteQuery` con "Cargar más").
 - Configuración pública por clave: `useConfigValor(clave, fallback)`; `GET /config` (listado) es solo para directiva.
 - Alias `@/*` → `./src/*`. Fuentes (Gemunu Libre, Quicksand, Frank Ruhl Libre) en `index.html`.

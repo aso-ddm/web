@@ -3,12 +3,10 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, UserX, UserCheck, Shield, Key, CheckCircle2, FileText } from 'lucide-react'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { invalidarSocios } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
@@ -248,70 +246,38 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
         </div>}
       </div>
 
-      <AlertDialog open={confirmBaja} onOpenChange={setConfirmBaja}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Dar de baja a {socio.nombre} {socio.apellidos}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              El socio quedará en estado "baja" y perderá acceso al área privada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => darBaja()}
-              disabled={bajando}
-              className="font-display font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {bajando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Dar de baja'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Al terminar bien, invalidar() cierra la ficha y con ella el diálogo */}
+      <ConfirmDialog
+        open={confirmBaja}
+        onOpenChange={setConfirmBaja}
+        title={`¿Dar de baja a ${socio.nombre} ${socio.apellidos}?`}
+        description='El socio quedará en estado "baja" y perderá acceso al área privada.'
+        confirmLabel="Dar de baja"
+        destructive
+        onConfirm={() => darBaja()}
+        pending={bajando}
+      />
 
-      <AlertDialog open={confirmDevolucion} onOpenChange={setConfirmDevolucion}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Registrar devolución de llaves?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Se marcará que {socio.nombre} {socio.apellidos} ha devuelto las llaves del club.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setLlaves(false)} disabled={guardandoLlaves} className="font-display font-bold">
-              {guardandoLlaves ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirmar devolución'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmDevolucion}
+        onOpenChange={setConfirmDevolucion}
+        title="¿Registrar devolución de llaves?"
+        description={`Se marcará que ${socio.nombre} ${socio.apellidos} ha devuelto las llaves del club.`}
+        confirmLabel="Confirmar devolución"
+        onConfirm={() => setLlaves(false)}
+        pending={guardandoLlaves}
+      />
 
-      <AlertDialog open={confirmReactivar} onOpenChange={setConfirmReactivar}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Dar de alta a {socio.nombre} {socio.apellidos}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              El socio volverá al estado activo y recuperará el acceso al área privada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => reactivar()}
-              disabled={reactivando}
-              className="font-display font-bold bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              {reactivando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Dar de alta'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmReactivar}
+        onOpenChange={setConfirmReactivar}
+        title={`¿Dar de alta a ${socio.nombre} ${socio.apellidos}?`}
+        description="El socio volverá al estado activo y recuperará el acceso al área privada."
+        confirmLabel="Dar de alta"
+        confirmClassName="bg-emerald-600 text-white hover:bg-emerald-700"
+        onConfirm={() => reactivar()}
+        pending={reactivando}
+      />
     </>
   )
 }

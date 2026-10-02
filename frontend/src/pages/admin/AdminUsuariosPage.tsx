@@ -4,16 +4,13 @@ import { toast } from 'sonner'
 import { Search, Loader2, UserX, Shield, Trash2, Edit2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/atoms/SEOHead'
@@ -49,7 +46,7 @@ function UsuarioDetalle({
   const { mutate: eliminar, isPending: eliminando } = useMutation({
     mutationFn: () => adminApi.deleteUsuario(usuario.id),
     onSuccess: () => { toast.success(`${usuario.nombre} eliminado`); invalidar() },
-    onError: (err: Error) => { toast.error(err.message); setConfirmEliminar(false) },
+    onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
   })
 
   const { mutate: cambiarRoles, isPending: cambiandoRoles } = useMutation({
@@ -173,29 +170,19 @@ function UsuarioDetalle({
         </div>}
       </div>
 
-      <AlertDialog open={confirmEliminar} onOpenChange={setConfirmEliminar}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Eliminar a {usuario.nombre} {usuario.apellidos}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es <strong>irreversible</strong>. Se eliminará el usuario y todos sus datos del sistema.
-              No se puede eliminar si tiene préstamos activos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => eliminar()}
-              disabled={eliminando}
-              className="font-display font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {eliminando ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Eliminar definitivamente'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmEliminar}
+        onOpenChange={setConfirmEliminar}
+        title={`¿Eliminar a ${usuario.nombre} ${usuario.apellidos}?`}
+        description={<>
+          Esta acción es <strong>irreversible</strong>. Se eliminará el usuario y todos sus datos del sistema.
+          No se puede eliminar si tiene préstamos activos.
+        </>}
+        confirmLabel="Eliminar definitivamente"
+        destructive
+        onConfirm={() => eliminar()}
+        pending={eliminando}
+      />
     </>
   )
 }

@@ -29,7 +29,7 @@ export function RegistroPage() {
   const [comprobanteError, setComprobanteError] = useState<string | undefined>()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<RegistroForm>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
     defaultValues: { tipo_cuota: 'individual', consentimiento_tiendas: false },
   })
@@ -449,7 +449,7 @@ export function RegistroPage() {
 
             {/* Submit */}
             <div className="pt-2 pb-8 space-y-4">
-              <Button type="submit" disabled={isPending} className="w-full h-12 font-display font-bold text-base gap-2">
+              <Button type="submit" disabled={isPending || isSubmitting} className="w-full h-12 font-display font-bold text-base gap-2">
                 {isPending ? (
                   <><Loader2 className="h-4 w-4 animate-spin" />Enviando solicitud...</>
                 ) : (

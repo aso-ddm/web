@@ -4,9 +4,6 @@ import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, Loader2, Library, Search, MapPin, Archive, ChevronDown, ChevronUp, Download, RefreshCw,
 } from 'lucide-react'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { juegosApi } from '@/services/api/juegos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
 import { invalidarJuegos } from '@/lib/queryKeys'
@@ -65,7 +63,7 @@ export function GestionJuegosPage() {
       invalidarJuegos(queryClient)
       setEliminando(undefined)
     },
-    onError: (err: Error) => { toast.error(err.message); setEliminando(undefined) },
+    onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
   })
 
   const { mutate: retirar, isPending: retirandoPending } = useMutation({
@@ -76,7 +74,7 @@ export function GestionJuegosPage() {
       queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setRetirando(undefined)
     },
-    onError: (err: Error) => { toast.error(err.message); setRetirando(undefined) },
+    onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
   })
 
   const { mutate: reactivar, isPending: reactivandoPending } = useMutation({
@@ -87,7 +85,7 @@ export function GestionJuegosPage() {
       queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
       setReactivando(undefined)
     },
-    onError: (err: Error) => { toast.error(err.message); setReactivando(undefined) },
+    onError: (err: Error) => toast.error(err.message), // el diálogo sigue abierto para reintentar
   })
 
   const handleExportCsv = async () => {
@@ -312,77 +310,37 @@ export function GestionJuegosPage() {
         onClose={() => { setDialogOpen(false); setEditando(undefined) }}
       />
 
-      {/* Confirmar retirar */}
-      <AlertDialog open={!!retirando} onOpenChange={(v) => !v && setRetirando(undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Retirar «{retirando?.nombre}»?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              El juego quedará marcado como retirado y se registrará en el historial. No podrá prestarse.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="font-display font-bold bg-amber-600 text-white hover:bg-amber-700"
-              onClick={() => retirando && retirar(retirando.id)}
-              disabled={retirandoPending}
-            >
-              {retirandoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Archive className="h-4 w-4 mr-1" /> Retirar</>}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!retirando}
+        onOpenChange={(v) => !v && setRetirando(undefined)}
+        title={`¿Retirar «${retirando?.nombre}»?`}
+        description="El juego quedará marcado como retirado y se registrará en el historial. No podrá prestarse."
+        confirmLabel={<><Archive className="h-4 w-4 mr-1" /> Retirar</>}
+        confirmClassName="bg-amber-600 text-white hover:bg-amber-700"
+        onConfirm={() => retirando && retirar(retirando.id)}
+        pending={retirandoPending}
+      />
 
-      {/* Confirmar reactivar */}
-      <AlertDialog open={!!reactivando} onOpenChange={(v) => !v && setReactivando(undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Reactivar «{reactivando?.nombre}»?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              El juego volverá a estar disponible en la estantería y podrá prestarse de nuevo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="font-display font-bold"
-              onClick={() => reactivando && reactivar(reactivando.id)}
-              disabled={reactivandoPending}
-            >
-              {reactivandoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="h-4 w-4 mr-1" /> Reactivar</>}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!reactivando}
+        onOpenChange={(v) => !v && setReactivando(undefined)}
+        title={`¿Reactivar «${reactivando?.nombre}»?`}
+        description="El juego volverá a estar disponible en la estantería y podrá prestarse de nuevo."
+        confirmLabel={<><RefreshCw className="h-4 w-4 mr-1" /> Reactivar</>}
+        onConfirm={() => reactivando && reactivar(reactivando.id)}
+        pending={reactivandoPending}
+      />
 
-      {/* Confirmar eliminar */}
-      <AlertDialog open={!!eliminando} onOpenChange={(v) => !v && setEliminando(undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary">
-              ¿Eliminar «{eliminando?.nombre}»?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es irreversible. El juego se eliminará del catálogo permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-display">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="font-display font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => eliminando && eliminar(eliminando.id)}
-              disabled={eliminandoPending}
-            >
-              {eliminandoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Eliminar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!eliminando}
+        onOpenChange={(v) => !v && setEliminando(undefined)}
+        title={`¿Eliminar «${eliminando?.nombre}»?`}
+        description="Esta acción es irreversible. El juego se eliminará del catálogo permanentemente."
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={() => eliminando && eliminar(eliminando.id)}
+        pending={eliminandoPending}
+      />
     </>
   )
 }
