@@ -1,23 +1,20 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Wallet, Check, X, Users } from 'lucide-react'
+import { Wallet, Users } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEOHead } from '@/components/SEOHead'
 import { cuotasApi, type SocioCuotas } from '@/services/api/cuotas'
-import { situacion, mesEnPeriodo, type EstadoPago, type Situacion } from '@/lib/cuotas'
+import { esMoroso, mesEnPeriodo, type EstadoPago } from '@/lib/cuotas'
 import { cn } from '@/lib/utils'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-const TABS: { value: Situacion; label: string }[] = [
-  { value: 'moroso', label: 'Morosos' },
-  { value: 'pendiente', label: 'Pendientes de revisar' },
-  { value: 'al_corriente', label: 'Al corriente' },
-]
-// Clic en una celda: sin revisar → pagado → sin pagar → sin revisar
+type Tab = 'todos' | 'morosos'
+const ETIQUETA = { pagado: 'Pago realizado', sin_pagar: 'Pago no realizado', sin_revisar: 'Pendiente de revisar' }
+// Clic en una celda: pendiente de revisar → pago realizado → pago no realizado → pendiente de revisar
 const SIGUIENTE = (e: EstadoPago | undefined): EstadoPago | null =>
   e === undefined ? 'pagado' : e === 'pagado' ? 'sin_pagar' : null
 
@@ -26,9 +23,9 @@ const QK_CUOTAS = ['cuotas']
 export function CuotasPage() {
   const qc = useQueryClient()
   const hoy = new Date()
-  const [tab, setTab] = useState<Situacion>('pendiente')
+  const [tab, setTab] = useState<Tab>('todos')
   const [anio, setAnio] = useState(hoy.getFullYear())
-  // Socios tocados en esta pestaña: siguen visibles aunque cambie su situación, para poder seguir marcando
+  // Morosos tocados en la pestaña: siguen visibles aunque se pongan al día, para poder seguir marcando
   const [fijados, setFijados] = useState<Set<string>>(new Set())
 
   const { data, isLoading } = useQuery({ queryKey: QK_CUOTAS, queryFn: cuotasApi.getAll })
@@ -53,9 +50,8 @@ export function CuotasPage() {
     },
   })
 
-  const conSituacion = socios.map((s) => ({ ...s, situacion: situacion(s.fecha_alta, s.pagos_cuota, hoy) }))
-  const contar = (t: Situacion) => conSituacion.filter((s) => s.situacion === t).length
-  const visibles = conSituacion.filter((s) => s.situacion === tab || fijados.has(s.id))
+  const morosos = socios.filter((s) => esMoroso(s.fecha_alta, s.pagos_cuota, hoy))
+  const visibles = tab === 'todos' ? socios : socios.filter((s) => fijados.has(s.id) || morosos.includes(s))
 
   const primerAnio = Math.min(hoy.getFullYear(), ...socios.map((s) => new Date(s.fecha_alta).getFullYear()))
   const anios = Array.from({ length: hoy.getFullYear() - primerAnio + 1 }, (_, i) => hoy.getFullYear() - i)
@@ -72,7 +68,7 @@ export function CuotasPage() {
               Cuotas
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Pulsa un mes para cambiar su estado: sin revisar → pagado → sin pagar.
+              Pulsa un mes para cambiar su estado: pendiente de revisar → pago realizado → pago no realizado.
             </p>
           </div>
           <Select value={String(anio)} onValueChange={(v) => setAnio(Number(v))}>
@@ -83,13 +79,14 @@ export function CuotasPage() {
           </Select>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => { setTab(v as Situacion); setFijados(new Set()) }}>
-          <TabsList className="flex-wrap h-auto">
-            {TABS.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="font-display font-bold">
-                {t.label} ({isLoading ? '…' : contar(t.value)})
-              </TabsTrigger>
-            ))}
+        <Tabs value={tab} onValueChange={(v) => { setTab(v as Tab); setFijados(new Set()) }}>
+          <TabsList>
+            <TabsTrigger value="todos" className="font-display font-bold">
+              Todos ({isLoading ? '…' : socios.length})
+            </TabsTrigger>
+            <TabsTrigger value="morosos" className="font-display font-bold">
+              Morosos ({isLoading ? '…' : morosos.length})
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -102,7 +99,7 @@ export function CuotasPage() {
             ) : visibles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-sm text-muted-foreground">No hay socios en esta categoría</p>
+                <p className="text-sm text-muted-foreground">{tab === 'morosos' ? 'No hay socios morosos' : 'No hay socios'}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -134,7 +131,7 @@ export function CuotasPage() {
                               return <td key={mes} className="text-center text-muted-foreground/40">—</td>
                             }
                             const estado = s.pagos_cuota.find((p) => p.anio === anio && p.mes === mes)?.estado
-                            const etiqueta = estado === 'pagado' ? 'pagado' : estado === 'sin_pagar' ? 'sin pagar' : 'sin revisar'
+                            const etiqueta = ETIQUETA[estado ?? 'sin_revisar']
                             return (
                               <td key={mes} className="px-1 py-1 text-center">
                                 <button
@@ -143,13 +140,13 @@ export function CuotasPage() {
                                   title={`${nombreMes} ${anio}: ${etiqueta}`}
                                   aria-label={`${s.nombre} ${s.apellidos}, ${nombreMes} ${anio}: ${etiqueta}`}
                                   className={cn(
-                                    'h-8 w-8 rounded-md inline-flex items-center justify-center border transition-colors',
+                                    'w-24 min-h-10 px-1.5 py-1 rounded-md inline-flex items-center justify-center border text-xs leading-tight font-medium transition-colors',
                                     estado === 'pagado' && 'bg-emerald-600/15 border-emerald-600/40 text-emerald-700',
                                     estado === 'sin_pagar' && 'bg-destructive/15 border-destructive/40 text-destructive',
                                     !estado && 'border-dashed border-border text-muted-foreground hover:bg-accent',
                                   )}
                                 >
-                                  {estado === 'pagado' ? <Check className="h-4 w-4" /> : estado === 'sin_pagar' ? <X className="h-4 w-4" /> : '·'}
+                                  {etiqueta}
                                 </button>
                               </td>
                             )
