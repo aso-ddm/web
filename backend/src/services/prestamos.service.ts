@@ -1,6 +1,7 @@
 import { PrismaClient, EstadoPrestamo, TipoLogJuego } from '@prisma/client'
 import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema'
 import type { LogsJuegoService } from './logs_juego.service'
+import { finDelDiaMadrid } from '../lib/fechas'
 
 export class PrestamosService {
   constructor(
@@ -14,12 +15,6 @@ export class PrestamosService {
     const config = await this.prisma.configuracion.findUnique({ where: { clave } })
     const n = config ? parseInt(config.valor, 10) : NaN
     return Number.isNaN(n) ? fallback : n
-  }
-
-  private addDays(date: Date, days: number): Date {
-    const result = new Date(date)
-    result.setDate(result.getDate() + days)
-    return result
   }
 
   // ── Socio ─────────────────────────────────────────────────────────────────
@@ -64,7 +59,7 @@ export class PrestamosService {
 
     const diasPrestamo = await this.getConfigNum('dias_prestamo', 14)
     const ahora = new Date()
-    const fechaLimite = this.addDays(ahora, diasPrestamo)
+    const fechaLimite = finDelDiaMadrid(ahora, diasPrestamo) // vence al acabar el día
 
     const prestamo = await this.prisma.$transaction(async (tx) => {
       // Reserva atómica: si dos socios piden el mismo juego a la vez, solo uno lo consigue
@@ -111,7 +106,7 @@ export class PrestamosService {
       throw new Error(`Máximo de renovaciones alcanzado (${maxRenovaciones})`)
     }
 
-    const nuevaFechaLimite = this.addDays(prestamo.fecha_limite, diasRenovacion)
+    const nuevaFechaLimite = finDelDiaMadrid(prestamo.fecha_limite, diasRenovacion)
 
     // Condición en el where: dos renovaciones simultáneas no pueden pasar del máximo
     const { count } = await this.prisma.prestamo.updateMany({

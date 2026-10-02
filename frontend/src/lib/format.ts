@@ -6,7 +6,8 @@ export function formatDate(date?: string | null, month: 'short' | 'long' = 'shor
   return new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month, year: 'numeric' })
 }
 
-/** Días hasta la fecha límite (negativo si ya pasó) */
+/** Días hasta la fecha límite: 0 = vence hoy, negativo = vencido (-1 desde el día siguiente).
+ *  El backend guarda la fecha límite a las 23:59:59 de Madrid, así que floor da días de calendario. */
 export function diasRestantes(fechaLimite: string) {
-  return Math.ceil((new Date(fechaLimite).getTime() - Date.now()) / DIA_MS)
+  return Math.floor((new Date(fechaLimite).getTime() - Date.now()) / DIA_MS)
 }
