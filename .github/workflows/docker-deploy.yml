@@ -49,19 +49,29 @@ jobs:
     name: Deploy to server
     needs: build-push
     runs-on: ubuntu-latest
+    env:
+      IMAGES: asoddm/dragondemadera-backend:latest asoddm/dragondemadera-frontend:latest
     steps:
-      - name: SSH deploy
-        uses: appleboy/ssh-action@v1
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            cd /opt/web
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-            # pull antes de parar nada: si falla, lo que está corriendo sigue en pie
-            # ponytail: 3 reintentos ante cortes puntuales con Docker Hub (TLS handshake timeout)
-            for i in 1 2 3; do docker compose pull && break; [ "$i" = 3 ] && exit 1; sleep 15; done
-            docker compose up -d --remove-orphans
-            docker image prune -f
+      - name: Configurar SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          echo "SSH=ssh -i $HOME/.ssh/id_deploy -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" >> "$GITHUB_ENV"
+
+      # El servidor no siempre llega a Docker Hub (13/10/2026: TLS handshake timeout desde el VPS):
+      # el runner descarga las imágenes y se las pasa por SSH. Si falla, lo que está corriendo sigue en pie.
+      - name: Enviar imágenes al servidor
+        run: |
+          for img in $IMAGES; do docker pull "$img"; done
+          docker save $IMAGES | gzip | $SSH 'gunzip | docker load'
+
+      # db (postgres) ya está en el servidor; up -d no descarga imágenes que existen en local
+      - name: Arrancar contenedores
+        run: $SSH 'set -e; cd /opt/web; docker compose up -d --remove-orphans; docker image prune -f'
