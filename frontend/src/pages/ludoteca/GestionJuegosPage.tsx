@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Plus, Pencil, Trash2, Loader2, Library, Search, MapPin, Archive, ChevronDown, ChevronUp, Download, RefreshCw,
+  Plus, Pencil, Trash2, Loader2, Library, Search, MapPin, User, Users, StickyNote, Archive, ChevronDown, ChevronUp, Download, RefreshCw,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -190,23 +190,29 @@ export function GestionJuegosPage() {
                           <div className="flex items-center gap-4 px-4 py-3">
                             <div className="flex-1 min-w-0">
                               <p className="font-display font-bold text-sm">{juego.nombre}</p>
-                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
                                 {juego.localizacion && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />{juego.localizacion}
-                                  </span>
+                                  <p className="flex items-center gap-1.5">
+                                    <MapPin className="h-3 w-3 shrink-0" />{juego.localizacion}
+                                  </p>
                                 )}
+                                <p className="flex items-center gap-1.5">
+                                  <User className="h-3 w-3 shrink-0" />
+                                  {juego.propietario ? `${juego.propietario.nombre} ${juego.propietario.apellidos}` : 'Club'}
+                                </p>
                                 {(juego.num_jugadores_min || juego.num_jugadores_max) && (
-                                  <span className="text-xs text-muted-foreground">
+                                  <p className="flex items-center gap-1.5">
+                                    <Users className="h-3 w-3 shrink-0" />
                                     {juego.num_jugadores_min}
                                     {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
-                                      ? `–${juego.num_jugadores_max}` : ''}{' '}j.
-                                  </span>
+                                      ? `–${juego.num_jugadores_max}` : ''} jugadores
+                                  </p>
                                 )}
-                                {juego.propietario && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {juego.propietario.nombre} {juego.propietario.apellidos}
-                                  </span>
+                                {juego.notas && (
+                                  <p className="flex items-start gap-1.5">
+                                    <StickyNote className="h-3 w-3 shrink-0 mt-0.5" />
+                                    <span className="whitespace-pre-line break-words">{juego.notas}</span>
+                                  </p>
                                 )}
                               </div>
                             </div>

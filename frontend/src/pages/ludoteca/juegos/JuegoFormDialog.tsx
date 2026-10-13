@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog'
@@ -12,11 +12,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { cn } from '@/lib/utils'
 import { juegosApi } from '@/services/api/juegos'
 import { invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
 import type { Juego } from '@/types/api'
+
+const etiquetaSocio = (s: { nombre: string; apellidos: string; apodo: string | null }) =>
+  `${s.nombre} ${s.apellidos}${s.apodo ? ` (${s.apodo})` : ''}`
 
 const juegoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -62,6 +67,13 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
   })
 
   const propietarioId = watch('propietario_id')
+  const propietario = socios.find((s) => s.id === propietarioId)
+  const [propietarioAbierto, setPropietarioAbierto] = useState(false)
+
+  const elegirPropietario = (id: string) => {
+    setValue('propietario_id', id)
+    setPropietarioAbierto(false)
+  }
 
   useEffect(() => {
     if (open) {
@@ -130,23 +142,44 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
             )}
           </div>
           <div className="space-y-1.5">
-            <Label className="font-display font-bold text-xs">Propietario</Label>
-            <Select
-              value={propietarioId ?? ''}
-              onValueChange={(v) => setValue('propietario_id', v === 'club' ? '' : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Club (por defecto)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="club">Club (sin propietario específico)</SelectItem>
-                {socios.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.nombre} {s.apellidos}{s.apodo ? ` (${s.apodo})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="propietario" className="font-display font-bold text-xs">Propietario</Label>
+            <Popover open={propietarioAbierto} onOpenChange={setPropietarioAbierto} modal>
+              <PopoverTrigger asChild>
+                <Button
+                  id="propietario"
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={propietarioAbierto}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className={cn('truncate', !propietario && 'text-muted-foreground')}>
+                    {propietario ? etiquetaSocio(propietario) : 'Club (por defecto)'}
+                  </span>
+                  <ChevronsUpDown className="opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar socio..." />
+                  <CommandList>
+                    <CommandEmpty>Ningún socio coincide</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem value="Club (sin propietario específico)" onSelect={() => elegirPropietario('')}>
+                        Club (sin propietario específico)
+                        <Check className={cn('ml-auto', propietarioId ? 'opacity-0' : 'opacity-100')} />
+                      </CommandItem>
+                      {socios.map((s) => (
+                        <CommandItem key={s.id} value={`${etiquetaSocio(s)} ${s.id}`} onSelect={() => elegirPropietario(s.id)}>
+                          {etiquetaSocio(s)}
+                          <Check className={cn('ml-auto', propietarioId === s.id ? 'opacity-100' : 'opacity-0')} />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notas" className="font-display font-bold text-xs">Notas</Label>
