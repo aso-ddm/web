@@ -25,6 +25,9 @@ const USUARIO_SELECT = {
   fecha_nacimiento: true,
   alias_telegram: true,
   telegram_chat_id: true,
+  telegram_linked_at: true,
+  direccion: true,
+  consentimiento_tiendas: true,
   apodo: true,
   tipo_cuota: true,
   roles: true,
@@ -142,6 +145,14 @@ const updateUsuarioSchema = z.object({
   tipo_cuota: z.nativeEnum(TipoCuota).optional(),
   alias_telegram: z.string().optional().nullable(),
   apodo: z.string().optional().nullable(),
+  fecha_nacimiento: z.coerce.date().nullable().optional(),
+  direccion: z.string().nullable().optional(),
+  consentimiento_tiendas: z.boolean().optional(),
+  tiene_llaves: z.boolean().optional(),
+  fecha_alta: z.coerce.date().nullable().optional(),
+  fecha_baja: z.coerce.date().nullable().optional(),
+  // Solo para desvincular: la vinculación la hace el propio socio con el bot
+  telegram_chat_id: z.null().optional(),
   password: passwordSchema.optional(),
 })
 
@@ -153,7 +164,9 @@ router.put('/usuarios/:id', async (req, res) => {
     return
   }
   const { password: newPassword, ...rest } = parsed.data
-  if (rest.roles || rest.estado) {
+  if (rest.telegram_chat_id === null) Object.assign(rest, { telegram_linked_at: null })
+  const pedido = { ...rest } // lo que el admin fija a mano prevalece sobre los valores automáticos
+  if (rest.roles || rest.estado || rest.tiene_llaves) {
     const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true, estado: true, fecha_alta: true } })
     if (!actual) {
       res.status(404).json({ error: 'Usuario no encontrado' })
@@ -166,14 +179,18 @@ router.put('/usuarios/:id', async (req, res) => {
     // Mismo ciclo de vida que aprobar / dar de baja / reactivar
     if (rest.estado && rest.estado !== actual.estado) {
       if (rest.estado === EstadoSocio.activo) {
-        Object.assign(rest, { fecha_baja: null, baja_por_id: null, ...(actual.fecha_alta ? {} : { fecha_alta: new Date(), aprobado_por_id: req.user.id }) })
+        Object.assign(rest, { fecha_baja: null, baja_por_id: null, ...(actual.fecha_alta ? {} : { fecha_alta: new Date(), aprobado_por_id: req.user.id }), ...pedido })
       } else if (rest.estado === EstadoSocio.baja) {
-        Object.assign(rest, { fecha_baja: new Date(), baja_por_id: req.user.id, tiene_llaves: false })
+        Object.assign(rest, { fecha_baja: new Date(), baja_por_id: req.user.id, tiene_llaves: false, ...pedido })
       }
       // De pendiente a baja es un rechazo, no una baja: nunca fue socio
       const tipo = rest.estado === EstadoSocio.activo ? TipoCambioEstado.alta
         : rest.estado === EstadoSocio.baja && actual.fecha_alta ? TipoCambioEstado.baja : null
       if (tipo) Object.assign(rest, { historial_estado: { create: { tipo, por_id: req.user.id } } })
+    }
+    if (rest.tiene_llaves && (rest.estado ?? actual.estado) !== EstadoSocio.activo) {
+      res.status(400).json({ error: 'Solo se pueden asignar llaves a socios activos' })
+      return
     }
     if (rest.roles) {
       if (req.params.id === req.user.id) {

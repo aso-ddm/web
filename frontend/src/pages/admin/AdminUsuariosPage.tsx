@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, Loader2, UserX, Shield, Trash2, Edit2 } from 'lucide-react'
+import { Search, Loader2, UserX, Shield, Trash2, Edit2, Save } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -23,6 +25,49 @@ import type { SocioAdmin } from '@/services/api/socios'
 import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { passwordSchema } from '@/pages/registro/schema'
+
+const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50'
+
+const CAMPOS_TEXTO = [
+  ['nombre', 'Nombre', 'text', false],
+  ['apellidos', 'Apellidos', 'text', false],
+  ['email', 'Email', 'email', true],
+  ['dni', 'DNI', 'text', false],
+  ['telefono', 'Teléfono', 'tel', false],
+  ['fecha_nacimiento', 'Nacimiento', 'date', false],
+  ['apodo', 'Apodo', 'text', false],
+  ['direccion', 'Dirección', 'text', true],
+  ['alias_telegram', 'Alias de Telegram', 'text', false],
+  ['fecha_alta', 'Alta', 'date', false],
+  ['fecha_baja', 'Baja', 'date', false],
+] as const
+
+type FormDatos = Record<(typeof CAMPOS_TEXTO)[number][0], string> & {
+  tipo_cuota: string
+  estado: string
+  tiene_llaves: boolean
+  consentimiento_tiendas: boolean
+}
+
+function aFormulario(u: SocioAdmin): FormDatos {
+  return {
+    nombre: u.nombre,
+    apellidos: u.apellidos,
+    email: u.email,
+    dni: u.dni,
+    telefono: u.telefono ?? '',
+    fecha_nacimiento: u.fecha_nacimiento?.slice(0, 10) ?? '',
+    apodo: u.apodo ?? '',
+    direccion: u.direccion ?? '',
+    alias_telegram: u.alias_telegram ?? '',
+    fecha_alta: u.fecha_alta?.slice(0, 10) ?? '',
+    fecha_baja: u.fecha_baja?.slice(0, 10) ?? '',
+    tipo_cuota: u.tipo_cuota,
+    estado: u.estado,
+    tiene_llaves: u.tiene_llaves,
+    consentimiento_tiendas: !!u.consentimiento_tiendas,
+  }
+}
 
 // ponytail: administrador no es asignable desde la app (solo BD/seed)
 function UsuarioDetalle({
@@ -66,6 +111,26 @@ function UsuarioDetalle({
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const esAdmin = usuario.roles.includes('administrador')
+  const { register, handleSubmit, formState: { isDirty, dirtyFields } } = useForm<FormDatos>({
+    defaultValues: aFormulario(usuario),
+  })
+
+  const { mutate: guardarDatos, isPending: guardando } = useMutation({
+    // Solo se envía lo modificado; vacío = null en los campos opcionales
+    mutationFn: (v: FormDatos) => adminApi.updateUsuario(usuario.id, Object.fromEntries(
+      (Object.keys(dirtyFields) as (keyof FormDatos)[]).map((k) => [k, v[k] === '' ? null : v[k]]),
+    )),
+    onSuccess: () => { toast.success('Datos actualizados'); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const { mutate: desvincularTelegram } = useMutation({
+    mutationFn: () => adminApi.updateUsuario(usuario.id, { telegram_chat_id: null }),
+    onSuccess: () => { toast.success('Telegram desvinculado'); invalidar() },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const toggleRol = (rol: Rol) => setRolesEditados((prev) => toggleRolLista(prev, rol))
 
   const rolesChanged = JSON.stringify([...rolesEditados].sort()) !== JSON.stringify([...usuario.roles].sort())
@@ -73,30 +138,52 @@ function UsuarioDetalle({
   return (
     <>
       <div className="space-y-5 py-2">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-xs text-muted-foreground font-display">Estado</p>
-            <Badge variant={ESTADO_SOCIO_VARIANT[usuario.estado]} className="mt-0.5 font-display capitalize">
-              {usuario.estado}
-            </Badge>
+        <form onSubmit={handleSubmit((v) => guardarDatos(v))} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {CAMPOS_TEXTO.map(([campo, label, type, ancho]) => (
+              <div key={campo} className={ancho ? 'col-span-2 space-y-1' : 'space-y-1'}>
+                <Label htmlFor={campo} className="text-xs text-muted-foreground font-display">{label}</Label>
+                <Input id={campo} type={type} className="text-sm" {...register(campo)} />
+              </div>
+            ))}
+            <div className="space-y-1">
+              <Label htmlFor="tipo_cuota" className="text-xs text-muted-foreground font-display">Cuota</Label>
+              <select id="tipo_cuota" className={SELECT_CLASS} {...register('tipo_cuota')}>
+                <option value="individual">Individual</option>
+                <option value="conjunta">Conjunta</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="estado" className="text-xs text-muted-foreground font-display">Estado</Label>
+              {/* El backend no deja cambiar el estado de un administrador */}
+              <select id="estado" className={SELECT_CLASS} disabled={esAdmin} {...register('estado')}>
+                <option value="pendiente">Pendiente</option>
+                <option value="activo">Activo</option>
+                <option value="baja">Baja</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="accent-primary" {...register('tiene_llaves')} /> Tiene llaves
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="accent-primary" {...register('consentimiento_tiendas')} /> Consentimiento tiendas
+            </label>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-display">Alta</p>
-            <p className="font-medium">{formatDate(usuario.fecha_alta)}</p>
-          </div>
-          <div className="col-span-2">
-            <p className="text-xs text-muted-foreground font-display">Email</p>
-            <p className="font-medium text-sm">{usuario.email}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-display">DNI</p>
-            <p className="font-medium">{usuario.dni}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground font-display">Cuota</p>
-            <p className="font-medium capitalize">{usuario.tipo_cuota}</p>
-          </div>
-        </div>
+          <p className="text-xs text-muted-foreground">
+            Registrado el {formatDate(usuario.created_at)}
+            {usuario.telegram_chat_id && <> · Telegram vinculado{' '}
+              <button type="button" className="underline hover:text-destructive" onClick={() => desvincularTelegram()}>
+                (desvincular)
+              </button>
+            </>}
+          </p>
+          {isDirty && (
+            <Button type="submit" size="sm" disabled={guardando} className="font-display font-bold gap-1">
+              {guardando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Guardar datos
+            </Button>
+          )}
+        </form>
 
         {/* Roles — nadie cambia sus propios roles */}
         {!esUnoMismo && <div className="space-y-3">
@@ -156,7 +243,7 @@ function UsuarioDetalle({
         </div>
 
         {/* Eliminar — las cuentas de administrador no se borran desde la app */}
-        {!usuario.roles.includes('administrador') && <div className="space-y-2 pt-2 border-t border-destructive/20">
+        {!esAdmin && <div className="space-y-2 pt-2 border-t border-destructive/20">
           <p className="font-display font-bold text-sm text-destructive">Zona destructiva</p>
           <Button
             variant="outline"

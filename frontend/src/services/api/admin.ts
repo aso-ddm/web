@@ -11,6 +11,6 @@ export const adminApi = {
       `/admin/usuarios?${q.toString()}`,
     )
   },
-  updateUsuario: (id: string, data: { roles?: Rol[]; password?: string }) => api.put(`/admin/usuarios/${id}`, data),
+  updateUsuario: (id: string, data: Partial<Record<keyof SocioAdmin | 'password', unknown>> & { roles?: Rol[] }) => api.put(`/admin/usuarios/${id}`, data),
   deleteUsuario: (id: string) => api.delete(`/admin/usuarios/${id}`),
 }
