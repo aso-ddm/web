@@ -190,30 +190,31 @@ export function GestionJuegosPage() {
                           <div className="flex items-center gap-4 px-4 py-3">
                             <div className="flex-1 min-w-0">
                               <p className="font-display font-bold text-sm">{juego.nombre}</p>
-                              <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                                {juego.localizacion && (
-                                  <p className="flex items-center gap-1.5">
-                                    <MapPin className="h-3 w-3 shrink-0" />{juego.localizacion}
-                                  </p>
-                                )}
-                                <p className="flex items-center gap-1.5">
+                              {/* Celdas fijas con "—" si falta el dato: así las columnas se alinean entre juegos */}
+                              <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5 min-w-0" title="Ubicación">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{juego.localizacion || '—'}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 min-w-0" title="Propietario">
                                   <User className="h-3 w-3 shrink-0" />
-                                  {juego.propietario ? `${juego.propietario.nombre} ${juego.propietario.apellidos}` : 'Club'}
-                                </p>
-                                {(juego.num_jugadores_min || juego.num_jugadores_max) && (
-                                  <p className="flex items-center gap-1.5">
-                                    <Users className="h-3 w-3 shrink-0" />
-                                    {juego.num_jugadores_min}
-                                    {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
-                                      ? `–${juego.num_jugadores_max}` : ''} jugadores
-                                  </p>
-                                )}
-                                {juego.notas && (
-                                  <p className="flex items-start gap-1.5">
-                                    <StickyNote className="h-3 w-3 shrink-0 mt-0.5" />
-                                    <span className="whitespace-pre-line break-words">{juego.notas}</span>
-                                  </p>
-                                )}
+                                  <span className="truncate">
+                                    {juego.propietario ? `${juego.propietario.nombre} ${juego.propietario.apellidos}` : 'Club'}
+                                  </span>
+                                </span>
+                                <span className="flex items-center gap-1.5 min-w-0" title="Nº de jugadores">
+                                  <Users className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">
+                                    {juego.num_jugadores_min || juego.num_jugadores_max
+                                      ? `${juego.num_jugadores_min ?? '?'}${juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
+                                        ? `–${juego.num_jugadores_max}` : ''} jugadores`
+                                      : '—'}
+                                  </span>
+                                </span>
+                                <span className="flex items-center gap-1.5 min-w-0" title={juego.notas || 'Notas'}>
+                                  <StickyNote className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{juego.notas || '—'}</span>
+                                </span>
                               </div>
                             </div>
 
