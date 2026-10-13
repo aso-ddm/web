@@ -64,10 +64,6 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     label: 'Reglamento interno (enlace)',
     description: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
   },
-  iban_club: {
-    label: 'IBAN del club',
-    description: 'Número de cuenta bancaria para el pago de cuotas (se incluye en los recordatorios de pago)',
-  },
 }
 
 function ConfigField({ config }: { config: ConfigItem }) {
@@ -288,7 +284,7 @@ export function ConfiguracionPage() {
 
   const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
   const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
-  const comunicacionConfigs = ['telegram_bot_username', 'iban_club']
+  const comunicacionConfigs = ['telegram_bot_username']
     .map((clave) => (data?.data ?? []).find((c) => c.clave === clave))
     .filter(Boolean) as typeof configs
 

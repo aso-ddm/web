@@ -15,7 +15,7 @@ La **Fase 2** añade las **áreas de gestión para socios**: registro, login, ge
 - `préstamos`: préstamo directo (reserva atómica del juego) → renovación → devolución
 - `cuotas`: control mensual de pagos (directiva)
 - `solicitudes-juego` y `logs de juego`: cesiones de socios e historial de cada juego
-- `telegram`: vinculación, anuncios, recordatorios y webhook del bot
+- `telegram`: vinculación, anuncios y webhook del bot
 - `admin`: gestión completa de usuarios (rol administrador)
 - `visitas`: registro con visitas gratuitas configurables y cobro automático
 - `configuración`: parámetros de negocio ajustables por directiva

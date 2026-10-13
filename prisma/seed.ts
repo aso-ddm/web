@@ -162,12 +162,6 @@ Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o e
       descripcion: 'Enlaces de interés mostrados a los socios en Mi panel',
     },
     {
-      clave: 'iban_club',
-      valor: 'ES4730230180596406354008',
-      tipo: 'texto',
-      descripcion: 'IBAN de la cuenta bancaria del club para pagos de cuotas',
-    },
-    {
       clave: 'texto_consentimiento_tiendas',
       tipo: 'texto_largo',
       descripcion: 'Texto del checkbox de consentimiento de datos con tiendas colaboradoras (visible en el formulario de alta)',

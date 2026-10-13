@@ -65,50 +65,6 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
   res.json({ data: { enviados, errores, total: socios.length } })
 })
 
-// POST /api/telegram/recordatorio-pago — envía recordatorio de cuota (tesorero)
-router.post('/recordatorio-pago', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  if (!BOT_TOKEN) {
-    res.status(500).json({ error: 'BOT_TOKEN no configurado' })
-    return
-  }
-
-  const { destinatarios } = req.body
-  const idsFiltro = Array.isArray(destinatarios) && destinatarios.length > 0 ? destinatarios : undefined
-
-  const [socios, configIndividual, configAdicional, configIban] = await Promise.all([
-    prisma.usuario.findMany({
-      where: {
-        telegram_chat_id: { not: null },
-        estado: 'activo',
-        NOT: { roles: { has: 'administrador' } }, // cuenta técnica: no recibe anuncios (el front tampoco la cuenta)
-        ...(idsFiltro ? { id: { in: idsFiltro } } : {}),
-      },
-      select: { telegram_chat_id: true, nombre: true, tipo_cuota: true },
-    }),
-    prisma.configuracion.findUnique({ where: { clave: 'precio_cuota_individual' } }),
-    prisma.configuracion.findUnique({ where: { clave: 'precio_cuota_adicional' } }),
-    prisma.configuracion.findUnique({ where: { clave: 'iban_club' } }),
-  ])
-
-  const precioIndividual = configIndividual?.valor ?? '15'
-  const precioAdicional = configAdicional?.valor ?? '5'
-  const iban = configIban?.valor ?? 'IBAN no configurado'
-
-  const mensajes = socios
-    .filter((s) => s.telegram_chat_id)
-    .map((s) => {
-      const precio = s.tipo_cuota === 'individual' ? precioIndividual : precioAdicional
-      return {
-        chat_id: s.telegram_chat_id!.toString(),
-        text: `🐉 <b>Recordatorio de cuota — Dragón de Madera</b>\n\nHola ${s.nombre}, recuerda realizar el pago de tu cuota mensual de <b>${precio}€</b> entre el día 1 y el 15 del mes.\n\nTransferencia al IBAN: <code>${iban}</code>\n\n¡Gracias!`,
-        parse_mode: 'HTML',
-      }
-    })
-
-  const { enviados, errores } = await sendBatch(mensajes)
-  res.json({ data: { enviados, errores, total: socios.length } })
-})
-
 // POST /api/telegram/bienvenida/:socioId — envía bienvenida Telegram a un socio (directiva)
 router.post('/bienvenida/:socioId', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const socio = await prisma.usuario.findUnique({
