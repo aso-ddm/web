@@ -1,4 +1,6 @@
-import 'dotenv/config'
+// Carga backend/.env y, si falta alguna variable, el .env de la raíz del monorepo (pnpm dev:backend corre en backend/).
+// require y no import: tiene que ejecutarse antes que los módulos que leen process.env al cargarse (auth.ts)
+require('dotenv').config({ path: ['.env', '../.env'] })
 import './types/index'
 import express from 'express'
 // Express 4 no captura promesas rechazadas: esto las manda al errorHandler en vez de tumbar el proceso

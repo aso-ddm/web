@@ -1,0 +1,24 @@
+# Base de datos para desarrollo local (solo Postgres; backend y frontend corren con pnpm dev).
+# Puerto 5433 para no chocar con un Postgres nativo en 5432.
+#   pnpm db:up      → arranca
+#   pnpm db:setup   → migra + carga datos de prueba (BORRA lo que haya)
+services:
+  db:
+    container_name: dragondemadera_db_dev
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dragon
+      POSTGRES_PASSWORD: dragon
+      POSTGRES_DB: dragondb
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dragon -d dragondb"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata_dev:
