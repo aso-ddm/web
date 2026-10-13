@@ -395,19 +395,21 @@ export function AdminUsuariosPage() {
       </div>
 
       <Sheet open={!!usuarioSeleccionado} onOpenChange={(v) => !v && setUsuarioSeleccionado(null)}>
-        <SheetContent className="overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           {usuarioSeleccionado && (
             <>
-              <SheetHeader className="mb-4">
+              <SheetHeader>
                 <SheetTitle className="font-display text-primary">
                   {usuarioSeleccionado.nombre} {usuarioSeleccionado.apellidos}
                 </SheetTitle>
                 <SheetDescription>{usuarioSeleccionado.email}</SheetDescription>
               </SheetHeader>
-              <UsuarioDetalle
-                usuario={usuarioSeleccionado}
-                onClose={() => setUsuarioSeleccionado(null)}
-              />
+              <div className="px-4 pb-6">
+                <UsuarioDetalle
+                  usuario={usuarioSeleccionado}
+                  onClose={() => setUsuarioSeleccionado(null)}
+                />
+              </div>
             </>
           )}
         </SheetContent>

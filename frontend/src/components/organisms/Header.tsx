@@ -113,7 +113,7 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]" aria-describedby={undefined}>
               <SheetTitle className="sr-only">Menú</SheetTitle>
-              <nav className={`flex flex-col ${SPACING.gapSm} ${SPACING.marginTopMd} px-5 pb-6`}>
+              <nav className={`flex flex-col ${SPACING.gapSm} ${SPACING.marginTopMd} px-4 pb-6`}>
                 {navigationItems.map((item) => (
                   <NavLink
                     key={item.label}
