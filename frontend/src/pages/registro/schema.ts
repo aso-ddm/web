@@ -21,17 +21,18 @@ export const dniSchema = z
     return dni[8] === DNI_LETTERS[num % 23]
   }, 'La letra del DNI/NIE no es correcta')
 
-const fechaNacimientoSchema = z
+// Fecha local de hoy en YYYY-MM-DD: <input type="date"> da ese formato y se compara como texto, sin zonas horarias
+const hoy = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Anterior a hoy y mayor de edad (cumple 18 hoy o antes; un 29 de febrero cumple el 1 de marzo). Igual que el backend
+export const fechaNacimientoSchema = z
   .string()
   .min(1, 'La fecha de nacimiento es obligatoria')
-  .refine((val) => new Date(val) <= new Date(), 'La fecha de nacimiento no puede ser en el futuro')
-  .refine((val) => {
-    const date = new Date(val)
-    const now = new Date()
-    const age = now.getFullYear() - date.getFullYear() -
-      (now.getMonth() < date.getMonth() || (now.getMonth() === date.getMonth() && now.getDate() < date.getDate()) ? 1 : 0)
-    return age >= 16
-  }, 'Debes tener al menos 16 años para registrarte')
+  .refine((f) => f < hoy(), 'La fecha de nacimiento debe ser anterior a hoy')
+  .refine((f) => `${Number(f.slice(0, 4)) + 18}${f.slice(4)}` <= hoy(), 'Debes ser mayor de edad para registrarte')
 
 const miembroAdicionalSchema = z
   .object({
