@@ -222,6 +222,14 @@ describe('AuthService.pedirLlaves', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }))
     await expect(service.pedirLlaves('u1')).resolves.toBeUndefined()
     expect(JSON.parse(fetchSpy.mock.calls[0][1]!.body as string).chat_id).toBe('7')
+    expect(prisma.usuario.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { llaves_solicitadas_at: expect.any(Date) } })
+  })
+
+  it('ya pidió hace menos de 1 mes → 409 sin avisar', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socio(haceMeses(8)), llaves_solicitadas_at: new Date() })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    await expect(service.pedirLlaves('u1')).rejects.toThrow('Ya has pedido las llaves')
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('ningún secretario recibe el aviso → error', async () => {

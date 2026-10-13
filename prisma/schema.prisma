@@ -102,6 +102,7 @@ model Usuario {
   fecha_alta              DateTime?
   fecha_baja              DateTime?
   tiene_llaves            Boolean     @default(false)
+  llaves_solicitadas_at   DateTime?
 
   // Trazabilidad — quién aprobó el alta, quién dio de baja
   aprobado_por_id        String?

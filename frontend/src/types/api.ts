@@ -33,6 +33,7 @@ export interface Usuario {
   estado: EstadoSocio
   fecha_alta?: string | null
   tiene_llaves: boolean
+  llaves_solicitadas_at?: string | null
 }
 
 // ── Auth payloads ────────────────────────────────────────────────────────────

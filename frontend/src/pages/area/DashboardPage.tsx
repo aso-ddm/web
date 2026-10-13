@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle } from 'lucide-react'
@@ -27,6 +27,15 @@ function fechaPuedePedirLlaves(fechaAlta: string): Date {
   const d = new Date(fechaAlta)
   d.setMonth(d.getMonth() + MESES_PARA_LLAVES)
   return d
+}
+
+// Tras pedir llaves, el botón no vuelve hasta pasado 1 mes (el backend aplica la misma regla).
+// Devuelve los días que faltan (0 = ya puede volver a pedirlas)
+function diasParaRepetirSolicitudLlaves(solicitadas?: string | null): number {
+  if (!solicitadas) return 0
+  const d = new Date(solicitadas)
+  d.setMonth(d.getMonth() + 1)
+  return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86_400_000))
 }
 
 const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
@@ -70,15 +79,21 @@ export function DashboardPage() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const { mutate: pedirLlaves, isPending: pidiendoLlaves, isSuccess: llavesPedidas } = useMutation({
+  const queryClient = useQueryClient()
+  const { mutate: pedirLlaves, isPending: pidiendoLlaves } = useMutation({
     mutationFn: () => authApi.pedirLlaves(),
-    onSuccess: () => toast.success('Hemos avisado al secretario. Se pondrá en contacto contigo.'),
+    onSuccess: () => {
+      toast.success('Ya hemos avisado al secretario. Espera a que se ponga en contacto contigo por Telegram.')
+      // Devolver la promesa mantiene el botón en "Enviando…" hasta que llega el /me actualizado
+      return queryClient.invalidateQueries({ queryKey: ['me'] })
+    },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'No se pudo enviar la solicitud'),
   })
 
   const usuario = meData?.data
   const fechaLlaves = usuario?.fecha_alta ? fechaPuedePedirLlaves(usuario.fecha_alta) : null
   const puedePedirLlaves = !!fechaLlaves && fechaLlaves <= new Date()
+  const diasParaPedirLlaves = diasParaRepetirSolicitudLlaves(usuario?.llaves_solicitadas_at)
   const prestamosActivos = prestamosData?.data.filter(
     (p) => p.estado === 'activo',
   ) ?? []
@@ -182,18 +197,33 @@ export function DashboardPage() {
               </div>
               {!loadingMe && usuario && !usuario.tiene_llaves && usuario.estado === 'activo' && (
                 puedePedirLlaves ? (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs text-emerald-700">Ya llevas {MESES_PARA_LLAVES} meses como socio: puedes pedir las llaves.</p>
-                    <Button
-                      size="sm"
-                      className="w-full font-display gap-2"
-                      onClick={() => pedirLlaves()}
-                      disabled={pidiendoLlaves || llavesPedidas}
-                    >
-                      <Key className="h-3.5 w-3.5" />
-                      {llavesPedidas ? 'Solicitud enviada' : pidiendoLlaves ? 'Enviando…' : 'Pedir llaves'}
-                    </Button>
-                  </div>
+                  diasParaPedirLlaves > 0 ? (
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-xs text-emerald-700 flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                        Solicitud enviada correctamente el {formatDate(usuario.llaves_solicitadas_at)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        El secretario se pondrá en contacto contigo por Telegram.
+                      </p>
+                      <p className="text-xs font-display font-bold text-foreground">
+                        Podrás volver a solicitarlas en {diasParaPedirLlaves} {diasParaPedirLlaves === 1 ? 'día' : 'días'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs text-emerald-700">Ya llevas {MESES_PARA_LLAVES} meses como socio: puedes pedir las llaves.</p>
+                      <Button
+                        size="sm"
+                        className="w-full font-display gap-2"
+                        onClick={() => pedirLlaves()}
+                        disabled={pidiendoLlaves}
+                      >
+                        <Key className="h-3.5 w-3.5" />
+                        {pidiendoLlaves ? 'Enviando…' : 'Pedir llaves'}
+                      </Button>
+                    </div>
+                  )
                 ) : (
                   <p className="text-xs text-muted-foreground mt-3">
                     No puedes pedir las llaves hasta llevar {MESES_PARA_LLAVES} meses como socio

@@ -37,6 +37,13 @@ export function fechaPuedePedirLlaves(fechaAlta: Date): Date {
   return d
 }
 
+/** Fecha a partir de la cual el socio puede volver a pedir llaves (1 mes tras la última solicitud) */
+export function fechaPuedeRepetirSolicitudLlaves(solicitadas: Date): Date {
+  const d = new Date(solicitadas)
+  d.setMonth(d.getMonth() + 1)
+  return d
+}
+
 const SESSION_SELECT = { id: true, email: true, nombre: true, apellidos: true, roles: true, estado: true } as const
 
 // Búsqueda sin distinguir mayúsculas: hay cuentas antiguas guardadas con mayúsculas
@@ -263,6 +270,7 @@ export class AuthService {
         estado: true,
         fecha_alta: true,
         tiene_llaves: true,
+        llaves_solicitadas_at: true,
         telegram_chat_id: true,
         telegram_linked_at: true,
       },
@@ -393,12 +401,16 @@ export class AuthService {
   async pedirLlaves(userId: string) {
     const socio = await this.prisma.usuario.findUnique({
       where: { id: userId },
-      select: { nombre: true, apellidos: true, apodo: true, email: true, alias_telegram: true, estado: true, fecha_alta: true, tiene_llaves: true },
+      select: { nombre: true, apellidos: true, apodo: true, email: true, alias_telegram: true, estado: true, fecha_alta: true, tiene_llaves: true, llaves_solicitadas_at: true },
     })
     if (!socio || socio.estado !== 'activo') throw new HttpError(403, 'Solo los socios activos pueden pedir llaves')
     if (socio.tiene_llaves) throw new HttpError(409, 'Ya tienes llaves del club')
     if (!socio.fecha_alta || fechaPuedePedirLlaves(socio.fecha_alta) > new Date()) {
       throw new HttpError(403, `Necesitas ${MESES_PARA_LLAVES} meses como socio para pedir llaves`)
+    }
+
+    if (socio.llaves_solicitadas_at && fechaPuedeRepetirSolicitudLlaves(socio.llaves_solicitadas_at) > new Date()) {
+      throw new HttpError(409, 'Ya has pedido las llaves. Espera a que el secretario se ponga en contacto contigo por Telegram.')
     }
 
     const botToken = process.env.BOT_TOKEN
@@ -435,5 +447,7 @@ Telegram: ${esc(socio.alias_telegram)}` : '')
     if (!resultados.includes(true)) {
       throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
     }
+
+    await this.prisma.usuario.update({ where: { id: userId }, data: { llaves_solicitadas_at: new Date() } })
   }
 }
