@@ -171,7 +171,11 @@ describe('SociosService.darDeBaja', () => {
 
     expect(prisma.usuario.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ estado: 'baja', baja_por_id: 'admin1' }),
+        data: expect.objectContaining({
+          estado: 'baja',
+          baja_por_id: 'admin1',
+          historial_estado: { create: { tipo: 'baja', por_id: 'admin1' } },
+        }),
       }),
     )
   })

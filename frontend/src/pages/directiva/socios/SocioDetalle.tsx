@@ -117,6 +117,30 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
           )}
         </div>
 
+        {!!socio.historial_estado?.length && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <p className="font-display font-bold text-sm">Historial de altas y bajas</p>
+              <ul className="space-y-1.5 text-sm">
+                {socio.historial_estado.map((h) => (
+                  <li key={h.id} className="flex items-center gap-2">
+                    <Badge variant={h.tipo === 'alta' ? 'default' : 'destructive'} className="w-12 justify-center capitalize">
+                      {h.tipo}
+                    </Badge>
+                    <span className="font-medium">{formatDate(h.created_at)}</span>
+                    {h.por && (
+                      <span className="text-xs text-muted-foreground">
+                        por {h.por.nombre} {h.por.apellidos}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+
         {socio.comprobante_transferencia && (
           <>
             <Separator />

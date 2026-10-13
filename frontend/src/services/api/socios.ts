@@ -22,6 +22,12 @@ export type SocioAdmin = Usuario & {
   comprobante_transferencia?: string | null
   aprobado_por?: { id: string; nombre: string; apellidos: string } | null
   baja_por?: { id: string; nombre: string; apellidos: string } | null
+  historial_estado?: {
+    id: string
+    tipo: 'alta' | 'baja'
+    created_at: string
+    por: { id: string; nombre: string; apellidos: string } | null
+  }[]
 }
 
 // Socio del listado (paginado)

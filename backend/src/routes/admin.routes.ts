@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { comprobarCambioAdmin, normalizarRoles } from '../services/socios.service'
-import { Rol, EstadoSocio, TipoCuota } from '@prisma/client'
+import { Rol, EstadoSocio, TipoCuota, TipoCambioEstado } from '@prisma/client'
 import { dniSchema, emailSchema, passwordSchema } from '../schemas/auth.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 
@@ -118,7 +118,14 @@ router.post('/usuarios', async (req, res) => {
   }
   const password_hash = await bcrypt.hash(rawPassword as string, 12)
   const usuario = await prisma.usuario.create({
-    data: { ...rest, password_hash, fecha_alta: rest.estado === 'activo' ? new Date() : undefined },
+    data: {
+      ...rest,
+      password_hash,
+      ...(rest.estado === 'activo' && {
+        fecha_alta: new Date(),
+        historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: req.user.id } },
+      }),
+    },
     select: USUARIO_SELECT,
   })
   res.status(201).json({ data: { ...usuario, telegram_chat_id: usuario.telegram_chat_id?.toString() ?? null } })
@@ -163,6 +170,10 @@ router.put('/usuarios/:id', async (req, res) => {
       } else if (rest.estado === EstadoSocio.baja) {
         Object.assign(rest, { fecha_baja: new Date(), baja_por_id: req.user.id, tiene_llaves: false })
       }
+      // De pendiente a baja es un rechazo, no una baja: nunca fue socio
+      const tipo = rest.estado === EstadoSocio.activo ? TipoCambioEstado.alta
+        : rest.estado === EstadoSocio.baja && actual.fecha_alta ? TipoCambioEstado.baja : null
+      if (tipo) Object.assign(rest, { historial_estado: { create: { tipo, por_id: req.user.id } } })
     }
     if (rest.roles) {
       if (req.params.id === req.user.id) {

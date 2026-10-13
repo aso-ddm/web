@@ -112,6 +112,10 @@ model Usuario {
   baja_por                Usuario?  @relation("DioBaja",      fields: [baja_por_id],             references: [id])
   socios_dados_baja       Usuario[] @relation("DioBaja")
 
+  // Historial de altas y bajas
+  historial_estado        HistorialEstadoSocio[] @relation("HistorialSocio")
+  cambios_estado_hechos   HistorialEstadoSocio[] @relation("HistorialPor")
+
   // Cuota conjunta
   solicitud_grupal_id String?
   solicitud_grupal    SolicitudGrupal? @relation("MiembrosGrupo", fields: [solicitud_grupal_id], references: [id])
@@ -236,6 +240,24 @@ model SolicitudGrupal {
 
   titular  Usuario   @relation("TitularGrupo",  fields: [titular_id], references: [id])
   miembros Usuario[] @relation("MiembrosGrupo")
+}
+
+enum TipoCambioEstado {
+  alta
+  baja
+}
+
+model HistorialEstadoSocio {
+  id         String           @id @default(uuid())
+  socio_id   String
+  tipo       TipoCambioEstado
+  por_id     String?
+  created_at DateTime         @default(now())
+
+  socio Usuario  @relation("HistorialSocio", fields: [socio_id], references: [id], onDelete: Cascade)
+  por   Usuario? @relation("HistorialPor", fields: [por_id], references: [id], onDelete: SetNull)
+
+  @@index([socio_id])
 }
 
 model LogJuego {

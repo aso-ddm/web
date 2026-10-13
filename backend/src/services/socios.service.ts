@@ -1,4 +1,4 @@
-import { PrismaClient, Rol, EstadoSocio, EstadoPago } from '@prisma/client'
+import { PrismaClient, Rol, EstadoSocio, EstadoPago, TipoCambioEstado } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 
@@ -24,6 +24,10 @@ const SOCIO_PUBLIC_SELECT = {
   created_at: true,
   aprobado_por: { select: { id: true, nombre: true, apellidos: true } },
   baja_por: { select: { id: true, nombre: true, apellidos: true } },
+  historial_estado: {
+    select: { id: true, tipo: true, created_at: true, por: { select: { id: true, nombre: true, apellidos: true } } },
+    orderBy: { created_at: 'desc' },
+  },
 } as const
 
 // El rol administrador no se asigna ni se retira desde la app (solo BD/seed).
@@ -200,6 +204,9 @@ export class SociosService {
         where: { id: grupoId },
         data: { estado: 'aprobada' },
       }),
+      this.prisma.historialEstadoSocio.createMany({
+        data: grupo.miembros.map((u) => ({ socio_id: u.id, tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora })),
+      }),
       // El comprobante de alta cubre el mes de alta; la cuota conjunta se registra en el titular
       this.prisma.pagoCuota.create({ data: { socio_id: grupo.titular_id, ...mesPagadoAlAlta(ahora) } }),
     ])
@@ -308,6 +315,7 @@ export class SociosService {
         roles: normalizarRoles([rol]),
         // El comprobante de alta cubre el mes de alta
         pagos_cuota: { create: mesPagadoAlAlta(ahora) },
+        historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora } },
       },
       select: SOCIO_PUBLIC_SELECT,
     })
@@ -354,6 +362,7 @@ export class SociosService {
         fecha_baja: new Date(),
         baja_por_id: bajaPorId,
         tiene_llaves: false,
+        historial_estado: { create: { tipo: TipoCambioEstado.baja, por_id: bajaPorId } },
       },
       select: SOCIO_PUBLIC_SELECT,
     })
@@ -376,6 +385,7 @@ export class SociosService {
         estado: EstadoSocio.activo,
         fecha_baja: null,
         baja_por_id: null,
+        historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: reactivadoPorId } },
       },
       select: SOCIO_PUBLIC_SELECT,
     })
