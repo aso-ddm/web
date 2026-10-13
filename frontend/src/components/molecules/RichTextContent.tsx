@@ -15,13 +15,13 @@ interface RichTextContentProps {
   className?: string
 }
 
-function isHtml(str: string): boolean {
+export function isHtml(str: string): boolean {
   return /<[a-z][\s\S]*>/i.test(str)
 }
 
 // Convierte texto plano con marcadores **SECCIÓN** al HTML que espera prose.
 // Solo se usa para contenido guardado antes del editor WYSIWYG.
-function plainTextToHtml(text: string): string {
+export function plainTextToHtml(text: string): string {
   return text
     .split('\n')
     .map((line) => {

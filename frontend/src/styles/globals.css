@@ -107,7 +107,9 @@ html {
 .anim-delay-450 { animation-delay: 450ms; }
 .anim-delay-600 { animation-delay: 600ms; }
 
-@custom-variant dark (&:is(.dark *));
+/* Sin tema oscuro: algunas extensiones del navegador ponen .dark en <html> y activaban los dark: de shadcn
+   y prose-invert (texto claro sobre fondo claro). La variante solo responde a una clase que la app no usa. */
+@custom-variant dark (&:is(.tema-oscuro *));
 
 :root {
   --font-quicksand: 'Quicksand', sans-serif;

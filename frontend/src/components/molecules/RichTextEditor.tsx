@@ -6,6 +6,7 @@ import {
   Bold, Italic, Heading2, Heading3, List, ListOrdered, Link2, Link2Off, Undo, Redo,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isHtml, plainTextToHtml } from './RichTextContent'
 import { Toggle } from '@/components/ui/toggle'
 import { Separator } from '@/components/ui/separator'
 import { useCallback } from 'react'
@@ -24,7 +25,8 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
       Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-primary underline cursor-pointer' } }),
       Placeholder.configure({ placeholder: placeholder ?? 'Escribe aquí...', emptyEditorClass: 'is-editor-empty' }),
     ],
-    content: value,
+    // Texto antiguo en plano: sin convertir, el editor juntaría todas las líneas en un párrafo
+    content: isHtml(value) ? value : plainTextToHtml(value),
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
       attributes: {
