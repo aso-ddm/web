@@ -220,8 +220,8 @@ TELEGRAM_WEBHOOK_SECRET=...     # sin él, el webhook rechaza todo
 FRONTEND_URL=https://dragondemadera.com
 ```
 
-El seed (admin + configuración inicial) ya no corre al arrancar el contenedor; se ejecuta una vez a mano con
-`SEED_ADMIN_PASSWORD` (ver `backend/Dockerfile`).
+El seed (configuración + admin + club de prueba; borra los datos) no corre al arrancar el contenedor; se ejecuta a mano con
+`PERMITIR_SEED_DEV=si` y `SEED_ADMIN_PASSWORD` (ver `backend/Dockerfile`).
 
 IPs en proxy_network: `.110` (db) · `.111` (backend) · `.112` (frontend)
 
