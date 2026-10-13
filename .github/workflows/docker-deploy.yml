@@ -61,6 +61,7 @@ jobs:
             cd /opt/web
 
             # pull antes de parar nada: si falla, lo que está corriendo sigue en pie
-            docker compose pull
+            # ponytail: 3 reintentos ante cortes puntuales con Docker Hub (TLS handshake timeout)
+            for i in 1 2 3; do docker compose pull && break; [ "$i" = 3 ] && exit 1; sleep 15; done
             docker compose up -d --remove-orphans
             docker image prune -f
