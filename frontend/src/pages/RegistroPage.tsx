@@ -15,9 +15,7 @@ import { Separator } from '@/components/ui/separator'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { RichTextContent } from '@/components/molecules/RichTextContent'
-import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
-import { authApi, type TelegramUser } from '@/services/api/auth'
-import { useConfigValor } from '@/hooks/useConfigValor'
+import { authApi } from '@/services/api/auth'
 import { configuracionApi } from '@/services/api/configuracion'
 import { registroSchema, RegistroForm, errMsg } from './registro/schema'
 import { FieldError, FormSection, DocumentosCard } from './registro/FormParts'
@@ -30,9 +28,6 @@ export function RegistroPage() {
   const [comprobante, setComprobante] = useState<File | null>(null)
   const [comprobanteError, setComprobanteError] = useState<string | undefined>()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [telegram, setTelegram] = useState<TelegramUser | null>(null)
-  const [telegramError, setTelegramError] = useState<string | undefined>()
-  const botUsername = useConfigValor('telegram_bot_username', 'Dragon_de_maderaBot')
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
@@ -90,8 +85,16 @@ export function RegistroPage() {
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
       if (!comprobante) throw new Error('Debes adjuntar el comprobante de transferencia')
-      if (!telegram) throw new Error('Debes vincular tu cuenta de Telegram')
-      return authApi.register({ ...data, telegram }, comprobante)
+
+      if (data.tipo_cuota === 'conjunta') {
+        const { confirmPassword: _cp, miembros_adicionales, ...titular } = data as Extract<RegistroForm, { tipo_cuota: 'conjunta' }>
+        void _cp
+        const miembros = miembros_adicionales.map(({ confirmPassword: _m, ...m }) => { void _m; return m })
+        return authApi.register({ ...titular, miembros_adicionales: miembros }, comprobante)
+      }
+      const { confirmPassword: _cp, ...payload } = data as Extract<RegistroForm, { tipo_cuota: 'individual' }>
+      void _cp
+      return authApi.register(payload, comprobante)
     },
     onSuccess: () => setSubmitted(true),
     onError: (err: Error) => toast.error(err.message),
@@ -117,9 +120,10 @@ export function RegistroPage() {
   }
 
   function handleSubmitWithComprobanteCheck(data: RegistroForm) {
-    if (!telegram) setTelegramError('Debes vincular tu cuenta de Telegram')
-    if (!comprobante) setComprobanteError('Debes adjuntar el comprobante de transferencia')
-    if (!telegram || !comprobante) return
+    if (!comprobante) {
+      setComprobanteError('Debes adjuntar el comprobante de transferencia')
+      return
+    }
     mutate(data)
   }
 
@@ -288,44 +292,32 @@ export function RegistroPage() {
             </FormSection>
 
             {/* 3. Cuenta de acceso */}
-            <FormSection number={3} title={`Cuenta de acceso${tipoCuota === 'conjunta' ? ' — Titular' : ''}`} description="Entrarás al área de socios con tu Telegram. Si además quieres una contraseña, créala luego desde «¿Olvidaste tu contraseña?»">
+            <FormSection number={3} title={`Cuenta de acceso${tipoCuota === 'conjunta' ? ' — Titular' : ''}`} description="Con estas credenciales podrás acceder al área de socios. Al entrar por primera vez vincularás tu Telegram">
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="font-display font-bold text-sm">Email <span className="text-destructive">*</span></Label>
                   <Input id="email" type="email" autoComplete="email" placeholder="tu@email.com" {...register('email')} />
                   <FieldError message={errMsg(errors.email)} />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="font-display font-bold text-sm">Telegram <span className="text-destructive">*</span></Label>
-                  {telegram ? (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/50 bg-primary/5 px-4 py-3">
-                      <span className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                        Vinculado como <strong>{telegram.username ? `@${telegram.username}` : telegram.first_name}</strong>
-                      </span>
-                      <button type="button" onClick={() => setTelegram(null)} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
-                        Cambiar
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-xs text-muted-foreground">Inicia sesión con Telegram y autoriza al bot del club: lo usamos para los avisos y para que puedas entrar.</p>
-                      <TelegramLoginWidget
-                        onAuth={(user) => { setTelegram(user); setTelegramError(undefined) }}
-                        botUsername={botUsername}
-                        size="large"
-                        radius={8}
-                      />
-                    </>
-                  )}
-                  <FieldError message={telegramError} />
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="font-display font-bold text-sm">Contraseña <span className="text-destructive">*</span></Label>
+                    <Input id="password" type="password" autoComplete="new-password" placeholder="Mín. 8 caracteres" {...register('password')} />
+                    <FieldError message={errMsg(errors.password)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmPassword" className="font-display font-bold text-sm">Confirmar contraseña <span className="text-destructive">*</span></Label>
+                    <Input id="confirmPassword" type="password" autoComplete="new-password" placeholder="Repite la contraseña" {...register('confirmPassword')} />
+                    <FieldError message={errMsg(errors.confirmPassword)} />
+                  </div>
                 </div>
+                <p className="text-xs text-muted-foreground">Mínimo 8 caracteres, una mayúscula y un número.</p>
               </div>
             </FormSection>
 
             {/* 4. Miembros adicionales (solo cuota conjunta) */}
             {tipoCuota === 'conjunta' && (
-              <FormSection number={4} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Cada uno vinculará su Telegram la primera vez que entre, con su email y DNI. Precio total: ${precioIndividual + precioAdicional * fields.length}€/mes`} className="border-secondary/40">
+              <FormSection number={4} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Cada uno vinculará su Telegram la primera vez que entre. Precio total: ${precioIndividual + precioAdicional * fields.length}€/mes`} className="border-secondary/40">
                 <div className="space-y-4">
                   {'miembros_adicionales' in errors && (errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message && (
                     <FieldError message={(errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message} />
@@ -349,7 +341,7 @@ export function RegistroPage() {
                     variant="outline"
                     className="w-full font-display font-bold gap-2 border-dashed"
                     disabled={fields.length >= 5}
-                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', apodo: '', consentimiento_tiendas: false, tipo_relacion: 'pareja' })}
+                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', apodo: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
                   >
                     <PlusCircle className="h-4 w-4" />
                     {fields.length >= 5 ? 'Máximo 5 miembros adicionales' : 'Añadir miembro'}

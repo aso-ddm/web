@@ -81,7 +81,7 @@ enum EstadoSolicitudJuego {
 model Usuario {
   id                      String      @id @default(uuid())
   email                   String      @unique
-  password_hash           String?
+  password_hash           String
   nombre                  String
   apellidos               String
   dni                     String      @unique

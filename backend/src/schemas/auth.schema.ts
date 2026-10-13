@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { telegramAuthSchema } from './telegram.schema'
 
 // ─── Reutilizable ────────────────────────────────────────────────────────────
 
@@ -28,8 +27,7 @@ const titularFields = {
   direccion: z.string().optional(),
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
-  // Sin contraseña: el titular vincula Telegram en el propio registro (datos firmados del widget)
-  telegram: telegramAuthSchema,
+  password: passwordSchema,
 }
 
 // ─── Miembro adicional ───────────────────────────────────────────────────────
@@ -43,6 +41,7 @@ export const miembroAdicionalSchema = z.object({
   fecha_nacimiento: z.string().datetime().or(z.string().date()),
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
+  password: passwordSchema,
   tipo_relacion: z.enum(['pareja', 'familiar_directo']),
 })
 
@@ -65,13 +64,6 @@ export const registerSchema = z.union([
   }),
 ])
 
-// Login con Telegram. email + DNI solo en el primer acceso de una cuenta sin vincular
-export const telegramLoginSchema = z.object({
-  telegram: telegramAuthSchema,
-  email: emailSchema.optional(),
-  dni: z.string().trim().toUpperCase().optional(),
-})
-
 export const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, 'La contraseña es obligatoria'),
@@ -79,4 +71,3 @@ export const loginSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>
-export type TelegramLoginInput = z.infer<typeof telegramLoginSchema>

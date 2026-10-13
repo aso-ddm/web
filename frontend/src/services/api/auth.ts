@@ -15,8 +15,8 @@ export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<LoginResponse>('/auth/login', payload),
 
-  // 404 = Telegram sin vincular: reintentar con email + DNI (primer acceso de miembros de cuota conjunta)
-  loginTelegram: (payload: { telegram: TelegramUser; email?: string; dni?: string }) =>
+  // Solo cuentas con Telegram ya vinculado (se vincula tras el primer login con contraseña)
+  loginTelegram: (payload: TelegramUser) =>
     api.post<LoginResponse>('/auth/telegram', payload),
 
   register: (payload: RegisterPayload, comprobante: File) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,8 +12,7 @@ import { Label } from '@/components/ui/label'
 import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
-import { authApi, type TelegramUser } from '@/services/api/auth'
-import { ApiRequestError } from '@/services/api/client'
+import { authApi } from '@/services/api/auth'
 import { useConfigValor } from '@/hooks/useConfigValor'
 import { useAuthStore } from '@/store/authStore'
 import type { LoginResponse } from '@/types/api'
@@ -59,18 +58,7 @@ export function LoginPage() {
     },
   }
   const { mutate, isPending } = useMutation({ mutationFn: authApi.login, ...onLogin })
-
-  // Telegram aún sin vincular: se guarda para reintentar con email + DNI
-  const [telegramSinVincular, setTelegramSinVincular] = useState<TelegramUser | null>(null)
-  const [vinculo, setVinculo] = useState({ email: '', dni: '' })
-  const { mutate: mutateTelegram, isPending: isPendingTelegram } = useMutation({
-    mutationFn: authApi.loginTelegram,
-    ...onLogin,
-    onError: (err: Error, vars) => {
-      if (err instanceof ApiRequestError && err.status === 404) setTelegramSinVincular(vars.telegram)
-      else toast.error(err.message)
-    },
-  })
+  const { mutate: mutateTelegram } = useMutation({ mutationFn: authApi.loginTelegram, ...onLogin })
 
   return (
     <>
@@ -130,37 +118,9 @@ export function LoginPage() {
               </p>
             </div>
 
-            {telegramSinVincular ? (
-              <form
-                onSubmit={(e) => { e.preventDefault(); mutateTelegram({ telegram: telegramSinVincular, ...vinculo }) }}
-                className="space-y-4 rounded-lg border border-primary/30 bg-primary/5 p-4"
-              >
-                <p className="text-sm">
-                  Es tu primer acceso con Telegram. Indica el email y el DNI con los que se hizo tu alta para vincular tu cuenta.
-                </p>
-                <div className="space-y-1.5">
-                  <Label htmlFor="vinculo-email" className="font-display font-bold text-sm">Email</Label>
-                  <Input id="vinculo-email" type="email" required autoComplete="email" placeholder="tu@email.com"
-                    value={vinculo.email} onChange={(e) => setVinculo({ ...vinculo, email: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="vinculo-dni" className="font-display font-bold text-sm">DNI / NIE</Label>
-                  <Input id="vinculo-dni" required maxLength={9} placeholder="12345678Z"
-                    value={vinculo.dni} onChange={(e) => setVinculo({ ...vinculo, dni: e.target.value.toUpperCase() })} />
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={isPendingTelegram} className="flex-1 font-display font-bold">
-                    {isPendingTelegram && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Vincular y entrar
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => setTelegramSinVincular(null)}>Cancelar</Button>
-                </div>
-              </form>
-            ) : (
-              <div className="flex justify-center">
-                <TelegramLoginWidget onAuth={(telegram) => mutateTelegram({ telegram })} botUsername={botUsername} size="large" radius={8} />
-              </div>
-            )}
+            <div className="flex justify-center">
+              <TelegramLoginWidget onAuth={mutateTelegram} botUsername={botUsername} size="large" radius={8} />
+            </div>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-border" />

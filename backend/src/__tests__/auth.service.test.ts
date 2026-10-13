@@ -49,7 +49,7 @@ describe('AuthService.register (individual)', () => {
     apellidos: 'García',
     apodo: 'Anita',
     consentimiento_tiendas: false,
-    telegram: firmarTelegram({ id: 42, first_name: 'Ana', username: 'ana_g' }),
+    password: 'Password123!',
   }
 
   it('email duplicado → throws', async () => {
@@ -70,23 +70,9 @@ describe('AuthService.register (individual)', () => {
     )
   })
 
-  it('firma de Telegram falsa → throws', async () => {
+  it('éxito → devuelve usuario con estado=pendiente, sin password_hash', async () => {
     ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
-
-    await expect(service.register({ ...validInput, telegram: { ...validInput.telegram, id: 43 } }, 'c.pdf')).rejects.toThrow('Firma de Telegram inválida')
-  })
-
-  it('Telegram ya vinculado a otro socio → throws', async () => {
-    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'otro' })
-
-    await expect(service.register(validInput, 'c.pdf')).rejects.toThrow('ya está vinculada a otro socio')
-  })
-
-  it('éxito → devuelve usuario con estado=pendiente y guarda el Telegram', async () => {
-    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null)
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null).mockResolvedValueOnce(null)
 
     const created = {
       id: 'u1',
@@ -101,9 +87,6 @@ describe('AuthService.register (individual)', () => {
 
     const result = await service.register(validInput, 'c.pdf')
 
-    expect(prisma.usuario.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ telegram_chat_id: BigInt(42), alias_telegram: '@ana_g', estado: 'pendiente' }),
-    }))
     expect(result).toEqual(created)
     expect(result).not.toHaveProperty('password_hash')
     expect(result).toMatchObject({ estado: 'pendiente', roles: ['socio_basico'] })
@@ -172,72 +155,32 @@ describe('AuthService.login', () => {
   })
 })
 
-describe('AuthService.login sin contraseña', () => {
-  it('cuenta creada con Telegram (password_hash null) → "Credenciales incorrectas"', async () => {
-    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ ...BASE_USER, password_hash: null })
-
-    await expect(service.login({ email: BASE_USER.email, password: 'pw' })).rejects.toThrow('Credenciales incorrectas')
-  })
-})
-
 describe('AuthService.loginTelegram', () => {
   const findUnique = () => prisma.usuario.findUnique as ReturnType<typeof vi.fn>
-  const findFirst = () => prisma.usuario.findFirst as ReturnType<typeof vi.fn>
-  const tg = (id = 42, username?: string) => firmarTelegram({ id, first_name: 'Ana', ...(username ? { username } : {}) })
+  const tg = () => firmarTelegram({ id: 42, first_name: 'Ana' })
 
   it('Telegram vinculado → devuelve el usuario', async () => {
     findUnique().mockResolvedValue(BASE_USER)
-    await expect(service.loginTelegram({ telegram: tg() })).resolves.toMatchObject({ id: 'u1' })
+    await expect(service.loginTelegram(tg())).resolves.toMatchObject({ id: 'u1' })
   })
 
   it('firma inválida → throws', async () => {
-    await expect(service.loginTelegram({ telegram: { ...tg(), id: 1 } })).rejects.toThrow('Firma de Telegram inválida')
+    await expect(service.loginTelegram({ ...tg(), id: 1 })).rejects.toThrow('Firma de Telegram inválida')
   })
 
   it('autenticación de hace más de 24h → throws', async () => {
     const viejo = firmarTelegram({ id: 42, first_name: 'Ana' }, Math.floor(Date.now() / 1000) - 90000)
-    await expect(service.loginTelegram({ telegram: viejo })).rejects.toThrow('ha expirado')
+    await expect(service.loginTelegram(viejo)).rejects.toThrow('ha expirado')
   })
 
-  it('sin vincular y sin email/DNI → 404 para que el front los pida', async () => {
+  it('Telegram sin vincular → throws', async () => {
     findUnique().mockResolvedValue(null)
-    await expect(service.loginTelegram({ telegram: tg() })).rejects.toMatchObject({ status: 404 })
-  })
-
-  it('primer acceso con email + DNI → busca solo cuentas sin Telegram ni contraseña y la vincula', async () => {
-    findUnique().mockResolvedValue(null)
-    findFirst().mockResolvedValue({ id: 'u2', estado: 'activo' })
-    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...BASE_USER, id: 'u2' })
-
-    await expect(service.loginTelegram({ telegram: tg(7, 'Luis_M'), email: 'luis@x.com', dni: '12345678Z' })).resolves.toMatchObject({ id: 'u2' })
-    expect(findFirst()).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ dni: '12345678Z', telegram_chat_id: null, password_hash: null }),
-    }))
-    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'u2' },
-      data: expect.objectContaining({ telegram_chat_id: BigInt(7), alias_telegram: '@Luis_M' }),
-    }))
-  })
-
-  it('email + DNI sin cuenta pendiente de vincular → throws y no vincula', async () => {
-    findUnique().mockResolvedValue(null)
-    findFirst().mockResolvedValue(null)
-
-    await expect(service.loginTelegram({ telegram: tg(), email: 'x@x.com', dni: '12345678Z' })).rejects.toThrow('No hay ninguna cuenta pendiente')
-    expect(prisma.usuario.update).not.toHaveBeenCalled()
-  })
-
-  it('primer acceso de una cuenta aún pendiente de aprobar → throws y no vincula', async () => {
-    findUnique().mockResolvedValue(null)
-    findFirst().mockResolvedValue({ id: 'u2', estado: 'pendiente' })
-
-    await expect(service.loginTelegram({ telegram: tg(), email: 'x@x.com', dni: '12345678Z' })).rejects.toThrow('pendiente de aprobación')
-    expect(prisma.usuario.update).not.toHaveBeenCalled()
+    await expect(service.loginTelegram(tg())).rejects.toThrow('no está vinculada')
   })
 
   it('vinculado pero pendiente → throws', async () => {
     findUnique().mockResolvedValue({ ...BASE_USER, estado: 'pendiente' })
-    await expect(service.loginTelegram({ telegram: tg() })).rejects.toThrow('pendiente de aprobación')
+    await expect(service.loginTelegram(tg())).rejects.toThrow('pendiente de aprobación')
   })
 })
 

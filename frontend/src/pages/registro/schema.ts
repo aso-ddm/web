@@ -43,9 +43,16 @@ const miembroAdicionalSchema = z
     fecha_nacimiento: fechaNacimientoSchema,
     apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
     consentimiento_tiendas: z.boolean().default(false),
+    password: passwordSchema,
+    confirmPassword: z.string(),
     tipo_relacion: z.enum(['pareja', 'familiar_directo'], {
       required_error: 'Selecciona el tipo de relación',
     }),
+  })
+  .superRefine((d: { password: string; confirmPassword: string }, ctx: z.RefinementCtx) => {
+    if (d.password !== d.confirmPassword) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
+    }
   })
 
 const camposTitular = {
@@ -58,10 +65,18 @@ const camposTitular = {
   direccion: z.string().min(1, 'La dirección es obligatoria'),
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
+  password: passwordSchema,
+  confirmPassword: z.string(),
 }
 
 export const registroSchema = z.union([
-  z.object({ tipo_cuota: z.literal('individual'), ...camposTitular }),
+  z
+    .object({ tipo_cuota: z.literal('individual'), ...camposTitular })
+    .superRefine((d: { password: string; confirmPassword: string }, ctx: z.RefinementCtx) => {
+        if (d.password !== d.confirmPassword) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
+        }
+      }),
   z
     .object({
       tipo_cuota: z.literal('conjunta'),
@@ -71,7 +86,10 @@ export const registroSchema = z.union([
         .min(1, 'Debes añadir al menos un miembro')
         .max(5, 'Máximo 5 miembros adicionales'),
     })
-    .superRefine((d: { email: string; dni: string; miembros_adicionales: Array<{ email: string; dni: string }> }, ctx: z.RefinementCtx) => {
+    .superRefine((d: { password: string; confirmPassword: string; email: string; dni: string; miembros_adicionales: Array<{ email: string; dni: string }> }, ctx: z.RefinementCtx) => {
+      if (d.password !== d.confirmPassword) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
+      }
       // Unicidad de emails
       const emails = [d.email, ...d.miembros_adicionales.map((m) => m.email)]
       const emailsDuplicados = emails.filter((e, i) => emails.indexOf(e) !== i)

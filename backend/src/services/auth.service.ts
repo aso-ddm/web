@@ -1,8 +1,7 @@
 import { PrismaClient, Rol } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
-import { RegisterInput, LoginInput, TelegramLoginInput } from '../schemas/auth.schema'
-import { HttpError } from '../lib/httpError'
+import { RegisterInput, LoginInput } from '../schemas/auth.schema'
 import { TelegramAuthInput } from '../schemas/telegram.schema'
 
 function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
@@ -65,13 +64,13 @@ export class AuthService {
       throw new Error(`Ya existe una cuenta con ese DNI: ${data.dni}`)
     }
 
-    const telegram_chat_id = await this.telegramLibre(data.telegram)
-    const { telegram, ...rest } = data
+    const password_hash = await bcrypt.hash(data.password, SALT_ROUNDS)
+    const { password: _, ...rest } = data
 
     const usuario = await this.prisma.usuario.create({
       data: {
         ...rest,
-        ...this.datosTelegram(telegram, telegram_chat_id),
+        password_hash,
         comprobante_transferencia: comprobanteFilename,
         roles: [Rol.socio_basico],
         estado: 'pendiente',
@@ -128,13 +127,12 @@ export class AuthService {
       }
     }
 
-    const telegram_chat_id = await this.telegramLibre(data.telegram)
-
     // Transacción atómica
     const resultado = await this.prisma.$transaction(async (tx) => {
       // Crear SolicitudGrupal con titular_id temporal (se actualizará)
       // Necesitamos crear el titular primero para tener su id
-      const { telegram, miembros_adicionales, ...restoTitular } = data
+      const password_hash_titular = await bcrypt.hash(data.password, SALT_ROUNDS)
+      const { password: _, miembros_adicionales, ...restoTitular } = data
 
       // Crear SolicitudGrupal con un titular_id placeholder — lo actualizamos tras crear el titular
       // Prisma requiere titular_id no nulo, así que creamos titular primero sin solicitud_grupal_id
@@ -142,7 +140,7 @@ export class AuthService {
       const titular = await tx.usuario.create({
         data: {
           ...restoTitular,
-          ...this.datosTelegram(telegram, telegram_chat_id),
+          password_hash: password_hash_titular,
           comprobante_transferencia: comprobanteFilename,
           roles: [Rol.socio_basico],
           estado: 'pendiente',
@@ -174,12 +172,13 @@ export class AuthService {
 
       // Crear miembros adicionales y sus relaciones
       for (const m of miembros_adicionales) {
-        // Sin Telegram ni contraseña: se vincula en su primer login con Telegram (email + DNI)
-        const { tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
+        const { password: _p, tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
+        const password_hash_miembro = await bcrypt.hash(m.password, SALT_ROUNDS)
 
         const miembro = await tx.usuario.create({
           data: {
             ...restoMiembro,
+            password_hash: password_hash_miembro,
             tipo_cuota: 'conjunta',
             roles: [Rol.socio_basico],
             estado: 'pendiente',
@@ -218,8 +217,7 @@ export class AuthService {
     })
 
     // Contraseña antes que estado: no revelar si una cuenta existe sin conocer su contraseña
-    // Cuentas creadas con Telegram no tienen contraseña (pueden ponerla con "¿Olvidaste tu contraseña?")
-    if (!usuario?.password_hash || !(await bcrypt.compare(data.password, usuario.password_hash))) {
+    if (!usuario || !(await bcrypt.compare(data.password, usuario.password_hash))) {
       throw new Error('Credenciales incorrectas')
     }
 
@@ -227,48 +225,14 @@ export class AuthService {
     return comprobarEstado(userWithoutHash)
   }
 
-  async loginTelegram({ telegram, email, dni }: TelegramLoginInput) {
-    const telegram_chat_id = checkTelegram(telegram)
-
-    const usuario = await this.prisma.usuario.findUnique({ where: { telegram_chat_id }, select: SESSION_SELECT })
-    if (usuario) return comprobarEstado(usuario)
-
-    // Telegram sin vincular: el front pide email + DNI (status 404) y reintenta
-    if (!email || !dni) {
-      throw new HttpError(404, 'Es tu primer acceso con Telegram: indica tu email y DNI para vincular tu cuenta.')
-    }
-
-    // Primer acceso de los miembros de cuota conjunta (los registra el titular, sin Telegram ni contraseña).
-    // ponytail: email + DNI como prueba de identidad, limitado a cuentas que nunca han tenido acceso
-    // (sin Telegram y sin contraseña). Si hace falta más, código de un solo uso al aprobar el alta
-    const cuenta = await this.prisma.usuario.findFirst({
-      where: { ...porEmail(email), dni, telegram_chat_id: null, password_hash: null },
-      select: { id: true, estado: true },
-    })
-    if (!cuenta) throw new Error('No hay ninguna cuenta pendiente de vincular con ese email y DNI')
-    comprobarEstado(cuenta)
-
-    const vinculada = await this.prisma.usuario.update({
-      where: { id: cuenta.id },
-      data: this.datosTelegram(telegram, telegram_chat_id),
-      select: SESSION_SELECT,
-    })
-    return vinculada
-  }
-
-  private async telegramLibre(data: TelegramAuthInput) {
+  // Solo cuentas ya vinculadas: Telegram se vincula tras el primer login con email + contraseña
+  async loginTelegram(data: TelegramAuthInput) {
     const telegram_chat_id = checkTelegram(data)
-    const existing = await this.prisma.usuario.findUnique({ where: { telegram_chat_id } })
-    if (existing) throw new Error('Esta cuenta de Telegram ya está vinculada a otro socio')
-    return telegram_chat_id
-  }
-
-  private datosTelegram(data: TelegramAuthInput, telegram_chat_id: bigint) {
-    return {
-      telegram_chat_id,
-      telegram_linked_at: new Date(),
-      ...(data.username ? { alias_telegram: `@${data.username}` } : {}),
+    const usuario = await this.prisma.usuario.findUnique({ where: { telegram_chat_id }, select: SESSION_SELECT })
+    if (!usuario) {
+      throw new Error('Esta cuenta de Telegram no está vinculada a ningún socio. Entra con tu email y contraseña y vincúlala desde el área de socios.')
     }
+    return comprobarEstado(usuario)
   }
 
   async getMe(id: string) {

@@ -111,6 +111,19 @@ export function MiembroForm({
         <RichTextContent html={textoConsentimiento ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
       </label>
 
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold text-sm">Contraseña <span className="text-destructive">*</span></Label>
+          <Input type="password" autoComplete="new-password" placeholder="Mín. 8 caracteres" {...register(`miembros_adicionales.${index}.password` as const)} />
+          <FieldError message={(err?.password as { message?: string } | undefined)?.message} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="font-display font-bold text-sm">Confirmar contraseña <span className="text-destructive">*</span></Label>
+          <Input type="password" autoComplete="new-password" placeholder="Repite la contraseña" {...register(`miembros_adicionales.${index}.confirmPassword` as const)} />
+          <FieldError message={(err?.confirmPassword as { message?: string } | undefined)?.message} />
+        </div>
+      </div>
     </div>
   )
 }
