@@ -1,3 +1,4 @@
+import type { TelegramUser } from '@/services/api/auth'
 // ── Roles ────────────────────────────────────────────────────────────────────
 export type Rol =
   | 'administrador'
@@ -48,10 +49,8 @@ export interface MiembroAdicionalPayload {
   email: string
   telefono: string
   fecha_nacimiento: string
-  alias_telegram: string
-  apodo?: string
+  apodo: string
   consentimiento_tiendas: boolean
-  password: string
   tipo_relacion: TipoRelacion
 }
 
@@ -59,29 +58,27 @@ export type RegisterPayload =
   | {
       tipo_cuota: 'individual'
       email: string
-      password: string
+      telegram: TelegramUser
       nombre: string
       apellidos: string
       dni: string
       telefono?: string
       fecha_nacimiento?: string
       direccion?: string
-      alias_telegram?: string
-      apodo?: string
+      apodo: string
       consentimiento_tiendas: boolean
     }
   | {
       tipo_cuota: 'conjunta'
       email: string
-      password: string
+      telegram: TelegramUser
       nombre: string
       apellidos: string
       dni: string
       telefono?: string
       fecha_nacimiento?: string
       direccion?: string
-      alias_telegram?: string
-      apodo?: string
+      apodo: string
       consentimiento_tiendas: boolean
       miembros_adicionales: MiembroAdicionalPayload[]
     }

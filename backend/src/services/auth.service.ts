@@ -1,7 +1,8 @@
 import { PrismaClient, Rol } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
-import { RegisterInput, LoginInput } from '../schemas/auth.schema'
+import { RegisterInput, LoginInput, TelegramLoginInput } from '../schemas/auth.schema'
+import { HttpError } from '../lib/httpError'
 import { TelegramAuthInput } from '../schemas/telegram.schema'
 
 function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
@@ -15,10 +16,29 @@ function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean 
   return hmac === hash
 }
 
+// Firma + caducidad (24h) de los datos del widget. Devuelve el id de Telegram como BigInt
+function checkTelegram(data: TelegramAuthInput): bigint {
+  const botToken = process.env.BOT_TOKEN?.trim()
+  if (!botToken) throw new Error('BOT_TOKEN no configurado')
+  if (!verifyTelegramData(data, botToken)) throw new Error('Firma de Telegram inválida')
+  if (Math.floor(Date.now() / 1000) - data.auth_date > 86400) {
+    throw new Error('La autenticación de Telegram ha expirado, vuelve a intentarlo')
+  }
+  return BigInt(data.id)
+}
+
 const SALT_ROUNDS = 12
+
+const SESSION_SELECT = { id: true, email: true, nombre: true, apellidos: true, roles: true, estado: true } as const
 
 // Búsqueda sin distinguir mayúsculas: hay cuentas antiguas guardadas con mayúsculas
 const porEmail = (email: string) => ({ email: { equals: email.trim(), mode: 'insensitive' as const } })
+
+function comprobarEstado<T extends { estado: string }>(usuario: T): T {
+  if (usuario.estado === 'baja') throw new Error('Esta cuenta ha sido dada de baja')
+  if (usuario.estado === 'pendiente') throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
+  return usuario
+}
 
 export class AuthService {
   constructor(private prisma: PrismaClient) {}
@@ -45,14 +65,13 @@ export class AuthService {
       throw new Error(`Ya existe una cuenta con ese DNI: ${data.dni}`)
     }
 
-    const password_hash = await bcrypt.hash(data.password, SALT_ROUNDS)
-
-    const { password: _, ...rest } = data
+    const telegram_chat_id = await this.telegramLibre(data.telegram)
+    const { telegram, ...rest } = data
 
     const usuario = await this.prisma.usuario.create({
       data: {
         ...rest,
-        password_hash,
+        ...this.datosTelegram(telegram, telegram_chat_id),
         comprobante_transferencia: comprobanteFilename,
         roles: [Rol.socio_basico],
         estado: 'pendiente',
@@ -109,12 +128,13 @@ export class AuthService {
       }
     }
 
+    const telegram_chat_id = await this.telegramLibre(data.telegram)
+
     // Transacción atómica
     const resultado = await this.prisma.$transaction(async (tx) => {
       // Crear SolicitudGrupal con titular_id temporal (se actualizará)
       // Necesitamos crear el titular primero para tener su id
-      const password_hash_titular = await bcrypt.hash(data.password, SALT_ROUNDS)
-      const { password: _, miembros_adicionales, ...restoTitular } = data
+      const { telegram, miembros_adicionales, ...restoTitular } = data
 
       // Crear SolicitudGrupal con un titular_id placeholder — lo actualizamos tras crear el titular
       // Prisma requiere titular_id no nulo, así que creamos titular primero sin solicitud_grupal_id
@@ -122,7 +142,7 @@ export class AuthService {
       const titular = await tx.usuario.create({
         data: {
           ...restoTitular,
-          password_hash: password_hash_titular,
+          ...this.datosTelegram(telegram, telegram_chat_id),
           comprobante_transferencia: comprobanteFilename,
           roles: [Rol.socio_basico],
           estado: 'pendiente',
@@ -154,13 +174,12 @@ export class AuthService {
 
       // Crear miembros adicionales y sus relaciones
       for (const m of miembros_adicionales) {
-        const { password: _p, tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
-        const password_hash_miembro = await bcrypt.hash(m.password, SALT_ROUNDS)
+        // Sin Telegram ni contraseña: se vincula en su primer login con Telegram (email + DNI)
+        const { tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
 
         const miembro = await tx.usuario.create({
           data: {
             ...restoMiembro,
-            password_hash: password_hash_miembro,
             tipo_cuota: 'conjunta',
             roles: [Rol.socio_basico],
             estado: 'pendiente',
@@ -199,20 +218,57 @@ export class AuthService {
     })
 
     // Contraseña antes que estado: no revelar si una cuenta existe sin conocer su contraseña
-    if (!usuario || !(await bcrypt.compare(data.password, usuario.password_hash))) {
+    // Cuentas creadas con Telegram no tienen contraseña (pueden ponerla con "¿Olvidaste tu contraseña?")
+    if (!usuario?.password_hash || !(await bcrypt.compare(data.password, usuario.password_hash))) {
       throw new Error('Credenciales incorrectas')
     }
 
-    if (usuario.estado === 'baja') {
-      throw new Error('Esta cuenta ha sido dada de baja')
-    }
-
-    if (usuario.estado === 'pendiente') {
-      throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
-    }
-
     const { password_hash: _, ...userWithoutHash } = usuario
-    return userWithoutHash
+    return comprobarEstado(userWithoutHash)
+  }
+
+  async loginTelegram({ telegram, email, dni }: TelegramLoginInput) {
+    const telegram_chat_id = checkTelegram(telegram)
+
+    const usuario = await this.prisma.usuario.findUnique({ where: { telegram_chat_id }, select: SESSION_SELECT })
+    if (usuario) return comprobarEstado(usuario)
+
+    // Telegram sin vincular: el front pide email + DNI (status 404) y reintenta
+    if (!email || !dni) {
+      throw new HttpError(404, 'Es tu primer acceso con Telegram: indica tu email y DNI para vincular tu cuenta.')
+    }
+
+    // Primer acceso de los miembros de cuota conjunta (los registra el titular, sin Telegram ni contraseña).
+    // ponytail: email + DNI como prueba de identidad, limitado a cuentas que nunca han tenido acceso
+    // (sin Telegram y sin contraseña). Si hace falta más, código de un solo uso al aprobar el alta
+    const cuenta = await this.prisma.usuario.findFirst({
+      where: { ...porEmail(email), dni, telegram_chat_id: null, password_hash: null },
+      select: { id: true, estado: true },
+    })
+    if (!cuenta) throw new Error('No hay ninguna cuenta pendiente de vincular con ese email y DNI')
+    comprobarEstado(cuenta)
+
+    const vinculada = await this.prisma.usuario.update({
+      where: { id: cuenta.id },
+      data: this.datosTelegram(telegram, telegram_chat_id),
+      select: SESSION_SELECT,
+    })
+    return vinculada
+  }
+
+  private async telegramLibre(data: TelegramAuthInput) {
+    const telegram_chat_id = checkTelegram(data)
+    const existing = await this.prisma.usuario.findUnique({ where: { telegram_chat_id } })
+    if (existing) throw new Error('Esta cuenta de Telegram ya está vinculada a otro socio')
+    return telegram_chat_id
+  }
+
+  private datosTelegram(data: TelegramAuthInput, telegram_chat_id: bigint) {
+    return {
+      telegram_chat_id,
+      telegram_linked_at: new Date(),
+      ...(data.username ? { alias_telegram: `@${data.username}` } : {}),
+    }
   }
 
   async getMe(id: string) {
@@ -248,17 +304,8 @@ export class AuthService {
   }
 
   async linkTelegram(userId: string, data: TelegramAuthInput) {
-    const botToken = process.env.BOT_TOKEN?.trim()
-    if (!botToken) throw new Error('BOT_TOKEN no configurado')
-
-    if (!verifyTelegramData(data, botToken)) {
-      throw new Error('Firma de Telegram inválida')
-    }
-
-    const now = Math.floor(Date.now() / 1000)
-    if (now - data.auth_date > 86400) {
-      throw new Error('La autenticación de Telegram ha expirado, vuelve a intentarlo')
-    }
+    checkTelegram(data)
+    const botToken = process.env.BOT_TOKEN!.trim()
 
     const existing = await this.prisma.usuario.findFirst({
       where: { telegram_chat_id: BigInt(data.id), NOT: { id: userId } },

@@ -96,14 +96,9 @@ export function MiembroForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="font-display font-bold text-sm">Alias de Telegram <span className="text-destructive">*</span></Label>
-        <Input placeholder="tuusuario" {...register(`miembros_adicionales.${index}.alias_telegram` as const)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { e.target.value = e.target.value.replace(/^@+/, ''); register(`miembros_adicionales.${index}.alias_telegram` as const).onChange(e) }} />
-        <FieldError message={(err?.alias_telegram as { message?: string } | undefined)?.message} />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="font-display font-bold text-sm">Apodo <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span></Label>
+        <Label className="font-display font-bold text-sm">Apodo <span className="text-destructive">*</span> <span className="text-muted-foreground font-normal text-xs">(cómo le conoce la gente)</span></Label>
         <Input placeholder="Ej: Carly, El Mago..." {...register(`miembros_adicionales.${index}.apodo` as const)} />
+        <FieldError message={(err?.apodo as { message?: string } | undefined)?.message} />
       </div>
 
       <label className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/30 transition-colors">
@@ -116,18 +111,6 @@ export function MiembroForm({
         <RichTextContent html={textoConsentimiento ?? 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
       </label>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label className="font-display font-bold text-sm">Contraseña <span className="text-destructive">*</span></Label>
-          <Input type="password" autoComplete="new-password" placeholder="Mín. 8 caracteres" {...register(`miembros_adicionales.${index}.password` as const)} />
-          <FieldError message={(err?.password as { message?: string } | undefined)?.message} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="font-display font-bold text-sm">Confirmar contraseña <span className="text-destructive">*</span></Label>
-          <Input type="password" autoComplete="new-password" placeholder="Repite la contraseña" {...register(`miembros_adicionales.${index}.confirmPassword` as const)} />
-          <FieldError message={(err?.confirmPassword as { message?: string } | undefined)?.message} />
-        </div>
-      </div>
     </div>
   )
 }

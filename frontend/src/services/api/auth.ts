@@ -15,6 +15,10 @@ export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<LoginResponse>('/auth/login', payload),
 
+  // 404 = Telegram sin vincular: reintentar con email + DNI (primer acceso de miembros de cuota conjunta)
+  loginTelegram: (payload: { telegram: TelegramUser; email?: string; dni?: string }) =>
+    api.post<LoginResponse>('/auth/telegram', payload),
+
   register: (payload: RegisterPayload, comprobante: File) => {
     const fd = new FormData()
     fd.append('data', JSON.stringify(payload))

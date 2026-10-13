@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { AuthService } from '../services/auth.service'
-import { registerSchema, loginSchema, passwordSchema } from '../schemas/auth.schema'
+import { registerSchema, loginSchema, passwordSchema, telegramLoginSchema } from '../schemas/auth.schema'
 import { telegramAuthSchema } from '../schemas/telegram.schema'
 import { authenticate, signToken } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -114,6 +114,25 @@ router.post('/login', loginLimit, async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error al iniciar sesión'
     res.status(401).json({ error: message })
+  }
+})
+
+// POST /api/auth/telegram — login con los datos firmados del widget de Telegram
+// 404 = Telegram sin vincular: reintentar con email + DNI
+router.post('/telegram', loginLimit, async (req, res) => {
+  const parsed = telegramLoginSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+
+  try {
+    const usuario = await authService.loginTelegram(parsed.data)
+    const token = signToken({ id: usuario.id, email: usuario.email, roles: usuario.roles })
+    res.json({ data: { usuario, token } })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error al iniciar sesión'
+    res.status(err instanceof HttpError ? err.status : 401).json({ error: message })
   }
 })
 
