@@ -111,19 +111,8 @@ export function LoginPage() {
                 Bienvenido de nuevo
               </h1>
               <p className="text-muted-foreground mt-1.5">
-                Accede con Telegram o con tu email y contraseña
+                Accede con tu email y contraseña o con Telegram
               </p>
-            </div>
-
-            {/* Alto reservado: el botón de Telegram es un iframe que llega tarde y empujaría el formulario */}
-            <div className="flex justify-center items-center min-h-10">
-              <TelegramLoginWidget onAuth={mutateTelegram} size="large" radius={8} />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">o con email y contraseña</span>
-              <div className="flex-1 h-px bg-border" />
             </div>
 
             {/* Formulario */}
@@ -177,6 +166,17 @@ export function LoginPage() {
                 )}
               </Button>
             </form>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">o con Telegram</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Alto reservado: el botón de Telegram es un iframe que llega tarde y empujaría los enlaces */}
+            <div className="flex justify-center items-center min-h-10">
+              <TelegramLoginWidget onAuth={mutateTelegram} size="large" radius={8} />
+            </div>
 
             {/* Links secundarios */}
             <div className="pt-2 border-t border-border text-center space-y-2.5">
