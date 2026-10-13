@@ -46,7 +46,7 @@ export function RichTextContent({ html, className }: RichTextContentProps) {
   const clean = DOMPurify.sanitize(source, { USE_PROFILES: { html: true } })
   return (
     <div
-      className={cn('prose prose-sm prose-neutral dark:prose-invert max-w-none', className)}
+      className={cn('prose prose-sm prose-neutral max-w-none', className)}
       dangerouslySetInnerHTML={{ __html: clean }}
     />
   )
