@@ -80,7 +80,7 @@ export function ClubPage() {
                 <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold font-display text-secondary-foreground mb-2">
                   {texts.club.rules.voluntariado.title}
                 </h3>
-                <p className="text-base sm:text-lg md:text-xl font-semibold text-secondary-foreground/80 mb-5 sm:mb-6">
+                <p className="text-base sm:text-lg md:text-xl font-semibold text-secondary-foreground mb-5 sm:mb-6">
                   {texts.club.rules.voluntariado.subtitle}
                 </p>
                 <ul className="space-y-3 sm:space-y-4">

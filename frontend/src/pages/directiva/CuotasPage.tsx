@@ -131,7 +131,7 @@ export function CuotasPage() {
                           {MESES.map((nombreMes, i) => {
                             const mes = i + 1
                             if (!mesEnPeriodo(s.fecha_alta, anio, mes, hoy)) {
-                              return <td key={mes} className="text-center text-muted-foreground/40">—</td>
+                              return <td key={mes} className="text-center text-muted-foreground/70">—</td>
                             }
                             const estado = s.pagos_cuota.find((p) => p.anio === anio && p.mes === mes)?.estado
                             const etiqueta = ETIQUETA[estado ?? 'sin_revisar']
@@ -144,7 +144,7 @@ export function CuotasPage() {
                                   aria-label={`${s.nombre} ${s.apellidos}, ${nombreMes} ${anio}: ${etiqueta}`}
                                   className={cn(
                                     'w-24 min-h-10 px-1.5 py-1 rounded-md inline-flex items-center justify-center border text-xs leading-tight font-medium transition-colors',
-                                    estado === 'pagado' && 'bg-emerald-600/15 border-emerald-600/40 text-emerald-700',
+                                    estado === 'pagado' && 'bg-emerald-700/15 border-emerald-600/40 text-emerald-800',
                                     estado === 'sin_pagar' && 'bg-destructive/15 border-destructive/40 text-destructive',
                                     !estado && 'border-dashed border-border text-muted-foreground hover:bg-accent',
                                   )}

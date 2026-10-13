@@ -137,7 +137,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         {items.map((entry, idx) =>
           entry.type === 'section' ? (
             <div key={`section-${idx}`} className="px-5 pt-4 pb-1.5">
-              <p className="text-[10px] font-display font-bold uppercase tracking-widest text-muted-foreground/55 select-none">
+              <p className="text-[10px] font-display font-bold uppercase tracking-widest text-muted-foreground select-none">
                 {entry.label}
               </p>
             </div>

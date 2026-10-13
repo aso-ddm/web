@@ -174,7 +174,7 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
           </div>
           {socio.tiene_llaves ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-sm font-display font-bold text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-sm font-display font-bold text-emerald-800">
                 <CheckCircle2 className="h-4 w-4" />
                 Tiene llaves
               </span>
@@ -242,12 +242,12 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
         {puedeGestionar && <div className="space-y-2">
           {socio.estado === 'baja' ? (
             <>
-              <p className="font-display font-bold text-sm text-emerald-700">Reactivar socio</p>
+              <p className="font-display font-bold text-sm text-emerald-800">Reactivar socio</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setConfirmReactivar(true)}
-                className="font-display text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-2"
+                className="font-display text-emerald-800 border-emerald-300 hover:bg-emerald-50 gap-2"
               >
                 <UserCheck className="h-4 w-4" />
                 Dar de alta al socio
@@ -298,7 +298,7 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
         title={`¿Dar de alta a ${socio.nombre} ${socio.apellidos}?`}
         description="El socio volverá al estado activo y recuperará el acceso al área privada."
         confirmLabel="Dar de alta"
-        confirmClassName="bg-emerald-600 text-white hover:bg-emerald-700"
+        confirmClassName="bg-emerald-700 text-white hover:bg-emerald-800"
         onConfirm={() => reactivar()}
         pending={reactivando}
       />

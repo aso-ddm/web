@@ -7,7 +7,7 @@ export function RolBadge({ rol }: { rol: Rol }) {
     presidente: 'bg-primary text-primary-foreground',
     secretario: 'bg-primary/80 text-primary-foreground',
     tesorero: 'bg-primary/70 text-primary-foreground',
-    vocal: 'bg-secondary/20 text-secondary-foreground',
+    vocal: 'bg-secondary text-secondary-foreground',
     ludotecario: 'bg-accent text-accent-foreground',
     socio_basico: 'bg-muted text-muted-foreground',
   }

@@ -31,7 +31,7 @@ function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
     </span>
   )
   if (dias <= 3) return (
-    <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+    <span className="flex items-center gap-1 text-xs text-amber-700 font-medium">
       <Clock className="h-3 w-3" /> {dias === 0 ? 'Vence hoy' : `Vence en ${dias}d`}
     </span>
   )

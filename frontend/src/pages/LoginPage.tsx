@@ -81,13 +81,13 @@ export function LoginPage() {
             <p className="text-4xl xl:text-5xl font-display font-bold leading-tight text-primary-foreground">
               Tu club de<br />juegos de mesa<br />en Granada
             </p>
-            <p className="text-primary-foreground/65 text-lg font-display leading-relaxed max-w-xs">
+            <p className="text-primary-foreground/80 text-lg font-display leading-relaxed max-w-xs">
               Más de 800 juegos, partidas semanales y una comunidad que comparte tu afición.
             </p>
           </div>
 
           {/* Pie */}
-          <p className="relative z-10 text-xs text-primary-foreground/40 font-display">
+          <p className="relative z-10 text-xs text-primary-foreground/70 font-display">
             © {new Date().getFullYear()} Dragón de Madera
           </p>
         </div>

@@ -21,7 +21,7 @@ const estadoLabels: Record<EstadoSocio, string> = {
 }
 
 const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
-  activo: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />,
+  activo: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />,
   devuelto: <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />,
 }
 
@@ -149,8 +149,8 @@ export function DashboardPage() {
                     <Skeleton className="h-6 w-24" />
                   ) : usuario?.tiene_llaves ? (
                     <div className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                      <span className="text-sm font-display font-bold text-emerald-600">Tienes llaves</span>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-700 flex-shrink-0" />
+                      <span className="text-sm font-display font-bold text-emerald-700">Tienes llaves</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">

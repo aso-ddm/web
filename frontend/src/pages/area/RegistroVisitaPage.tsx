@@ -312,7 +312,7 @@ export function RegistroVisitaPage() {
                               <Gift className="h-3 w-3" /> Gratuita
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="font-display gap-1 bg-secondary/20 text-secondary-foreground">
+                            <Badge variant="secondary" className="font-display gap-1">
                               <Euro className="h-3 w-3" /> {precioVisita}€
                             </Badge>
                           )}

@@ -170,7 +170,7 @@ export function RecuperarPasswordPage() {
 
             {step === 'done' && (
               <div className="text-center space-y-4">
-                <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto" />
+                <CheckCircle2 className="h-12 w-12 text-emerald-700 mx-auto" />
                 <p className="text-muted-foreground text-sm">
                   Tu contraseña se ha actualizado. Ya puedes iniciar sesión con la nueva contraseña.
                 </p>

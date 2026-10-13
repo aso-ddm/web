@@ -240,7 +240,7 @@ export function GestionJuegosPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-emerald-600"
+                                  className="h-7 w-7 text-muted-foreground hover:text-emerald-700"
                                   title="Reactivar juego"
                                   onClick={() => setReactivando(juego)}
                                 >
@@ -250,7 +250,7 @@ export function GestionJuegosPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-amber-600"
+                                  className="h-7 w-7 text-muted-foreground hover:text-amber-700"
                                   title="Retirar juego"
                                   disabled={juego.estado === 'prestado'}
                                   onClick={() => setRetirando(juego)}
@@ -314,7 +314,7 @@ export function GestionJuegosPage() {
         title={`¿Retirar «${retirando?.nombre}»?`}
         description="El juego quedará marcado como retirado y se registrará en el historial. No podrá prestarse."
         confirmLabel={<><Archive className="h-4 w-4 mr-1" /> Retirar</>}
-        confirmClassName="bg-amber-600 text-white hover:bg-amber-700"
+        confirmClassName="bg-amber-700 text-white hover:bg-amber-800"
         onConfirm={() => retirando && retirar(retirando.id)}
         pending={retirandoPending}
       />

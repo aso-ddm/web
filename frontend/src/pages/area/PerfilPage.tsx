@@ -188,8 +188,8 @@ export function PerfilPage() {
           <CardContent>
             {usuario?.tiene_llaves ? (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-                <p className="font-display font-bold text-emerald-700 text-sm">Tienes llaves del club</p>
+                <CheckCircle2 className="h-5 w-5 text-emerald-700 flex-shrink-0" />
+                <p className="font-display font-bold text-emerald-800 text-sm">Tienes llaves del club</p>
               </div>
             ) : (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">

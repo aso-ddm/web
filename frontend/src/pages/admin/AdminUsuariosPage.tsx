@@ -27,7 +27,7 @@ import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { passwordSchema } from '@/pages/registro/schema'
 
-const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50'
+const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-xs disabled:opacity-50 disabled:bg-muted'
 
 const CAMPOS_TEXTO = [
   ['nombre', 'Nombre', 'text', false],
@@ -206,7 +206,7 @@ function UsuarioDetalle({
                 className={`px-2.5 py-1 rounded text-xs font-display transition-colors border ${
                   rolesEditados.includes(rol)
                     ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                    : 'border-input bg-card text-foreground hover:border-primary'
                 }`}
               >
                 {ROL_LABELS[rol]}
