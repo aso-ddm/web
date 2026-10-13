@@ -128,7 +128,7 @@ export function GestionJuegosPage() {
             <TabsTrigger value="catalogo" className="font-display">Catálogo</TabsTrigger>
             <TabsTrigger value="historial" className="font-display">Historial</TabsTrigger>
             <TabsTrigger value="solicitudes" className="font-display relative">
-              Solicitudes
+              Cesiones
               {pendientesCount > 0 && (
                 <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5 font-bold">
                   {pendientesCount}

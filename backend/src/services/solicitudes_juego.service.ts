@@ -57,7 +57,7 @@ export class SolicitudesJuegoService {
   }
 
   async aprobar(id: string, staff_id: string) {
-    const solicitud = await this.prisma.solicitudJuego.findUnique({ where: { id } })
+    const solicitud = await this.prisma.solicitudJuego.findUnique({ where: { id }, include: { socio: socioSelect } })
     if (!solicitud) throw new HttpError(404, 'Solicitud no encontrada')
     if (solicitud.estado !== 'pendiente') throw new HttpError(409, 'La solicitud ya fue procesada')
 
@@ -81,7 +81,7 @@ export class SolicitudesJuegoService {
         data: {
           juego_id: juego.id,
           tipo: TipoLogJuego.donado,
-          texto: `${juego.nombre} donado al Dragón`,
+          texto: `${juego.nombre} cedido al Dragón por ${solicitud.socio.nombre} ${solicitud.socio.apellidos}`,
           usuario_id: staff_id,
         },
       })

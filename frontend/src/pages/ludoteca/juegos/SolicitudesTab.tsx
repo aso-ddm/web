@@ -30,7 +30,7 @@ export function SolicitudesTab() {
   const { mutate: aprobar, isPending: aprobando } = useMutation({
     mutationFn: (id: string) => solicitudesJuegoApi.aprobar(id),
     onSuccess: () => {
-      toast.success('Solicitud aprobada — juego añadido al catálogo')
+      toast.success('Cesión aprobada — juego añadido al catálogo con el socio como propietario')
       queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
       invalidarJuegos(queryClient)
       queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
@@ -42,7 +42,7 @@ export function SolicitudesTab() {
     mutationFn: ({ id, motivo }: { id: string; motivo?: string }) =>
       solicitudesJuegoApi.rechazar(id, motivo),
     onSuccess: () => {
-      toast.success('Solicitud rechazada')
+      toast.success('Cesión rechazada')
       queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
       setRechazando(null)
       setMotivo('')
@@ -61,7 +61,7 @@ export function SolicitudesTab() {
   if (solicitudes.length === 0) return (
     <div className="text-center py-12 text-muted-foreground">
       <Check className="h-8 w-8 mx-auto mb-2 opacity-30" />
-      <p className="text-sm">Sin solicitudes pendientes</p>
+      <p className="text-sm">Sin solicitudes de cesión pendientes</p>
     </div>
   )
 
@@ -70,7 +70,7 @@ export function SolicitudesTab() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="font-display text-sm text-primary">
-            Solicitudes pendientes ({solicitudes.length})
+            Juegos que los socios quieren ceder al club ({solicitudes.length})
           </CardTitle>
         </CardHeader>
         <CardContent className="divide-y divide-border p-0">
@@ -80,7 +80,7 @@ export function SolicitudesTab() {
                 <p className="font-display font-bold text-sm">{s.nombre}</p>
                 {s.socio && (
                   <p className="text-xs text-muted-foreground">
-                    {s.socio.nombre} {s.socio.apellidos}
+                    Lo cede {s.socio.nombre} {s.socio.apellidos}
                     {s.socio.apodo ? ` (${s.socio.apodo})` : ''}
                     {' · '}{s.socio.email}
                   </p>
@@ -115,7 +115,7 @@ export function SolicitudesTab() {
       <Dialog open={!!rechazando} onOpenChange={(v) => { if (!v) { setRechazando(null); setMotivo('') } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display">Rechazar solicitud</DialogTitle>
+            <DialogTitle className="font-display">Rechazar cesión</DialogTitle>
             <DialogDescription>«{rechazando?.nombre}» de {rechazando?.socio?.nombre}</DialogDescription>
           </DialogHeader>
           <div className="py-2">

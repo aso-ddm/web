@@ -92,7 +92,9 @@ export class JuegosService {
     await this.logsService.crearSistema(
       juego.id,
       TipoLogJuego.donado,
-      `${juego.nombre} donado al Dragón`,
+      juego.propietario
+        ? `${juego.nombre} cedido al Dragón por ${juego.propietario.nombre} ${juego.propietario.apellidos}`
+        : `${juego.nombre} añadido al catálogo del Dragón`,
       usuario_id,
     )
 

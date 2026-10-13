@@ -7,7 +7,7 @@ export const estadoConfig: Record<EstadoJuego, { label: string; variant: 'defaul
 }
 
 export const tipoLogLabel: Record<string, string> = {
-  donado: '🎁 Donado',
+  donado: '🆕 Alta en catálogo',
   retirado: '📦 Retirado',
   prestamo_activo: '📤 Prestado',
   prestamo_devuelto: '📥 Devuelto',

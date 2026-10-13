@@ -11,6 +11,7 @@ const filtros = { page: 1, limit: 20 }
 const solicitudPendiente = {
   id: 's1',
   socio_id: 'u1',
+  socio: { id: 'u1', nombre: 'Ana', apellidos: 'García', email: 'ana@test.com', apodo: null },
   nombre: 'Wingspan',
   notas: null,
   estado: 'pendiente' as const,
@@ -120,6 +121,7 @@ describe('SolicitudesJuegoService.aprobar', () => {
         data: expect.objectContaining({
           juego_id: 'g99',
           tipo: 'donado',
+          texto: 'Wingspan cedido al Dragón por Ana García',
           usuario_id: 'staff1',
         }),
       }),

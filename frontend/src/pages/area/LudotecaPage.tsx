@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Search, BookOpen, MapPin, Users, Loader2, Gift } from 'lucide-react'
+import { Search, BookOpen, MapPin, Users, Loader2, Handshake } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,7 +71,7 @@ function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Jueg
         </div>
         {juego.propietario && (
           <p className="text-xs text-muted-foreground">
-            Donado por {juego.propietario.nombre} {juego.propietario.apellidos}
+            Cedido por {juego.propietario.nombre} {juego.propietario.apellidos}
           </p>
         )}
         {disponible && (
@@ -147,7 +147,7 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const { mutate, isPending } = useMutation({
     mutationFn: () => solicitudesJuegoApi.crear({ nombre: nombre.trim(), notas: notas.trim() || undefined }),
     onSuccess: () => {
-      toast.success('Solicitud enviada al ludotecario')
+      toast.success('Solicitud de cesión enviada al ludotecario')
       queryClient.invalidateQueries({ queryKey: ['mis-solicitudes-juego'] })
       onClose()
       setNombre('')
@@ -162,7 +162,9 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
         <DialogHeader>
           <DialogTitle className="font-display">Ceder un juego al club</DialogTitle>
           <DialogDescription>
-            El ludotecario revisará tu solicitud y añadirá el juego al catálogo si es aprobada.
+            El juego sigue siendo tuyo: lo cedes al club para que forme parte de la ludoteca y el resto de
+            socios pueda jugarlo y pedirlo prestado. El ludotecario revisará la solicitud y, si la aprueba,
+            lo añadirá al catálogo contigo como propietario.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -218,7 +220,7 @@ function MisSolicitudes() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="font-display text-base text-primary">Mis solicitudes de donación</CardTitle>
+        <CardTitle className="font-display text-base text-primary">Mis solicitudes de cesión</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {solicitudes.map((s: SolicitudJuego) => (
@@ -272,7 +274,7 @@ export function LudotecaPage() {
             className="font-display gap-2 self-start sm:self-auto"
             onClick={() => setCederOpen(true)}
           >
-            <Gift className="h-4 w-4" /> Ceder un juego
+            <Handshake className="h-4 w-4" /> Ceder un juego al club
           </Button>
         </div>
 
