@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, Loader2, UserX, Shield, Trash2, Edit2, Save } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -112,7 +113,7 @@ function UsuarioDetalle({
   })
 
   const esAdmin = usuario.roles.includes('administrador')
-  const { register, handleSubmit, formState: { isDirty, dirtyFields } } = useForm<FormDatos>({
+  const { register, control, handleSubmit, formState: { isDirty, dirtyFields } } = useForm<FormDatos>({
     defaultValues: aFormulario(usuario),
   })
 
@@ -163,10 +164,16 @@ function UsuarioDetalle({
               </select>
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="accent-primary" {...register('tiene_llaves')} /> Tiene llaves
+              <Controller control={control} name="tiene_llaves" render={({ field }) => (
+                <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
+              )} />
+              Tiene llaves
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="accent-primary" {...register('consentimiento_tiendas')} /> Consentimiento tiendas
+              <Controller control={control} name="consentimiento_tiendas" render={({ field }) => (
+                <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
+              )} />
+              Consentimiento tiendas
             </label>
           </div>
           <p className="text-xs text-muted-foreground">
