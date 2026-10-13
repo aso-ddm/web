@@ -1,9 +1,16 @@
 import { PrismaClient, TipoLogJuego, Prisma } from '@prisma/client'
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 import type { LogsJuegoService } from './logs_juego.service'
+import { HttpError } from '../lib/httpError'
 import { likePattern } from '../lib/search'
 
 const propietarioSelect = { select: { id: true, nombre: true, apellidos: true } }
+
+function comprobarJugadores(min?: number | null, max?: number | null) {
+  if (min != null && max != null && min > max) {
+    throw new HttpError(400, 'El mínimo de jugadores no puede ser mayor que el máximo')
+  }
+}
 
 export class JuegosService {
   constructor(
@@ -84,6 +91,7 @@ export class JuegosService {
   }
 
   async crear(data: CrearJuegoInput, usuario_id?: string) {
+    comprobarJugadores(data.num_jugadores_min, data.num_jugadores_max)
     const juego = await this.prisma.juego.create({
       data,
       include: { propietario: propietarioSelect },
@@ -104,6 +112,11 @@ export class JuegosService {
   async update(id: string, data: UpdateJuegoInput) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
     if (!juego) throw new Error('Juego no encontrado')
+    // Si solo llega uno de los dos, se compara con el guardado
+    comprobarJugadores(
+      data.num_jugadores_min !== undefined ? data.num_jugadores_min : juego.num_jugadores_min,
+      data.num_jugadores_max !== undefined ? data.num_jugadores_max : juego.num_jugadores_max,
+    )
     return this.prisma.juego.update({
       where: { id },
       data,
