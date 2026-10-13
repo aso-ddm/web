@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { authApi } from '@/services/api/auth'
 import { prestamosApi } from '@/services/api/prestamos'
-import { configuracionApi } from '@/services/api/configuracion'
+import { configuracionApi, enlacesInteresApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import type { EstadoSocio, EstadoPrestamo } from '@/types/api'
 import { formatDate } from '@/lib/format'
@@ -48,14 +48,16 @@ export function DashboardPage() {
     queryFn: () => Promise.allSettled([
       configuracionApi.getOne('url_estatutos'),
       configuracionApi.getOne('url_reglamento_interno'),
-      configuracionApi.getOne('url_telegram_principal'),
-      configuracionApi.getOne('url_telegram_partidas'),
-    ]).then(([estatutos, reglamento, telegram, telegramPartidas]) => ({
+    ]).then(([estatutos, reglamento]) => ({
       urlEstatutos: estatutos.status === 'fulfilled' ? estatutos.value?.data?.valor : '',
       urlReglamento: reglamento.status === 'fulfilled' ? reglamento.value?.data?.valor : '',
-      urlTelegram: telegram.status === 'fulfilled' ? telegram.value?.data?.valor : '',
-      urlTelegramPartidas: telegramPartidas.status === 'fulfilled' ? telegramPartidas.value?.data?.valor : '',
     })),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: enlacesInteres = [] } = useQuery({
+    queryKey: ['config', 'enlaces_interes'],
+    queryFn: () => enlacesInteresApi.getAll(),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -261,8 +263,28 @@ export function DashboardPage() {
           </Card>
         </div>
 
+        {/* Enlaces de interés */}
+        {enlacesInteres.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="font-display text-lg text-primary">Enlaces de interés</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {enlacesInteres.map((e, i) => (
+                <Button key={i} asChild variant="outline" className="justify-start gap-3 font-display">
+                  <a href={e.url} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="truncate">{e.label}</span>
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </a>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Recursos del club */}
-        {clubLinks && (clubLinks.urlEstatutos || clubLinks.urlReglamento || clubLinks.urlTelegram || clubLinks.urlTelegramPartidas) && (
+        {clubLinks && (clubLinks.urlEstatutos || clubLinks.urlReglamento) && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="font-display text-lg text-primary">Recursos del club</CardTitle>
@@ -282,24 +304,6 @@ export function DashboardPage() {
                   <a href={clubLinks.urlReglamento} target="_blank" rel="noopener noreferrer">
                     <FileText className="h-4 w-4" />
                     Reglamento interno
-                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                  </a>
-                </Button>
-              )}
-              {clubLinks.urlTelegram && (
-                <Button asChild variant="outline" className="justify-start gap-3 font-display">
-                  <a href={clubLinks.urlTelegram} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="h-4 w-4" />
-                    Grupo de Telegram
-                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                  </a>
-                </Button>
-              )}
-              {clubLinks.urlTelegramPartidas && (
-                <Button asChild variant="outline" className="justify-start gap-3 font-display">
-                  <a href={clubLinks.urlTelegramPartidas} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="h-4 w-4" />
-                    Grupo Telegram partidas
                     <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
                   </a>
                 </Button>

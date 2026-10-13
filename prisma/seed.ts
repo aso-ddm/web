@@ -156,16 +156,10 @@ Para cualquier duda o comentario nos encontrarás en info@dragondemadera.com o e
       descripcion: 'Nombre de usuario del bot de Telegram (sin @), necesario para el widget de vinculación',
     },
     {
-      clave: 'url_telegram_principal',
-      valor: '',
-      tipo: 'url',
-      descripcion: 'Enlace de invitación al grupo principal de Telegram del club',
-    },
-    {
-      clave: 'url_telegram_partidas',
-      valor: '',
-      tipo: 'url',
-      descripcion: 'Enlace de invitación al grupo de Telegram de organización de partidas',
+      clave: 'enlaces_interes',
+      valor: '[]',
+      tipo: 'json',
+      descripcion: 'Enlaces de interés mostrados a los socios en Mi panel',
     },
     {
       clave: 'iban_club',

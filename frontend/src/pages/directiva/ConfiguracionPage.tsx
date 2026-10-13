@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Settings, FileText, Link, Loader2, Save } from 'lucide-react'
+import { Settings, FileText, Link, Loader2, Save, Plus, Trash2, MessageCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RichTextEditor } from '@/components/molecules/RichTextEditor'
 import { SEOHead } from '@/components/atoms/SEOHead'
-import { configuracionApi, type ConfigItem } from '@/services/api/configuracion'
+import { configuracionApi, enlacesInteresApi, type ConfigItem, type EnlaceInteres } from '@/services/api/configuracion'
 
 const configLabels: Record<string, { label: string; description: string; suffix?: string }> = {
   precio_cuota_individual: {
@@ -63,14 +63,6 @@ const configLabels: Record<string, { label: string; description: string; suffix?
   url_reglamento_interno: {
     label: 'Reglamento interno (enlace)',
     description: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
-  },
-  url_telegram_principal: {
-    label: 'Grupo de Telegram (enlace)',
-    description: 'Enlace de invitación al grupo principal de Telegram del club',
-  },
-  url_telegram_partidas: {
-    label: 'Grupo Telegram partidas (enlace)',
-    description: 'Enlace de invitación al grupo de Telegram de organización de partidas',
   },
   iban_club: {
     label: 'IBAN del club',
@@ -188,6 +180,88 @@ function RichTextConfigField({
   )
 }
 
+function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
+  const queryClient = useQueryClient()
+  const [enlaces, setEnlaces] = useState(initial)
+
+  const { mutate: guardar, isPending } = useMutation({
+    mutationFn: () => enlacesInteresApi.save(enlaces),
+    onSuccess: () => {
+      toast.success('Enlaces de interés actualizados')
+      queryClient.invalidateQueries({ queryKey: ['config', 'enlaces_interes'] })
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const editar = (i: number, campo: keyof EnlaceInteres, valor: string) =>
+    setEnlaces((prev) => prev.map((e, j) => (j === i ? { ...e, [campo]: valor } : e)))
+
+  const changed = JSON.stringify(enlaces) !== JSON.stringify(initial)
+
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        guardar()
+      }}
+    >
+      {enlaces.length === 0 && (
+        <p className="text-sm text-muted-foreground">No hay enlaces. Añade el primero.</p>
+      )}
+      {enlaces.map((e, i) => (
+        <div key={i} className="flex flex-col sm:flex-row gap-2">
+          <Input
+            aria-label={`Nombre del enlace ${i + 1}`}
+            placeholder="Nombre (ej: Grupo de partidas)"
+            value={e.label}
+            onChange={(ev) => editar(i, 'label', ev.target.value)}
+            maxLength={100}
+            required
+            className="sm:max-w-56"
+          />
+          <Input
+            aria-label={`URL del enlace ${i + 1}`}
+            type="url"
+            placeholder="https://t.me/..."
+            value={e.url}
+            onChange={(ev) => editar(i, 'url', ev.target.value)}
+            pattern="https?://.+"
+            maxLength={500}
+            required
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Eliminar enlace ${i + 1}`}
+            onClick={() => setEnlaces((prev) => prev.filter((_, j) => j !== i))}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="font-display font-bold gap-1"
+          onClick={() => setEnlaces((prev) => [...prev, { label: '', url: '' }])}
+          disabled={enlaces.length >= 50}
+        >
+          <Plus className="h-3 w-3" />
+          Añadir enlace
+        </Button>
+        <Button type="submit" size="sm" disabled={isPending || !changed} className="font-display font-bold gap-1">
+          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          Guardar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 export function ConfiguracionPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['configuracion'],
@@ -203,6 +277,12 @@ export function ConfiguracionPage() {
   const { data: consentimientoData, isLoading: isConsentimientoLoading } = useQuery({
     queryKey: ['config', 'texto_consentimiento_tiendas'],
     queryFn: () => configuracionApi.getOne('texto_consentimiento_tiendas'),
+    retry: false,
+  })
+
+  const { data: enlacesData, isLoading: isEnlacesLoading } = useQuery({
+    queryKey: ['config', 'enlaces_interes'],
+    queryFn: () => enlacesInteresApi.getAll(),
     retry: false,
   })
 
@@ -324,6 +404,25 @@ export function ConfiguracionPage() {
               <p className="text-sm text-muted-foreground">No hay documentos configurados en la base de datos.</p>
             ) : (
               urlConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Enlaces de interés
+            </CardTitle>
+            <CardDescription>
+              Grupos de Telegram y otros enlaces que los socios ven en Mi panel
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isEnlacesLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : (
+              <EnlacesInteresEditor key={JSON.stringify(enlacesData)} initial={enlacesData ?? []} />
             )}
           </CardContent>
         </Card>

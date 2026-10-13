@@ -14,3 +14,14 @@ export const configuracionApi = {
   update: (clave: string, valor: string) =>
     api.put<{ data: ConfigItem }>(`/config/${clave}`, { valor }),
 }
+
+export interface EnlaceInteres {
+  label: string
+  url: string
+}
+
+export const enlacesInteresApi = {
+  getAll: () =>
+    configuracionApi.getOne('enlaces_interes').then((r) => JSON.parse(r.data.valor || '[]') as EnlaceInteres[]),
+  save: (enlaces: EnlaceInteres[]) => configuracionApi.update('enlaces_interes', JSON.stringify(enlaces)),
+}

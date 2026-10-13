@@ -1,7 +1,7 @@
-import { Router } from 'express'
+import { Router, type RequestHandler } from 'express'
 import { z } from 'zod'
 import { ConfiguracionService } from '../services/configuracion.service'
-import { requireRoles, ROLES } from '../middleware/auth'
+import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 
 const updateConfigSchema = z.object({
@@ -17,8 +17,14 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA), async (_req, res) => {
   res.json({ data: configs })
 })
 
-// GET /api/config/:clave — valor individual (público)
-router.get('/:clave', async (req, res) => {
+// Claves solo para socios autenticados (enlaces de invitación a grupos)
+const CLAVES_SOCIOS = new Set(['enlaces_interes'])
+
+// GET /api/config/:clave — valor individual (público salvo CLAVES_SOCIOS)
+const soloSociosSiPrivada: RequestHandler = (req, res, next) =>
+  CLAVES_SOCIOS.has(req.params.clave) ? authenticate(req, res, next) : next()
+
+router.get('/:clave', soloSociosSiPrivada, async (req, res) => {
   try {
     const config = await configService.getByKey(req.params.clave)
     res.json({ data: config })
