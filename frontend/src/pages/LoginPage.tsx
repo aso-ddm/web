@@ -106,7 +106,7 @@ export function LoginPage() {
 
           <div className="w-full max-w-sm space-y-8">
             {/* Cabecera */}
-            <div>
+            <div className="text-center">
               <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">
                 Bienvenido de nuevo
               </h1>
@@ -115,13 +115,14 @@ export function LoginPage() {
               </p>
             </div>
 
-            <div className="flex justify-center">
+            {/* Alto reservado: el botón de Telegram es un iframe que llega tarde y empujaría el formulario */}
+            <div className="flex justify-center items-center min-h-10">
               <TelegramLoginWidget onAuth={mutateTelegram} size="large" radius={8} />
             </div>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">o con tu email</span>
+              <span className="text-xs text-muted-foreground">o con email y contraseña</span>
               <div className="flex-1 h-px bg-border" />
             </div>
 

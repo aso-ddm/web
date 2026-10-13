@@ -48,6 +48,7 @@ export function TelegramLoginWidget({
     if (radius !== undefined) script.setAttribute('data-radius', String(radius))
     script.setAttribute('data-onauth', 'onTelegramAuth(user)')
     script.setAttribute('data-request-access', 'write')
+    script.setAttribute('data-userpic', 'false') // sin foto: el botón queda centrado
     script.async = true
 
     containerRef.current?.appendChild(script)
