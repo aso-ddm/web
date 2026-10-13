@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import { RegisterInput, LoginInput } from '../schemas/auth.schema'
 import { TelegramAuthInput } from '../schemas/telegram.schema'
+import { HttpError } from '../lib/httpError'
 
 function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
   const { hash, ...rest } = data
@@ -27,6 +28,14 @@ function checkTelegram(data: TelegramAuthInput): bigint {
 }
 
 const SALT_ROUNDS = 12
+export const MESES_PARA_LLAVES = 6
+
+/** Fecha a partir de la cual el socio puede pedir llaves (fecha de alta + 6 meses) */
+export function fechaPuedePedirLlaves(fechaAlta: Date): Date {
+  const d = new Date(fechaAlta)
+  d.setMonth(d.getMonth() + MESES_PARA_LLAVES)
+  return d
+}
 
 const SESSION_SELECT = { id: true, email: true, nombre: true, apellidos: true, roles: true, estado: true } as const
 
@@ -378,5 +387,53 @@ export class AuthService {
       where: { id: usuario.id },
       data: { password_hash, reset_token: null, reset_token_expiry: null },
     })
+  }
+
+  // Avisa por Telegram a los secretarios activos de que un socio con 6+ meses pide llaves
+  async pedirLlaves(userId: string) {
+    const socio = await this.prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { nombre: true, apellidos: true, apodo: true, email: true, alias_telegram: true, estado: true, fecha_alta: true, tiene_llaves: true },
+    })
+    if (!socio || socio.estado !== 'activo') throw new HttpError(403, 'Solo los socios activos pueden pedir llaves')
+    if (socio.tiene_llaves) throw new HttpError(409, 'Ya tienes llaves del club')
+    if (!socio.fecha_alta || fechaPuedePedirLlaves(socio.fecha_alta) > new Date()) {
+      throw new HttpError(403, `Necesitas ${MESES_PARA_LLAVES} meses como socio para pedir llaves`)
+    }
+
+    const botToken = process.env.BOT_TOKEN
+    if (!botToken) throw new Error('BOT_TOKEN no configurado')
+
+    const secretarios = await this.prisma.usuario.findMany({
+      where: { roles: { has: Rol.secretario }, estado: 'activo', telegram_chat_id: { not: null } },
+      select: { telegram_chat_id: true },
+    })
+
+    const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const nombre = `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`
+    const texto =
+      `🔑 <b>Solicitud de llaves</b>
+
+` +
+      `${esc(nombre)} quiere pedir las llaves del club.
+` +
+      `Email: ${esc(socio.email)}` +
+      (socio.alias_telegram ? `
+Telegram: ${esc(socio.alias_telegram)}` : '')
+
+    const resultados = await Promise.all(secretarios.map((s) =>
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: s.telegram_chat_id!.toString(), text: texto, parse_mode: 'HTML' }),
+      })
+        .then((r) => r.json() as Promise<{ ok?: boolean }>)
+        .then((r) => r.ok === true)
+        .catch(() => false),
+    ))
+
+    if (!resultados.includes(true)) {
+      throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
+    }
   }
 }

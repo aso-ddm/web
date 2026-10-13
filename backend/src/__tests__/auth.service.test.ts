@@ -204,3 +204,29 @@ describe('AuthService.requestPasswordReset', () => {
     await expect(service.requestPasswordReset('ana@x.com')).resolves.toEqual({ hasTelegram: true })
   })
 })
+
+describe('AuthService.pedirLlaves', () => {
+  const haceMeses = (m: number) => { const d = new Date(); d.setMonth(d.getMonth() - m); return d }
+  const socio = (fecha_alta: Date) => ({ nombre: 'Ana', apellidos: 'García', apodo: null, email: 'a@x.com', alias_telegram: null, estado: 'activo', tiene_llaves: false, fecha_alta })
+
+  it('menos de 6 meses → 403 sin avisar', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(socio(haceMeses(5)))
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    await expect(service.pedirLlaves('u1')).rejects.toThrow('6 meses')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('6 meses → avisa al secretario por Telegram', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(socio(haceMeses(6)))
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ telegram_chat_id: BigInt(7) }])
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }))
+    await expect(service.pedirLlaves('u1')).resolves.toBeUndefined()
+    expect(JSON.parse(fetchSpy.mock.calls[0][1]!.body as string).chat_id).toBe('7')
+  })
+
+  it('ningún secretario recibe el aviso → error', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(socio(haceMeses(7)))
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    await expect(service.pedirLlaves('u1')).rejects.toThrow('No hemos podido avisar')
+  })
+})

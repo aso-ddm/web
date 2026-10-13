@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +19,14 @@ const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
   pendiente: 'Pendiente de aprobación',
   baja: 'Dado de baja',
+}
+
+const MESES_PARA_LLAVES = 6
+
+function fechaPuedePedirLlaves(fechaAlta: string): Date {
+  const d = new Date(fechaAlta)
+  d.setMonth(d.getMonth() + MESES_PARA_LLAVES)
+  return d
 }
 
 const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
@@ -61,7 +70,15 @@ export function DashboardPage() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const { mutate: pedirLlaves, isPending: pidiendoLlaves, isSuccess: llavesPedidas } = useMutation({
+    mutationFn: () => authApi.pedirLlaves(),
+    onSuccess: () => toast.success('Hemos avisado al secretario. Se pondrá en contacto contigo.'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'No se pudo enviar la solicitud'),
+  })
+
   const usuario = meData?.data
+  const fechaLlaves = usuario?.fecha_alta ? fechaPuedePedirLlaves(usuario.fecha_alta) : null
+  const puedePedirLlaves = !!fechaLlaves && fechaLlaves <= new Date()
   const prestamosActivos = prestamosData?.data.filter(
     (p) => p.estado === 'activo',
   ) ?? []
@@ -163,6 +180,27 @@ export function DashboardPage() {
                   <Key className="h-4 w-4 text-primary" />
                 </div>
               </div>
+              {!loadingMe && usuario && !usuario.tiene_llaves && usuario.estado === 'activo' && (
+                puedePedirLlaves ? (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-emerald-700">Ya llevas {MESES_PARA_LLAVES} meses como socio: puedes pedir las llaves.</p>
+                    <Button
+                      size="sm"
+                      className="w-full font-display gap-2"
+                      onClick={() => pedirLlaves()}
+                      disabled={pidiendoLlaves || llavesPedidas}
+                    >
+                      <Key className="h-3.5 w-3.5" />
+                      {llavesPedidas ? 'Solicitud enviada' : pidiendoLlaves ? 'Enviando…' : 'Pedir llaves'}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    No puedes pedir las llaves hasta llevar {MESES_PARA_LLAVES} meses como socio
+                    {fechaLlaves && <> (a partir del {formatDate(fechaLlaves.toISOString())})</>}.
+                  </p>
+                )
+              )}
             </CardContent>
           </Card>
 
