@@ -3,7 +3,6 @@ import { toast } from 'sonner'
 import { DragonIcon } from '@/components/atoms/icons'
 import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
 import { authApi, type TelegramUser } from '@/services/api/auth'
-import { configuracionApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 
@@ -14,13 +13,6 @@ export function TelegramLinkModal() {
   const { data: meData } = useQuery({
     queryKey: ['me'],
     queryFn: () => authApi.me(),
-    enabled: !!usuario,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const { data: botConfig, isPending: cargandoBot } = useQuery({
-    queryKey: ['config', 'telegram_bot_username'],
-    queryFn: () => configuracionApi.getOne('telegram_bot_username'),
     enabled: !!usuario,
     staleTime: 5 * 60 * 1000,
   })
@@ -38,8 +30,6 @@ export function TelegramLinkModal() {
     meData?.data !== undefined &&
     !meData.data.telegram_chat_id &&
     !meData.data.roles.includes('administrador')
-
-  const botUsername = botConfig?.data?.valor
 
   if (!needsTelegramLink) return null
 
@@ -88,15 +78,7 @@ export function TelegramLinkModal() {
         </div>
 
         <div className="flex justify-center">
-          {/* Hasta saber qué bot está configurado: montarlo con el de por defecto daría "Firma inválida" */}
-          {!cargandoBot && (
-            <TelegramLoginWidget
-              onAuth={linkTelegram}
-              botUsername={botUsername || undefined}
-              size="large"
-              radius={8}
-            />
-          )}
+          <TelegramLoginWidget onAuth={linkTelegram} size="large" radius={8} />
         </div>
 
         <p className="text-xs text-muted-foreground">

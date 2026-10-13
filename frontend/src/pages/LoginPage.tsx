@@ -13,7 +13,6 @@ import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
 import { authApi } from '@/services/api/auth'
-import { useConfigValor } from '@/hooks/useConfigValor'
 import { useAuthStore } from '@/store/authStore'
 import type { LoginResponse } from '@/types/api'
 
@@ -43,8 +42,6 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
-
-  const botUsername = useConfigValor('telegram_bot_username', 'Dragon_de_maderaBot')
 
   // Mismo final para los dos accesos: guardar sesión y redirigir
   const onLogin = {
@@ -119,7 +116,7 @@ export function LoginPage() {
             </div>
 
             <div className="flex justify-center">
-              <TelegramLoginWidget onAuth={mutateTelegram} botUsername={botUsername} size="large" radius={8} />
+              <TelegramLoginWidget onAuth={mutateTelegram} size="large" radius={8} />
             </div>
 
             <div className="flex items-center gap-3">

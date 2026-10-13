@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { TelegramUser } from '@/services/api/auth'
+import { configuracionApi } from '@/services/api/configuracion'
+
+const BOT_POR_DEFECTO = 'Dragon_de_maderaBot'
 
 // Callback global que invoca el script del widget de Telegram (data-onauth)
 declare global {
@@ -10,14 +14,12 @@ declare global {
 
 interface TelegramLoginWidgetProps {
   onAuth: (user: TelegramUser) => void
-  botUsername?: string
   size?: 'small' | 'medium' | 'large'
   radius?: number
 }
 
 export function TelegramLoginWidget({
   onAuth,
-  botUsername = 'Dragon_de_maderaBot',
   size = 'medium',
   radius,
 }: TelegramLoginWidgetProps) {
@@ -25,7 +27,18 @@ export function TelegramLoginWidget({
   const onAuthRef = useRef(onAuth)
   onAuthRef.current = onAuth
 
+  // Bot de Configuración; vacío o sin configurar → el de por defecto (si no, Telegram dice "Bot username required").
+  // Hasta saberlo no se monta: con otro bot la firma no cuadraría ("Firma de Telegram inválida")
+  const { data, isPending } = useQuery({
+    queryKey: ['config', 'telegram_bot_username'],
+    queryFn: () => configuracionApi.getOne('telegram_bot_username'),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+  const botUsername = isPending ? null : data?.data?.valor?.trim() || BOT_POR_DEFECTO
+
   useEffect(() => {
+    if (!botUsername) return
     window.onTelegramAuth = (user: TelegramUser) => onAuthRef.current(user)
 
     const script = document.createElement('script')
