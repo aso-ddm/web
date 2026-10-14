@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { GOOGLE_SHEETS, SPACING } from '@/lib/constants'
 import texts from '@/data/texts.json'
@@ -14,49 +15,31 @@ export function columnasCsv(linea: string): string[] {
   return columnas
 }
 
+/** Nombres de juego (columna 2 de la hoja pública), en mayúsculas y ordenados */
+async function cargarLudoteca(): Promise<string[]> {
+  const res = await fetch(GOOGLE_SHEETS.ludotecaCSV)
+  // Si la hoja deja de ser pública Google responde con HTML: no pintarlo como si fueran juegos
+  if (!res.ok) throw new Error(`Google Sheets respondió ${res.status}`)
+  return (await res.text())
+    .split('\n')
+    .slice(1)
+    .map((linea) => columnasCsv(linea.trim())[1]?.trim().toUpperCase())
+    .filter((nombre): nombre is string => !!nombre)
+    .sort((a, b) => a.localeCompare(b))
+}
+
 export function LudotecaTable() {
-  const [games, setGames] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  // Caché de sesión: volver a la página no descarga otra vez la hoja (unos 800 juegos)
+  const { data: games = [], isLoading: loading, isError: error } = useQuery({
+    queryKey: ['ludoteca-publica'],
+    queryFn: cargarLudoteca,
+    staleTime: Infinity,
+  })
+  // El filtrado de cientos de filas no bloquea lo que se escribe en el buscador
+  const busqueda = useDeferredValue(searchTerm)
 
-  useEffect(() => {
-    fetch(GOOGLE_SHEETS.ludotecaCSV)
-      .then((res) => {
-        // Si la hoja deja de ser pública Google responde con HTML: no pintarlo como si fueran juegos
-        if (!res.ok) throw new Error(`Google Sheets respondió ${res.status}`)
-        return res.text()
-      })
-      .then((csvText) => {
-        const lines = csvText.split('\n')
-        const gameNames: string[] = []
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim()
-          if (!line) continue
-
-          const columns = columnasCsv(line)
-          if (columns.length >= 2) {
-            const gameName = columns[1].trim()
-            if (gameName) {
-              gameNames.push(gameName.toUpperCase())
-            }
-          }
-        }
-
-        gameNames.sort((a, b) => a.localeCompare(b))
-
-        setGames(gameNames)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Error loading ludoteca:', err)
-        setError(true)
-        setLoading(false)
-      })
-  }, [])
-
-  const filteredGames = games.filter((game) => game.toUpperCase().includes(searchTerm.toUpperCase()))
+  const filteredGames = games.filter((game) => game.includes(busqueda.toUpperCase()))
 
   if (loading) {
     return (
@@ -115,7 +98,7 @@ export function LudotecaTable() {
             {filteredGames.length > 0 ? (
               filteredGames.map((game, index) => (
                 <tr
-                  key={index}
+                  key={`${index}-${game}`} // la hoja puede repetir un nombre (varias copias del mismo juego)
                   className={`border-b border-muted/50 hover:bg-muted/30 transition-colors ${
                     index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                   }`}
