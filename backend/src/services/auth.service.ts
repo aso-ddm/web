@@ -1,9 +1,12 @@
 import { PrismaClient, Rol } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import { RegisterInput, LoginInput } from '../schemas/auth.schema'
 import { TelegramAuthInput } from '../schemas/telegram.schema'
 import { HttpError } from '../lib/httpError'
+import { eventos } from '../lib/eventos'
 
 function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
   const { hash, ...rest } = data
@@ -28,6 +31,44 @@ function checkTelegram(data: TelegramAuthInput): bigint {
 }
 
 const SALT_ROUNDS = 12
+
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+// Envía un mensaje HTML a los secretarios activos con Telegram vinculado. Con `archivo`, lo adjunta
+// como documento y el texto va de pie (máx. 1024 caracteres). Devuelve si llegó a alguno
+async function avisarSecretarios(prisma: PrismaClient, texto: string, archivo?: string): Promise<boolean> {
+  const botToken = process.env.BOT_TOKEN
+  if (!botToken) throw new Error('BOT_TOKEN no configurado')
+
+  const secretarios = await prisma.usuario.findMany({
+    where: { roles: { has: Rol.secretario }, estado: 'activo', telegram_chat_id: { not: null } },
+    select: { telegram_chat_id: true },
+  })
+
+  const enviar = async (chatId: string) => {
+    if (!archivo) {
+      return fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: texto, parse_mode: 'HTML' }),
+      })
+    }
+    const form = new FormData()
+    form.append('chat_id', chatId)
+    form.append('caption', texto)
+    form.append('parse_mode', 'HTML')
+    form.append('document', await fs.openAsBlob(archivo), path.basename(archivo))
+    return fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method: 'POST', body: form })
+  }
+
+  const resultados = await Promise.all(secretarios.map((s) =>
+    enviar(s.telegram_chat_id!.toString())
+      .then((r) => r.json() as Promise<{ ok?: boolean }>)
+      .then((r) => r.ok === true)
+      .catch(() => false),
+  ))
+  return resultados.includes(true)
+}
 export const MESES_PARA_LLAVES = 6
 
 /** Fecha a partir de la cual el socio puede pedir llaves (fecha de alta + 6 meses) */
@@ -59,10 +100,28 @@ export class AuthService {
   constructor(private prisma: PrismaClient) {}
 
   async register(data: RegisterInput, comprobanteFilename: string) {
-    if (data.tipo_cuota === 'conjunta') {
-      return this.registerConjunta(data, comprobanteFilename)
-    }
-    return this.registerIndividual(data, comprobanteFilename)
+    const resultado = data.tipo_cuota === 'conjunta'
+      ? await this.registerConjunta(data, comprobanteFilename)
+      : await this.registerIndividual(data, comprobanteFilename)
+
+    eventos.emit('cambio', 'pendientes')
+
+    // Aviso al secretario sin bloquear ni hacer fallar el alta si Telegram no responde
+    const miembros = data.tipo_cuota === 'conjunta' ? data.miembros_adicionales.length : 0
+    const texto =
+      `📝 <b>Nueva solicitud de alta</b>
+
+` +
+      `${esc(`${data.nombre} ${data.apellidos}`)} (${esc(data.email)})
+` +
+      `Cuota: ${data.tipo_cuota}${miembros ? ` (+${miembros} miembro${miembros > 1 ? 's' : ''})` : ''}
+
+` +
+      `Revísala en Directiva → Solicitudes.`
+    const comprobante = path.resolve(process.cwd(), 'uploads/transferencias', comprobanteFilename)
+    avisarSecretarios(this.prisma, texto, comprobante).catch((err) => console.error('Aviso de alta por Telegram:', err))
+
+    return resultado
   }
 
   private async registerIndividual(data: Extract<RegisterInput, { tipo_cuota: 'individual' }>, comprobanteFilename: string) {
@@ -413,15 +472,6 @@ export class AuthService {
       throw new HttpError(409, 'Ya has pedido las llaves. Espera a que el secretario se ponga en contacto contigo por Telegram.')
     }
 
-    const botToken = process.env.BOT_TOKEN
-    if (!botToken) throw new Error('BOT_TOKEN no configurado')
-
-    const secretarios = await this.prisma.usuario.findMany({
-      where: { roles: { has: Rol.secretario }, estado: 'activo', telegram_chat_id: { not: null } },
-      select: { telegram_chat_id: true },
-    })
-
-    const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const nombre = `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`
     const texto =
       `🔑 <b>Solicitud de llaves</b>
@@ -433,18 +483,7 @@ export class AuthService {
       (socio.alias_telegram ? `
 Telegram: ${esc(socio.alias_telegram)}` : '')
 
-    const resultados = await Promise.all(secretarios.map((s) =>
-      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: s.telegram_chat_id!.toString(), text: texto, parse_mode: 'HTML' }),
-      })
-        .then((r) => r.json() as Promise<{ ok?: boolean }>)
-        .then((r) => r.ok === true)
-        .catch(() => false),
-    ))
-
-    if (!resultados.includes(true)) {
+    if (!(await avisarSecretarios(this.prisma, texto))) {
       throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
     }
 

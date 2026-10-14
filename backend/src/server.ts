@@ -21,6 +21,7 @@ import solicitudesJuegoRouter from './routes/solicitudes_juego.routes'
 import telegramRouter from './routes/telegram.routes'
 import adminRouter from './routes/admin.routes'
 import cuotasRouter from './routes/cuotas.routes'
+import eventosRouter from './routes/eventos.routes'
 import { notFound, errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -52,6 +53,7 @@ app.use('/api/solicitudes-juego', solicitudesJuegoRouter)
 app.use('/api/telegram', telegramRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/cuotas', cuotasRouter)
+app.use('/api/eventos', eventosRouter)
 
 // ── Errores ───────────────────────────────────────────────────────────────────
 app.use(notFound)

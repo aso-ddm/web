@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { CheckCircle2, XCircle, User, Users, Loader2, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { configuracionApi } from '@/services/api/configuracion'
+import { escucharEventos } from '@/services/api/eventos'
 import { useAuthStore } from '@/store/authStore'
 import { ROL_LABELS, ROLES_ASIGNABLES } from '@/lib/roles'
 import { invalidarSocios } from '@/lib/queryKeys'
@@ -244,10 +245,26 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export function SolicitudesPage() {
+  const queryClient = useQueryClient()
   const { data: pendientesData, isLoading: loadingAltas } = useQuery({
     queryKey: ['pendientes'],
     queryFn: () => sociosApi.getPendientes(),
+    staleTime: 0,
   })
+
+  // Altas nuevas en vivo. Si la conexión se corta, reintenta a los 5 s y recarga por si se perdió algún aviso
+  useEffect(() => {
+    const ctrl = new AbortController()
+    void (async () => {
+      while (!ctrl.signal.aborted) {
+        await escucharEventos((key) => queryClient.invalidateQueries({ queryKey: [key] }), ctrl.signal).catch(() => {})
+        if (ctrl.signal.aborted) return
+        await new Promise((r) => setTimeout(r, 5000))
+        queryClient.invalidateQueries({ queryKey: ['pendientes'] })
+      }
+    })()
+    return () => ctrl.abort()
+  }, [queryClient])
 
   const { data: configPrecioIndividual } = useQuery({
     queryKey: ['config', 'precio_cuota_individual'],
