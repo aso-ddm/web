@@ -37,11 +37,11 @@ export function fechaPuedePedirLlaves(fechaAlta: Date): Date {
   return d
 }
 
-/** Fecha a partir de la cual el socio puede volver a pedir llaves (1 mes tras la última solicitud) */
+export const DIAS_ENTRE_SOLICITUDES_LLAVES = 30
+
+/** Fecha a partir de la cual el socio puede volver a pedir llaves (30 días exactos tras la última solicitud) */
 export function fechaPuedeRepetirSolicitudLlaves(solicitadas: Date): Date {
-  const d = new Date(solicitadas)
-  d.setMonth(d.getMonth() + 1)
-  return d
+  return new Date(solicitadas.getTime() + DIAS_ENTRE_SOLICITUDES_LLAVES * 86_400_000)
 }
 
 const SESSION_SELECT = { id: true, email: true, nombre: true, apellidos: true, roles: true, estado: true } as const

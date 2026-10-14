@@ -37,5 +37,8 @@
       "Bash(npx tsc *)",
       "Bash(git commit *)"
     ]
+  },
+  "skillOverrides": {
+    "frontend-design": "off"
   }
 }

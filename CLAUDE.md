@@ -244,3 +244,9 @@ IPs en proxy_network: `.110` (db) · `.111` (backend) · `.112` (frontend)
 - **Tailwind CSS 4 + shadcn/ui**: dragondemadera lidera; el boilerplate se actualizará
 - **Sin Docker en producción actual**: bare metal + PM2; Docker disponible para futuros despliegues o proyectos derivados
 - `.env` en servidor, nunca en repo
+
+---
+
+## Commits
+
+- Los mensajes de commit, PRs y descripciones de cambios **no llevan ninguna referencia a Claude**: nada de `Co-Authored-By: Claude`, ni "Generated with Claude Code", ni menciones similares.

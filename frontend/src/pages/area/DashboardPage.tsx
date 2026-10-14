@@ -29,13 +29,14 @@ function fechaPuedePedirLlaves(fechaAlta: string): Date {
   return d
 }
 
-// Tras pedir llaves, el botón no vuelve hasta pasado 1 mes (el backend aplica la misma regla).
+const DIAS_ENTRE_SOLICITUDES_LLAVES = 30
+
+// Tras pedir llaves, el botón no vuelve hasta pasados 30 días exactos (el backend aplica la misma regla).
 // Devuelve los días que faltan (0 = ya puede volver a pedirlas)
 function diasParaRepetirSolicitudLlaves(solicitadas?: string | null): number {
   if (!solicitadas) return 0
-  const d = new Date(solicitadas)
-  d.setMonth(d.getMonth() + 1)
-  return Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86_400_000))
+  const disponible = new Date(solicitadas).getTime() + DIAS_ENTRE_SOLICITUDES_LLAVES * 86_400_000
+  return Math.max(0, Math.ceil((disponible - Date.now()) / 86_400_000))
 }
 
 const prestamoEstadoIcon: Record<EstadoPrestamo, React.ReactNode> = {
@@ -198,17 +199,24 @@ export function DashboardPage() {
               {!loadingMe && usuario && !usuario.tiene_llaves && usuario.estado === 'activo' && (
                 puedePedirLlaves ? (
                   diasParaPedirLlaves > 0 ? (
-                    <div className="mt-3 space-y-1.5">
-                      <p className="text-xs text-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
-                        Solicitud enviada correctamente el {formatDate(usuario.llaves_solicitadas_at)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        El secretario se pondrá en contacto contigo por Telegram.
-                      </p>
-                      <p className="text-xs font-display font-bold text-foreground">
-                        Podrás volver a solicitarlas en {diasParaPedirLlaves} {diasParaPedirLlaves === 1 ? 'día' : 'días'}
-                      </p>
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+                        <p className="text-sm font-display font-bold text-emerald-800 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                          Solicitud de llaves enviada
+                        </p>
+                        <p className="text-xs text-emerald-900/80">
+                          El {formatDate(usuario.llaves_solicitadas_at, 'long')} avisamos al secretario del club de que
+                          quieres las llaves. Se pondrá en contacto contigo por Telegram para acordar la entrega.
+                        </p>
+                        <p className="text-xs text-emerald-900/80 pt-2 border-t border-emerald-200">
+                          Podrás volver a solicitarlas en{' '}
+                          <span className="font-display font-bold text-emerald-800">
+                            {diasParaPedirLlaves} {diasParaPedirLlaves === 1 ? 'día' : 'días'}
+                          </span>
+                          {' '}si no has tenido respuesta.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-3 space-y-2">
