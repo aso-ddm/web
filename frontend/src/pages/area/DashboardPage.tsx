@@ -19,6 +19,7 @@ import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { QK } from '@/lib/queryKeys'
 import { useMe } from '@/hooks/useMe'
+import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
 
 const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
@@ -59,10 +60,12 @@ export function DashboardPage() {
 
   const { data: meData, isLoading: loadingMe } = useMe()
 
-  const { data: prestamosData, isLoading: loadingPrestamos } = useQuery({
-    queryKey: QK.MIS_PRESTAMOS_PAGINA(1),
-    queryFn: () => prestamosApi.misPrestamos(1),
+  const { data: prestamosActivos = [], isLoading: loadingActivos } = useMisPrestamosActivos()
+  const { data: recientesData, isLoading: loadingRecientes } = useQuery({
+    queryKey: QK.MIS_PRESTAMOS_RECIENTES,
+    queryFn: () => prestamosApi.misPrestamos({ limit: 3 }),
   })
+  const loadingPrestamos = loadingActivos || loadingRecientes
 
   const clubLinks = {
     urlEstatutos: useConfigValor('url_estatutos', ''),
@@ -97,10 +100,7 @@ export function DashboardPage() {
   const fechaLlaves = usuario?.fecha_alta ? fechaPuedePedirLlaves(usuario.fecha_alta) : null
   const puedePedirLlaves = !!fechaLlaves && fechaLlaves <= new Date()
   const diasParaPedirLlaves = diasParaRepetirSolicitudLlaves(usuario?.llaves_solicitadas_at)
-  const prestamosActivos = prestamosData?.data.filter(
-    (p) => p.estado === 'activo',
-  ) ?? []
-  const ultimosPrestamos = prestamosData?.data.slice(0, 3) ?? []
+  const ultimosPrestamos = recientesData?.data ?? []
 
   return (
     <>

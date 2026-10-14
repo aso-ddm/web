@@ -10,12 +10,10 @@ import { QueryError } from '@/components/molecules/QueryError'
 export function LlavesPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: QK.SOCIOS_LLAVES,
-    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 500 }),
+    queryFn: () => sociosApi.getAll({ estado: 'activo', tiene_llaves: true, limit: 500 }),
   })
 
-  const titulares = (data?.data ?? [])
-    .filter((s) => s.tiene_llaves)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  const titulares = [...(data?.data ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
   return (
     <>

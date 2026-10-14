@@ -368,3 +368,16 @@ describe('SociosService.cambiarEstado (panel de admin)', () => {
     await expect(service.cambiarEstado('u1', 'baja', 'admin1')).rejects.toMatchObject({ status: 404 })
   })
 })
+
+describe('SociosService.getAll (filtros de Llaves y Anuncios)', () => {
+  it('tiene_llaves y con_telegram se filtran en la consulta, no en el navegador', async () => {
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(prisma.usuario.count as ReturnType<typeof vi.fn>).mockResolvedValue(0)
+
+    await service.getAll({ estado: 'activo', tiene_llaves: true, con_telegram: true, page: 1, limit: 500 })
+
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { estado: 'activo', tiene_llaves: true, telegram_chat_id: { not: null } },
+    }))
+  })
+})

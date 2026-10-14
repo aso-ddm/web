@@ -31,6 +31,14 @@ async function send(endpoint: string, init: RequestInit): Promise<Response> {
   throw new ApiRequestError(detalle ? `${mensaje}: ${detalle}` : mensaje, response.status)
 }
 
+/** "?a=1&b=x" con los parámetros definidos (undefined y '' se omiten); '' si no hay ninguno */
+export function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
+  const q = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]),
+  ).toString()
+  return q ? `?${q}` : ''
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},

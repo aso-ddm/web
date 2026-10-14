@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   BookOpen, Plus, Search, Loader2, Package, RotateCcw, RefreshCw, AlertTriangle, Clock,
@@ -22,6 +22,7 @@ import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { Juego, Prestamo } from '@/types/api'
 import { formatJugadores, formatDate, diasRestantes } from '@/lib/format'
 import { useConfig, useConfigNumero } from '@/hooks/useConfigValor'
+import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
 
 function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
   const dias = diasRestantes(fechaLimite)
@@ -261,18 +262,23 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
 export function PrestamosPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: QK.MIS_PRESTAMOS_PAGINA(1),
-    queryFn: () => prestamosApi.misPrestamos(1),
+  const { data: activos = [], isLoading: loadingActivos, isError: errorActivos, refetch: recargarActivos } = useMisPrestamosActivos()
+  const historialQuery = useInfiniteQuery({
+    queryKey: QK.MIS_PRESTAMOS_HISTORIAL,
+    queryFn: ({ pageParam }) => prestamosApi.misPrestamos({ estado: 'devuelto', page: pageParam, limit: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
+  const historial = historialQuery.data?.pages.flatMap((p) => p.data) ?? []
+  const totalHistorial = historialQuery.data?.pages[0]?.total ?? 0
+  const isLoading = loadingActivos || historialQuery.isLoading
+  const isError = errorActivos || historialQuery.isError
+  const refetch = () => { recargarActivos(); historialQuery.refetch() }
 
   const maxRenovaciones = useConfigNumero('max_renovaciones', 2)
 
   const maxPrestamosActivos = useConfigNumero('max_prestamos_activos', 3)
 
-  const prestamos = data?.data ?? []
-  const activos = prestamos.filter((p) => p.estado === 'activo')
-  const historial = prestamos.filter((p) => p.estado === 'devuelto')
   const limitePrestamosAlcanzado = activos.length >= maxPrestamosActivos
 
   return (
@@ -307,7 +313,7 @@ export function PrestamosPage() {
           </div>
         ) : isError ? (
           <QueryError onRetry={() => refetch()} />
-        ) : prestamos.length === 0 ? (
+        ) : activos.length === 0 && historial.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <BookOpen className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -341,7 +347,7 @@ export function PrestamosPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="font-display text-base text-muted-foreground">
-                    Historial ({historial.length})
+                    Historial ({totalHistorial})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -356,6 +362,14 @@ export function PrestamosPage() {
                       <Badge variant="outline" className="font-display text-xs">Devuelto</Badge>
                     </div>
                   ))}
+                  {historialQuery.hasNextPage && (
+                    <div className="flex justify-center pt-3">
+                      <Button variant="outline" size="sm" className="font-display gap-2" disabled={historialQuery.isFetchingNextPage} onClick={() => historialQuery.fetchNextPage()}>
+                        {historialQuery.isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Cargar más
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

@@ -18,9 +18,10 @@ export class PrestamosService {
     const { page, limit } = filtros
     const skip = (page - 1) * limit
 
+    const where = { socio_id: socioId, ...(filtros.estado && { estado: filtros.estado }) }
     const [prestamos, total] = await Promise.all([
       this.prisma.prestamo.findMany({
-        where: { socio_id: socioId },
+        where,
         include: {
           juego: { select: { id: true, nombre: true } },
         },
@@ -28,7 +29,7 @@ export class PrestamosService {
         skip,
         take: limit,
       }),
-      this.prisma.prestamo.count({ where: { socio_id: socioId } }),
+      this.prisma.prestamo.count({ where }),
     ])
 
     return paginado(prestamos, total, filtros)

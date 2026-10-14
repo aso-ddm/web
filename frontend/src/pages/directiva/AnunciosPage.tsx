@@ -24,15 +24,13 @@ export function AnunciosPage() {
 
   const { data: sociosData } = useQuery({
     queryKey: QK.SOCIOS_DESTINATARIOS,
-    queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 500 }),
+    queryFn: () => sociosApi.getAll({ estado: 'activo', con_telegram: true, limit: 500 }),
     staleTime: 1000 * 60 * 5,
   })
 
   const sociosConTelegram = useMemo(
     () =>
-      (sociosData?.data ?? []).filter(
-        (s) => s.telegram_chat_id && !s.roles.includes('administrador'),
-      ),
+      (sociosData?.data ?? []).filter((s) => !s.roles.includes('administrador')),
     [sociosData],
   )
 

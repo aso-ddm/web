@@ -148,11 +148,13 @@ export class SociosService {
   constructor(private prisma: PrismaClient) {}
 
   async getAll(filtros: FiltrosSociosInput) {
-    const { estado, search, page, limit } = filtros
+    const { estado, search, tiene_llaves, con_telegram, page, limit } = filtros
     const skip = (page - 1) * limit
 
     if (search) {
-      const { ids, total } = await buscarIdsUsuarios(this.prisma, { search, estado, limit, skip })
+      const { ids, total } = await buscarIdsUsuarios(this.prisma, {
+        search, estado, tieneLlaves: tiene_llaves, conTelegram: con_telegram, limit, skip,
+      })
 
       const socios = ids.length > 0
         ? await this.prisma.usuario.findMany({
@@ -165,7 +167,11 @@ export class SociosService {
       return paginado(socios, total, filtros)
     }
 
-    const where = { ...(estado && { estado }) }
+    const where: Prisma.UsuarioWhereInput = {
+      ...(estado && { estado }),
+      ...(tiene_llaves !== undefined && { tiene_llaves }),
+      ...(con_telegram !== undefined && { telegram_chat_id: con_telegram ? { not: null } : null }),
+    }
 
     const [socios, total] = await Promise.all([
       this.prisma.usuario.findMany({

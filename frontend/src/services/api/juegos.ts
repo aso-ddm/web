@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, buildQuery } from './client'
 import type { Juego, PaginatedResponse } from '@/types/api'
 
 export interface FiltrosJuegos {
@@ -8,14 +8,9 @@ export interface FiltrosJuegos {
   limit?: number
 }
 
-function buildQuery(p: FiltrosJuegos): string {
-  const q = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString()
-  return q ? `?${q}` : ''
-}
-
 export const juegosApi = {
   getAll: (filtros: FiltrosJuegos = {}) =>
-    api.get<PaginatedResponse<Juego>>(`/juegos${buildQuery(filtros)}`),
+    api.get<PaginatedResponse<Juego>>(`/juegos${buildQuery({ ...filtros })}`),
 
   create: (data: Record<string, unknown>) => api.post<{ data: Juego }>('/juegos', data),
   update: (id: string, data: Record<string, unknown>) => api.put<{ data: Juego }>(`/juegos/${id}`, data),

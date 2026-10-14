@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, buildQuery } from './client'
 import type { Usuario, Rol, EstadoSocio, SolicitudGrupal, PaginatedResponse } from '@/types/api'
 
 export interface UpdateSocioPayload {
@@ -44,6 +44,8 @@ export type SocioListado = Omit<SocioAdmin, 'aprobado_por' | 'baja_por' | 'histo
 export interface GetSociosParams {
   estado?: EstadoSocio
   search?: string
+  tiene_llaves?: boolean
+  con_telegram?: boolean
   page?: number
   limit?: number
 }
@@ -53,16 +55,8 @@ export const sociosApi = {
     api.put<{ data: Usuario }>(`/socios/${id}`, payload),
 
   // Directiva — gestión
-  getAll: (params: GetSociosParams = {}) => {
-    const q = new URLSearchParams()
-    if (params.estado) q.set('estado', params.estado)
-    if (params.search) q.set('search', params.search)
-    if (params.page) q.set('page', String(params.page))
-    if (params.limit) q.set('limit', String(params.limit))
-    return api.get<PaginatedResponse<SocioListado>>(
-      `/socios?${q.toString()}`,
-    )
-  },
+  getAll: (params: GetSociosParams = {}) =>
+    api.get<PaginatedResponse<SocioListado>>(`/socios${buildQuery({ ...params })}`),
 
   getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 

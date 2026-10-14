@@ -8,6 +8,7 @@ export const solicitarPrestamoSchema = z.object({
 })
 
 export const filtrosPrestamosSchema = z.object({
+  estado: z.nativeEnum(EstadoPrestamo).optional(), // activos e historial se piden por separado
   ...paginacion(20, 100),
 })
 

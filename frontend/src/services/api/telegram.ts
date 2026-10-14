@@ -1,4 +1,4 @@
-import { api } from './client'
+import { api, buildQuery } from './client'
 import type { PaginatedResponse } from '@/types/api'
 
 export interface AnuncioResult {
@@ -37,14 +37,8 @@ export interface FiltrosLog {
 export const telegramAdminApi = {
   getEstado: () => api.get<{ data: { me: RespuestaBot; webhook: RespuestaBot } }>('/telegram/estado'),
   getLogs: (f: FiltrosLog) => {
-    const q = new URLSearchParams({ page: String(f.page) })
-    if (f.direccion) q.set('direccion', f.direccion)
-    if (f.contexto) q.set('contexto', f.contexto)
-    if (f.desde) q.set('desde', f.desde)
-    if (f.hasta) q.set('hasta', `${f.hasta}T23:59:59`)
-    return api.get<PaginatedResponse<TelegramLog> & { contextos: string[] }>(
-      `/telegram/logs?${q.toString()}`,
-    )
+    const q = buildQuery({ ...f, hasta: f.hasta && `${f.hasta}T23:59:59` })
+    return api.get<PaginatedResponse<TelegramLog> & { contextos: string[] }>(`/telegram/logs${q}`)
   },
   reintentar: (id: string) => api.post<{ data: TelegramLog }>(`/telegram/logs/${id}/reintentar`, {}),
 }

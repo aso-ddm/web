@@ -36,6 +36,9 @@ export const unirCuotaConjuntaSchema = z.object({
 export const filtrosSociosSchema = z.object({
   estado: z.nativeEnum(EstadoSocio).optional(),
   search: z.string().optional(),
+  // Llaves y Anuncios filtran en el servidor (z.coerce.boolean convertiría "false" en true)
+  tiene_llaves: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  con_telegram: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   ...paginacion(20, 500),
 })
 

@@ -23,7 +23,9 @@ export const QK = {
 
   // Préstamos
   MIS_PRESTAMOS: ['mis-prestamos'] as const,
-  MIS_PRESTAMOS_PAGINA: (page: number) => ['mis-prestamos', page] as const,
+  MIS_PRESTAMOS_ACTIVOS: ['mis-prestamos', 'activos'] as const,
+  MIS_PRESTAMOS_HISTORIAL: ['mis-prestamos', 'historial'] as const,
+  MIS_PRESTAMOS_RECIENTES: ['mis-prestamos', 'recientes'] as const,
   PRESTAMOS_GESTION: ['prestamos-gestion'] as const,
   PRESTAMOS_GESTION_ESTADO: (estado: 'activo' | 'devuelto') => ['prestamos-gestion', estado] as const,
 

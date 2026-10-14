@@ -234,3 +234,17 @@ describe('PrestamosService.devolucion', () => {
     )
   })
 })
+
+describe('PrestamosService.misPrestamos', () => {
+  it('filtra por estado (activos e historial por separado) y pagina', async () => {
+    ;(prisma.prestamo.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(prisma.prestamo.count as ReturnType<typeof vi.fn>).mockResolvedValue(45)
+
+    const r = await service.misPrestamos('u1', { estado: 'devuelto', page: 2, limit: 20 })
+
+    expect(prisma.prestamo.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { socio_id: 'u1', estado: 'devuelto' }, skip: 20, take: 20,
+    }))
+    expect(r).toMatchObject({ total: 45, page: 2, totalPages: 3 })
+  })
+})
