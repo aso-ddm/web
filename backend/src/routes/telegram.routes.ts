@@ -7,7 +7,9 @@ import { HttpError } from '../lib/httpError'
 import { registrarErrorTelegram, telegram } from '../lib/telegram'
 
 const router = Router()
+// Telegram admite ~30 mensajes/s a chats distintos: lotes de 25 con 1 s entre lotes
 const BATCH_SIZE = 25
+const PAUSA_ENTRE_LOTES_MS = 1000
 const BOT_TOKEN = process.env.BOT_TOKEN
 
 async function sendBatch(
@@ -16,6 +18,7 @@ async function sendBatch(
   let enviados = 0
   let errores = 0
   for (let i = 0; i < mensajes.length; i += BATCH_SIZE) {
+    if (i > 0) await new Promise((r) => setTimeout(r, PAUSA_ENTRE_LOTES_MS))
     const batch = mensajes.slice(i, i + BATCH_SIZE)
     const results = await Promise.all(batch.map((msg) => telegram(prisma, 'sendMessage', msg, 'anuncio')))
     for (const r of results) {
@@ -26,23 +29,19 @@ async function sendBatch(
   return { enviados, errores }
 }
 
-// POST /api/telegram/anuncio — envía mensaje a socios con Telegram (todos o lista concreta)
-router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
-  const { mensaje, destinatarios } = req.body
-  if (!mensaje || typeof mensaje !== 'string' || mensaje.trim().length === 0) {
-    res.status(400).json({ error: 'El mensaje no puede estar vacío' })
-    return
-  }
-  if (mensaje.trim().length > 4000) {
-    res.status(400).json({ error: 'El mensaje no puede superar los 4000 caracteres' })
-    return
-  }
-  if (!BOT_TOKEN) {
-    res.status(500).json({ error: 'BOT_TOKEN no configurado' })
-    return
-  }
+const anuncioSchema = z.object({
+  mensaje: z.string().trim().min(1, 'El mensaje no puede estar vacío').max(4000, 'El mensaje no puede superar los 4000 caracteres'),
+  destinatarios: z.array(z.string().uuid()).optional(),
+})
 
-  const idsFiltro = Array.isArray(destinatarios) && destinatarios.length > 0 ? destinatarios : undefined
+// POST /api/telegram/anuncio — envía mensaje a socios con Telegram (todos o lista concreta)
+// ponytail: se envía dentro de la petición para devolver enviados/errores; con la pausa entre lotes caben
+// ~1.400 destinatarios en el timeout de 60 s de nginx. Por encima, pasar a envío en segundo plano.
+router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
+  const { mensaje, destinatarios } = anuncioSchema.parse(req.body)
+  if (!BOT_TOKEN) throw new HttpError(500, 'BOT_TOKEN no configurado')
+
+  const idsFiltro = destinatarios?.length ? destinatarios : undefined
 
   const socios = await prisma.usuario.findMany({
     where: {
@@ -55,7 +54,7 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
 
   const mensajes = socios
     .filter((s) => s.telegram_chat_id)
-    .map((s) => ({ chat_id: s.telegram_chat_id!.toString(), text: mensaje.trim(), parse_mode: 'HTML' }))
+    .map((s) => ({ chat_id: s.telegram_chat_id!.toString(), text: mensaje, parse_mode: 'HTML' }))
 
   const { enviados, errores } = await sendBatch(mensajes)
   res.json({ data: { enviados, errores, total: socios.length } })
