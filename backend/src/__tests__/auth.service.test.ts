@@ -114,16 +114,14 @@ describe('AuthService.login', () => {
     )
   })
 
-  it('estado=pendiente → throws', async () => {
+  it('estado=pendiente → entra (solo para editar su solicitud)', async () => {
     ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...BASE_USER,
       estado: 'pendiente',
     })
     mockCompare.mockResolvedValue(true)
 
-    await expect(service.login({ email: BASE_USER.email, password: 'pw' })).rejects.toThrow(
-      'Tu solicitud está pendiente de aprobación por la directiva',
-    )
+    await expect(service.login({ email: BASE_USER.email, password: 'pw' })).resolves.toMatchObject({ estado: 'pendiente' })
   })
 
   it('cuenta de baja con contraseña incorrecta → no revela el estado', async () => {
@@ -152,6 +150,27 @@ describe('AuthService.login', () => {
 
     expect(result).not.toHaveProperty('password_hash')
     expect(result).toMatchObject({ id: 'u1', email: BASE_USER.email })
+  })
+})
+
+describe('AuthService.updateSolicitud', () => {
+  const datos = { nombre: 'Ana', apellidos: 'Pérez', dni: '12345678Z', fecha_nacimiento: '1990-01-01', apodo: 'Ana', consentimiento_tiendas: false }
+
+  it('DNI de otra cuenta → 409', async () => {
+    ;(prisma.usuario.findUniqueOrThrow as ReturnType<typeof vi.fn>).mockResolvedValue({ comprobante_transferencia: 'a.pdf', solicitud_grupal: null })
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'otro' })
+
+    await expect(service.updateSolicitud('u1', datos)).rejects.toThrow('Ya existe una cuenta con ese DNI')
+  })
+
+  it('cuota conjunta → el comprobante nuevo va al grupo', async () => {
+    ;(prisma.usuario.findUniqueOrThrow as ReturnType<typeof vi.fn>)
+      .mockResolvedValue({ comprobante_transferencia: null, solicitud_grupal: { id: 'g1', comprobante_transferencia: null } })
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+
+    await service.updateSolicitud('u1', datos, 'b.pdf')
+
+    expect(prisma.solicitudGrupal.update).toHaveBeenCalledWith({ where: { id: 'g1' }, data: { comprobante_transferencia: 'b.pdf' } })
   })
 })
 

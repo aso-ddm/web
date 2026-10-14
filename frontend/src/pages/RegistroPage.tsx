@@ -87,10 +87,10 @@ export function RegistroPage() {
       if (!comprobante) throw new Error('Debes adjuntar el comprobante de transferencia')
 
       if (data.tipo_cuota === 'conjunta') {
-        const { confirmPassword: _cp, miembros_adicionales, ...titular } = data as Extract<RegistroForm, { tipo_cuota: 'conjunta' }>
+        const { confirmPassword: _cp, miembros_adicionales, ...persona } = data as Extract<RegistroForm, { tipo_cuota: 'conjunta' }>
         void _cp
         const miembros = miembros_adicionales.map(({ confirmPassword: _m, ...m }) => { void _m; return m })
-        return authApi.register({ ...titular, miembros_adicionales: miembros }, comprobante)
+        return authApi.register({ ...persona, miembros_adicionales: miembros }, comprobante)
       }
       const { confirmPassword: _cp, ...payload } = data as Extract<RegistroForm, { tipo_cuota: 'individual' }>
       void _cp
@@ -140,6 +140,7 @@ export function RegistroPage() {
             <h1 className="font-display font-bold text-3xl text-primary mb-2">¡Solicitud enviada!</h1>
             <p className="text-base leading-relaxed text-muted-foreground">
               La directiva revisará tu solicitud y recibirás un email cuando sea aprobada.
+              Mientras tanto puedes <Link to="/login" className="text-secondary font-bold hover:underline">entrar</Link> con tu email y contraseña para corregir tus datos.
             </p>
           </div>
           <div className="bg-card border border-border rounded-xl p-5 text-left space-y-3">
@@ -223,7 +224,7 @@ export function RegistroPage() {
               >
                 {([
                   { tipo: 'individual', precio: `${precioIndividual}€/mes`, descripcion: 'Para un socio' },
-                  { tipo: 'conjunta', precio: `desde ${precioIndividual + precioAdicional}€/mes`, descripcion: `Para parejas o familiares directos mayores de edad (${precioIndividual}€ titular + ${precioAdicional}€ por cada miembro adicional)` },
+                  { tipo: 'conjunta', precio: `desde ${precioIndividual + precioAdicional}€/mes`, descripcion: `Para parejas o familiares directos mayores de edad (${precioIndividual}€ + ${precioAdicional}€ por cada miembro más)` },
                 ] as const).map(({ tipo, precio, descripcion }) => (
                   <label
                     key={tipo}
@@ -247,7 +248,7 @@ export function RegistroPage() {
             </FormSection>
 
             {/* 2. Datos personales */}
-            <FormSection number={2} title={`Datos personales${tipoCuota === 'conjunta' ? ' — Titular' : ''}`}>
+            <FormSection number={2} title={`Datos personales${tipoCuota === 'conjunta' ? ' — Tú' : ''}`}>
               <div className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -292,7 +293,7 @@ export function RegistroPage() {
             </FormSection>
 
             {/* 3. Cuenta de acceso */}
-            <FormSection number={3} title={`Cuenta de acceso${tipoCuota === 'conjunta' ? ' — Titular' : ''}`} description="Con estas credenciales podrás acceder al área de socios. Al entrar por primera vez vincularás tu Telegram">
+            <FormSection number={3} title={`Cuenta de acceso${tipoCuota === 'conjunta' ? ' — Tú' : ''}`} description="Con estas credenciales podrás acceder al área de socios. Al entrar por primera vez vincularás tu Telegram">
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="font-display font-bold text-sm">Email <span className="text-destructive">*</span></Label>
@@ -317,7 +318,7 @@ export function RegistroPage() {
 
             {/* 4. Miembros adicionales (solo cuota conjunta) */}
             {tipoCuota === 'conjunta' && (
-              <FormSection number={4} title="Miembros adicionales" description={`Añade los miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Cada uno vinculará su Telegram la primera vez que entre. Precio total: ${precioIndividual + precioAdicional * fields.length}€/mes`} className="border-secondary/40">
+              <FormSection number={4} title="Otros miembros de la cuota" description={`Añade a los demás miembros de tu cuota conjunta (parejas o familiares directos mayores de edad). Cada uno vinculará su Telegram la primera vez que entre. Precio total: ${precioIndividual + precioAdicional * fields.length}€/mes`} className="border-secondary/40">
                 <div className="space-y-4">
                   {'miembros_adicionales' in errors && (errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message && (
                     <FieldError message={(errors as { miembros_adicionales?: { message?: string } }).miembros_adicionales?.message} />
@@ -341,7 +342,7 @@ export function RegistroPage() {
                     variant="outline"
                     className="w-full font-display font-bold gap-2 border-dashed"
                     disabled={fields.length >= 5}
-                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', apodo: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
+                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', direccion: '', apodo: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
                   >
                     <PlusCircle className="h-4 w-4" />
                     {fields.length >= 5 ? 'Máximo 5 miembros adicionales' : 'Añadir miembro'}

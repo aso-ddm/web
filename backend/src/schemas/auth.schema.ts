@@ -41,9 +41,9 @@ export const fechaNacimientoSchema = z
   .refine((f) => f < hoy(), 'La fecha de nacimiento debe ser anterior a hoy')
   .refine((f) => `${Number(f.slice(0, 4)) + 18}${f.slice(4)}` <= hoy(), 'Debes ser mayor de edad para registrarte')
 
-// ─── Campos comunes del titular ──────────────────────────────────────────────
+// ─── Campos de quien rellena el formulario ───────────────────────────────────
 
-const titularFields = {
+const camposPersona = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
   dni: dniRegistroSchema,
@@ -65,6 +65,7 @@ export const miembroAdicionalSchema = z.object({
   email: emailSchema,
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
   fecha_nacimiento: fechaNacimientoSchema,
+  direccion: z.string().optional(),
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
@@ -79,16 +80,30 @@ export const registerSchema = z.union([
   // Rama individual
   z.object({
     tipo_cuota: z.literal('individual'),
-    ...titularFields,
+    ...camposPersona,
   }),
 
   // Rama conjunta
   z.object({
     tipo_cuota: z.literal('conjunta'),
-    ...titularFields,
+    ...camposPersona,
     miembros_adicionales: z.array(miembroAdicionalSchema).min(1).max(5),
   }),
 ])
+
+// Edición de la solicitud pendiente: los datos personales. Email, contraseña y composición del grupo no se tocan
+export const solicitudSchema = z.object({
+  nombre: camposPersona.nombre,
+  apellidos: camposPersona.apellidos,
+  dni: dniRegistroSchema,
+  telefono: z.string().optional(),
+  fecha_nacimiento: fechaNacimientoSchema,
+  direccion: z.string().optional(),
+  apodo: camposPersona.apodo,
+  consentimiento_tiendas: z.boolean().default(false),
+})
+
+export type SolicitudInput = z.infer<typeof solicitudSchema>
 
 export const loginSchema = z.object({
   email: emailSchema,

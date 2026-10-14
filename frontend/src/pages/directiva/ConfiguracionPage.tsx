@@ -19,7 +19,7 @@ const configLabels: Record<string, { label: string; description: string; suffix?
   },
   precio_cuota_adicional: {
     label: 'Precio por miembro adicional (conjunta)',
-    description: 'Importe adicional por cada miembro en una cuota conjunta (se suma al precio individual del titular)',
+    description: 'Importe adicional por cada miembro en una cuota conjunta (se suma al precio individual)',
     suffix: '€/mes',
   },
   visitas_gratuitas: {

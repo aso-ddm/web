@@ -74,7 +74,6 @@ export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
                 >
                   <span className="flex-1 font-medium">
                     {m.nombre} {m.apellidos}
-                    {m.id === grupo.titular_id && <span className="text-xs text-muted-foreground"> (titular)</span>}
                   </span>
                   <Badge variant={ESTADO_SOCIO_VARIANT[m.estado]} className="text-xs font-display capitalize">{m.estado}</Badge>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -95,7 +94,7 @@ export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
       ) : (
         <div className="space-y-2 rounded-md border border-border p-3">
           <p className="text-xs text-muted-foreground">
-            Se une a la cuota conjunta del socio elegido. Si ese socio tiene cuota individual, se crea una conjunta con él como titular.
+            Se une a la cuota conjunta del socio elegido. Si ese socio tiene cuota individual, se crea una conjunta con los dos y sus pagos pasan a ser los de la cuota.
           </p>
           <Popover open={elegirAbierto} onOpenChange={setElegirAbierto} modal>
             <PopoverTrigger asChild>
@@ -147,9 +146,7 @@ export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
         description={
           grupo && grupo.miembros.length <= 2
             ? 'Se lleva una copia del historial de pagos. La cuota conjunta se disuelve y el otro miembro también pasa a individual.'
-            : grupo?.titular_id === socio.id
-              ? 'Se lleva una copia del historial de pagos. La titularidad pasa al siguiente miembro de la cuota.'
-              : 'Se lleva una copia del historial de pagos de la cuota conjunta.'
+            : 'Se lleva una copia del historial de pagos de la cuota conjunta.'
         }
         confirmLabel="Pasar a individual"
         onConfirm={() => salir()}

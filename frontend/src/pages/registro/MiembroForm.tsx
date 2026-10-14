@@ -96,6 +96,12 @@ export function MiembroForm({
       </div>
 
       <div className="space-y-1.5">
+        <Label className="font-display font-bold text-sm">Dirección <span className="text-destructive">*</span></Label>
+        <Input placeholder="Calle, número, ciudad" {...register(`miembros_adicionales.${index}.direccion` as const)} />
+        <FieldError message={(err?.direccion as { message?: string } | undefined)?.message} />
+      </div>
+
+      <div className="space-y-1.5">
         <Label className="font-display font-bold text-sm">Apodo <span className="text-destructive">*</span> <span className="text-muted-foreground font-normal text-xs">(cómo le conoce la gente)</span></Label>
         <Input placeholder="Ej: Carly, El Mago..." {...register(`miembros_adicionales.${index}.apodo` as const)} />
         <FieldError message={(err?.apodo as { message?: string } | undefined)?.message} />

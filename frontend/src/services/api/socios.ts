@@ -31,7 +31,7 @@ export type SocioAdmin = Usuario & {
   }[]
   // null = cuota individual
   solicitud_grupal?: {
-    titular_id: string
+    id: string
     miembros: { id: string; nombre: string; apellidos: string; estado: EstadoSocio }[]
   } | null
 }
@@ -67,7 +67,7 @@ export const sociosApi = {
   getPendientes: () => api.get<{ data: { individuales: SocioAdmin[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
 
   aprobar: (id: string, rol: Rol) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, { rol }),
-  rechazar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/rechazar`),
+  rechazar: (id: string) => api.action(`/socios/${id}/rechazar`),
   darDeBaja: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/baja`),
   reactivar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/reactivar`),
 
@@ -92,7 +92,7 @@ export const sociosApi = {
   updateRoles: (id: string, roles: Rol[]) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/roles`, { roles }),
 
-  // Une a la cuota conjunta de otro socio (si es individual, se crea con él de titular)
+  // Une a la cuota conjunta de otro socio (si es individual, se crea una con los dos)
   unirCuotaConjunta: (id: string, socio_id: string, tipo_relacion: TipoRelacion) =>
     api.post<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`, { socio_id, tipo_relacion }),
   salirCuotaConjunta: (id: string) => api.delete<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`),

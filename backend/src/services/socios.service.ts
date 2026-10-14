@@ -1,6 +1,16 @@
 import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, TipoCuota, TipoRelacion } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
+import fs from 'fs'
+import path from 'path'
+
+function borrarComprobantes(nombres: (string | null)[]) {
+  for (const nombre of new Set(nombres)) {
+    if (!nombre) continue
+    fs.promises.unlink(path.resolve(process.cwd(), 'uploads/transferencias', nombre))
+      .catch((err) => console.error('Borrar comprobante:', err))
+  }
+}
 
 // Campos públicos que se devuelven en listados (sin datos sensibles)
 const SOCIO_PUBLIC_SELECT = {
@@ -22,10 +32,10 @@ const SOCIO_PUBLIC_SELECT = {
   tiene_llaves: true,
   comprobante_transferencia: true,
   created_at: true,
-  // Cuota conjunta: titular y miembros del grupo (null = cuota individual)
+  // Cuota conjunta: miembros del grupo (null = cuota individual)
   solicitud_grupal: {
     select: {
-      titular_id: true,
+      id: true,
       miembros: { select: { id: true, nombre: true, apellidos: true, estado: true }, orderBy: { created_at: 'asc' } },
     },
   },
@@ -73,9 +83,9 @@ function mesPagadoAlAlta(fecha: Date) {
 type Tx = Prisma.TransactionClient
 const nombreCompleto = (u: { nombre: string; apellidos: string }) => `${u.nombre} ${u.apellidos}`
 
-// Copia los pagos de un socio a otro; en los meses que coincidan prevalecen los copiados
-async function copiarPagos(tx: Tx, deId: string, aId: string) {
-  const pagos = await tx.pagoCuota.findMany({ where: { socio_id: deId } })
+// Copia los pagos de la cuota conjunta al socio; en los meses que coincidan prevalecen los copiados
+async function copiarPagos(tx: Tx, grupoId: string, aId: string) {
+  const pagos = await tx.pagoCuota.findMany({ where: { grupo_id: grupoId } })
   if (!pagos.length) return
   await tx.pagoCuota.deleteMany({ where: { socio_id: aId, OR: pagos.map(({ anio, mes }) => ({ anio, mes })) } })
   await tx.pagoCuota.createMany({
@@ -92,9 +102,8 @@ async function pasarAIndividual(tx: Tx, socioId: string) {
 }
 
 /**
- * Saca a un socio de su cuota conjunta. Los pagos del grupo se guardan en el titular:
- * quien sale se lleva una copia del historial. Si sale el titular, la titularidad pasa al
- * siguiente miembro por antigüedad. Si queda un solo miembro, el grupo se disuelve.
+ * Saca a un socio de su cuota conjunta: se lleva una copia de los pagos del grupo.
+ * Si queda un solo miembro, el grupo se disuelve y ese miembro también se lleva la copia.
  */
 export async function salirDeCuotaConjunta(tx: Tx, socioId: string, porId: string, motivo: string) {
   const socio = await tx.usuario.findUnique({
@@ -102,9 +111,7 @@ export async function salirDeCuotaConjunta(tx: Tx, socioId: string, porId: strin
     select: {
       nombre: true,
       apellidos: true,
-      solicitud_grupal: {
-        include: { miembros: { select: { id: true }, orderBy: { created_at: 'asc' } } },
-      },
+      solicitud_grupal: { include: { miembros: { select: { id: true } } } },
     },
   })
   const grupo = socio?.solicitud_grupal
@@ -113,21 +120,14 @@ export async function salirDeCuotaConjunta(tx: Tx, socioId: string, porId: strin
   const historial = (socio_id: string, tipo: TipoCambioEstado, detalle: string) =>
     tx.historialEstadoSocio.create({ data: { socio_id, tipo, detalle, por_id: porId } })
 
-  if (grupo.titular_id !== socioId) {
-    await copiarPagos(tx, grupo.titular_id, socioId)
-  } else if (restantes.length) {
-    // El titular ya tiene los pagos; el nuevo titular recibe la copia
-    const nuevo = restantes[0].id
-    await copiarPagos(tx, socioId, nuevo)
-    await tx.solicitudGrupal.update({ where: { id: grupo.id }, data: { titular_id: nuevo } })
-    if (restantes.length > 1) await historial(nuevo, TipoCambioEstado.cuota_conjunta, 'Pasa a ser titular de la cuota conjunta')
-  }
+  await copiarPagos(tx, grupo.id, socioId)
   await pasarAIndividual(tx, socioId)
   await historial(socioId, TipoCambioEstado.cuota_individual, motivo)
 
   // Una cuota conjunta de una persona no tiene sentido: el que queda (ya con el historial) pasa a individual
   if (restantes.length <= 1) {
     if (restantes.length) {
+      await copiarPagos(tx, grupo.id, restantes[0].id)
       await pasarAIndividual(tx, restantes[0].id)
       await historial(restantes[0].id, TipoCambioEstado.cuota_individual, `Cuota conjunta disuelta al salir ${nombreCompleto(socio)}`)
     }
@@ -198,7 +198,7 @@ export class SociosService {
         where: { estado: 'pendiente' },
         orderBy: { created_at: 'asc' },
         include: {
-          titular: {
+          miembros: {
             select: {
               id: true,
               nombre: true,
@@ -207,40 +207,21 @@ export class SociosService {
               email: true,
               apodo: true,
               alias_telegram: true,
-              tipo_cuota: true,
-              comprobante_transferencia: true,
-              created_at: true,
+              relaciones_como_relacionado: { select: { tipo_relacion: true }, take: 1 },
             },
-          },
-          miembros: {
-            select: {
-              id: true,
-              nombre: true,
-              apellidos: true,
-              dni: true,
-              email: true,
-              relaciones_como_relacionado: {
-                select: { tipo_relacion: true, socio_principal_id: true },
-              },
-            },
+            orderBy: { created_at: 'asc' },
           },
         },
       }),
     ])
 
+    // tipo_relacion: parentesco declarado en el formulario (null en quien lo rellenó)
     const gruposConTipoRelacion = grupos.map((grupo) => ({
       ...grupo,
-      // El titular también tiene solicitud_grupal_id: aquí solo van los miembros adicionales
-      miembros: grupo.miembros.filter((m) => m.id !== grupo.titular_id).map((miembro) => {
-        const relacion = miembro.relaciones_como_relacionado.find(
-          (r) => r.socio_principal_id === grupo.titular_id,
-        )
-        const { relaciones_como_relacionado: _, ...miembroSinRelaciones } = miembro
-        return {
-          ...miembroSinRelaciones,
-          tipo_relacion: relacion?.tipo_relacion ?? null,
-        }
-      }),
+      miembros: grupo.miembros.map(({ relaciones_como_relacionado: relaciones, ...miembro }) => ({
+        ...miembro,
+        tipo_relacion: relaciones[0]?.tipo_relacion ?? null,
+      })),
     }))
 
     return { individuales, grupos: gruposConTipoRelacion }
@@ -279,8 +260,8 @@ export class SociosService {
       this.prisma.historialEstadoSocio.createMany({
         data: grupo.miembros.map((u) => ({ socio_id: u.id, tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora })),
       }),
-      // El comprobante de alta cubre el mes de alta; la cuota conjunta se registra en el titular
-      this.prisma.pagoCuota.create({ data: { socio_id: grupo.titular_id, ...mesPagadoAlAlta(ahora) } }),
+      // El comprobante de alta cubre el mes de alta
+      this.prisma.pagoCuota.create({ data: { grupo_id: grupoId, ...mesPagadoAlAlta(ahora) } }),
     ])
 
     return this.prisma.solicitudGrupal.findUnique({
@@ -289,7 +270,8 @@ export class SociosService {
     })
   }
 
-  async rechazarGrupo(grupoId: string, bajaPorId: string) {
+  // Un rechazado nunca fue socio: se borra para que pueda volver a solicitar el alta con el mismo email/DNI
+  async rechazarGrupo(grupoId: string) {
     const grupo = await this.prisma.solicitudGrupal.findUnique({
       where: { id: grupoId },
       include: { miembros: true },
@@ -305,24 +287,10 @@ export class SociosService {
     }
 
     await this.prisma.$transaction([
-      this.prisma.usuario.updateMany({
-        where: { solicitud_grupal_id: grupoId },
-        data: {
-          estado: EstadoSocio.baja,
-          fecha_baja: new Date(),
-          baja_por_id: bajaPorId,
-        },
-      }),
-      this.prisma.solicitudGrupal.update({
-        where: { id: grupoId },
-        data: { estado: 'rechazada' },
-      }),
+      this.prisma.usuario.deleteMany({ where: { solicitud_grupal_id: grupoId } }),
+      this.prisma.solicitudGrupal.delete({ where: { id: grupoId } }),
     ])
-
-    return this.prisma.solicitudGrupal.findUnique({
-      where: { id: grupoId },
-      include: { miembros: { select: SOCIO_PUBLIC_SELECT } },
-    })
+    borrarComprobantes([grupo.comprobante_transferencia])
   }
 
   async getById(id: string) {
@@ -371,7 +339,7 @@ export class SociosService {
     if (socio.estado !== EstadoSocio.pendiente) {
       throw new Error('Solo se pueden aprobar solicitudes en estado pendiente')
     }
-    // Los miembros de una solicitud conjunta se aprueban o rechazan juntos (la cuota va al titular)
+    // Los miembros de una solicitud conjunta se aprueban o rechazan juntos
     if (socio.solicitud_grupal_id) {
       throw new Error('Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
@@ -393,26 +361,20 @@ export class SociosService {
     })
   }
 
-  async rechazar(id: string, aprobadoPorId: string) {
+  // Un rechazado nunca fue socio: se borra para que pueda volver a solicitar el alta con el mismo email/DNI
+  async rechazar(id: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new Error('Socio no encontrado')
     if (socio.estado !== EstadoSocio.pendiente) {
       throw new Error('Solo se pueden rechazar solicitudes en estado pendiente')
     }
-    // Los miembros de una solicitud conjunta se aprueban o rechazan juntos (la cuota va al titular)
+    // Los miembros de una solicitud conjunta se aprueban o rechazan juntos
     if (socio.solicitud_grupal_id) {
       throw new Error('Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
 
-    return this.prisma.usuario.update({
-      where: { id },
-      data: {
-        estado: EstadoSocio.baja,
-        fecha_baja: new Date(),
-        baja_por_id: aprobadoPorId,
-      },
-      select: SOCIO_PUBLIC_SELECT,
-    })
+    await this.prisma.usuario.delete({ where: { id } })
+    borrarComprobantes([socio.comprobante_transferencia])
   }
 
   async darDeBaja(id: string, bajaPorId: string) {
@@ -457,7 +419,7 @@ export class SociosService {
     })
   }
 
-  /** Une al socio a la cuota conjunta de otro; si el otro es individual, se crea una con él de titular. */
+  /** Une al socio a la cuota conjunta de otro; si el otro es individual, se crea una con los dos. */
   async unirCuotaConjunta(id: string, otroId: string, tipoRelacion: TipoRelacion, porId: string) {
     if (id === otroId) throw new Error('Elige a otro socio')
     return this.prisma.$transaction(async (tx) => {
@@ -466,7 +428,7 @@ export class SociosService {
         nombre: true,
         apellidos: true,
         estado: true,
-        solicitud_grupal: { select: { id: true, titular: { select: { id: true, nombre: true, apellidos: true } } } },
+        solicitud_grupal: { select: { id: true } },
       } as const
       const [socio, otro] = await Promise.all([
         tx.usuario.findUnique({ where: { id }, select }),
@@ -482,17 +444,18 @@ export class SociosService {
 
       let grupo = otro.solicitud_grupal
       if (!grupo) {
-        const { id: grupoId } = await tx.solicitudGrupal.create({ data: { titular_id: otro.id, estado: EstadoSolicitud.aprobada } })
-        await tx.usuario.update({ where: { id: otro.id }, data: { solicitud_grupal_id: grupoId, tipo_cuota: TipoCuota.conjunta } })
-        await historial(otro.id, `Crea una cuota conjunta con ${nombreCompleto(socio)} (titular)`)
-        grupo = { id: grupoId, titular: otro }
+        grupo = await tx.solicitudGrupal.create({ data: { estado: EstadoSolicitud.aprobada }, select: { id: true } })
+        await tx.usuario.update({ where: { id: otro.id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
+        // Sus pagos pasan a ser los de la cuota conjunta: sigue al corriente de lo que ya tenía
+        await tx.pagoCuota.updateMany({ where: { socio_id: otro.id }, data: { socio_id: null, grupo_id: grupo.id } })
+        await historial(otro.id, `Crea una cuota conjunta con ${nombreCompleto(socio)}`)
       }
-      // Desde ahora cuentan los pagos del titular; los suyos de antes se conservan pero no se muestran
+      // Desde ahora cuentan los pagos del grupo; los suyos de antes se conservan pero no se muestran
       await tx.usuario.update({ where: { id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
       await tx.relacionSocio.create({
-        data: { socio_principal_id: grupo.titular.id, socio_relacionado_id: id, tipo_relacion: tipoRelacion },
+        data: { socio_principal_id: otro.id, socio_relacionado_id: id, tipo_relacion: tipoRelacion },
       })
-      await historial(id, `Se une a la cuota conjunta de ${nombreCompleto(grupo.titular)}`)
+      await historial(id, `Se une a la cuota conjunta de ${nombreCompleto(otro)}`)
       return tx.usuario.findUnique({ where: { id }, select: SOCIO_PUBLIC_SELECT })
     })
   }

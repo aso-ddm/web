@@ -4,9 +4,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { AuthService } from '../services/auth.service'
-import { registerSchema, loginSchema, passwordSchema } from '../schemas/auth.schema'
+import { registerSchema, loginSchema, passwordSchema, solicitudSchema } from '../schemas/auth.schema'
 import { telegramAuthSchema } from '../schemas/telegram.schema'
-import { authenticate, signToken } from '../middleware/auth'
+import { authenticate, authenticatePendiente, signToken } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { HttpError } from '../lib/httpError'
 import { rateLimit } from '../middleware/rateLimit'
@@ -145,6 +145,23 @@ router.get('/me', authenticate, async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     res.status(404).json({ error: message })
+  }
+})
+
+// GET /api/auth/solicitud — la solicitud de alta propia, mientras está pendiente
+router.get('/solicitud', authenticatePendiente, async (req, res) => {
+  res.json({ data: await authService.getSolicitud(req.user.id) })
+})
+
+// PUT /api/auth/solicitud — multipart/form-data: data (JSON) + comprobante opcional
+router.put('/solicitud', authenticatePendiente, upload.single('comprobante'), async (req, res) => {
+  try {
+    const data = solicitudSchema.parse(JSON.parse(req.body?.data ?? 'null'))
+    res.json({ data: await authService.updateSolicitud(req.user.id, data, req.file?.filename) })
+  } catch (err) {
+    if (req.file) fs.promises.unlink(req.file.path).catch(() => {})
+    if (err instanceof SyntaxError) throw new HttpError(400, 'Datos del formulario con formato inválido')
+    throw err
   }
 })
 

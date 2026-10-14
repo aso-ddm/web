@@ -42,6 +42,7 @@ function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>
 
 const RegistroPage = lazyPage(() => import('@/pages/RegistroPage'), 'RegistroPage')
 const RgpdPage = lazyPage(() => import('@/pages/RgpdPage'), 'RgpdPage')
+const MiSolicitudPage = lazyPage(() => import('@/pages/MiSolicitudPage'), 'MiSolicitudPage')
 const RecuperarPasswordPage = lazyPage(() => import('@/pages/RecuperarPasswordPage'), 'RecuperarPasswordPage')
 
 // Área de socio
@@ -77,6 +78,7 @@ export function AppRoutes() {
       <Route path="/registro" element={<RegistroPage />} />
       <Route path="/rgpd" element={<RgpdPage />} />
       <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
+      <Route path="/mi-solicitud" element={<MiSolicitudPage />} />
 
       {/* ── Área de socio (cualquier autenticado) ───────────────────── */}
       <Route element={<ProtectedRoute />}>

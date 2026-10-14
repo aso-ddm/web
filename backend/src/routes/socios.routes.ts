@@ -56,12 +56,14 @@ router.get('/:id/comprobante', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async
   const { id } = req.params
   const socio = await prisma.usuario.findUnique({
     where: { id },
-    select: { comprobante_transferencia: true, nombre: true, apellidos: true },
+    select: { comprobante_transferencia: true, nombre: true, apellidos: true, solicitud_grupal: { select: { comprobante_transferencia: true } } },
   })
   if (!socio) {
     res.status(404).json({ error: 'Socio no encontrado' })
     return
   }
+  // Cuota conjunta: el comprobante es del grupo
+  socio.comprobante_transferencia ??= socio.solicitud_grupal?.comprobante_transferencia ?? null
   if (!socio.comprobante_transferencia) {
     res.status(404).json({ error: 'Este socio no tiene comprobante adjunto' })
     return
@@ -169,8 +171,8 @@ router.post('/:id/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) =
 router.post('/:id/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
   try {
-    const socio = await sociosService.rechazar(id, req.user.id)
-    res.json({ message: 'Solicitud rechazada', data: socio })
+    await sociosService.rechazar(id)
+    res.json({ message: 'Solicitud rechazada' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     res.status(400).json({ error: message })
@@ -262,8 +264,8 @@ router.post('/grupos/:grupoId/aprobar', requireRoles(...ROLES.DIRECTIVA), async 
 router.post('/grupos/:grupoId/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { grupoId } = req.params
   try {
-    const resultado = await sociosService.rechazarGrupo(grupoId, req.user.id)
-    res.json({ message: 'Solicitud grupal rechazada', data: resultado })
+    await sociosService.rechazarGrupo(grupoId)
+    res.json({ message: 'Solicitud grupal rechazada' })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'
     const status = message.includes('no encontrada') ? 404 : 400

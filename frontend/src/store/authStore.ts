@@ -68,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
         DIRECTIVA_Y_LUDOTECARIO.some((r) => get().usuario?.roles.includes(r)),
 
       getRedirectPath: () => {
+        if (get().usuario?.estado === 'pendiente') return '/mi-solicitud'
         const roles = get().usuario?.roles ?? []
         if (DIRECTIVA.some((r) => roles.includes(r))) return '/directiva'
         if (roles.includes('ludotecario')) return '/ludoteca'

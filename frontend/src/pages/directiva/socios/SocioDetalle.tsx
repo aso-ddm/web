@@ -103,7 +103,7 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
           <div>
             <p className="text-xs text-muted-foreground font-display">Cuota</p>
             <p className="font-medium">
-              {grupo ? (grupo.titular_id === socio.id ? 'Conjunta (titular)' : 'Conjunta') : 'Individual'}
+              {grupo ? 'Conjunta' : 'Individual'}
             </p>
           </div>
           <div>

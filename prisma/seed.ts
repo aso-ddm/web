@@ -255,25 +255,23 @@ async function main() {
     }))
   }
 
-  // ── Cuota conjunta aprobada (titular + pareja + hijo) ───────────────────
-  const famTitular = await crear({ email: 'familia.titular@test.com', nombre: 'Rosa', apellidos: 'Domínguez Soler', tipo_cuota: TipoCuota.conjunta, fecha_alta: haceDias(400), aprobado_por_id: presi.id })
-  const grupoOk = await prisma.solicitudGrupal.create({ data: { titular_id: famTitular.id, estado: 'aprobada' } })
-  await prisma.usuario.update({ where: { id: famTitular.id }, data: { solicitud_grupal_id: grupoOk.id } })
+  // ── Cuota conjunta aprobada (madre + pareja + hijo) ─────────────────────
+  const grupoOk = await prisma.solicitudGrupal.create({ data: { estado: 'aprobada', comprobante_transferencia: COMPROBANTE } })
+  const famMadre = await crear({ email: 'familia.madre@test.com', nombre: 'Rosa', apellidos: 'Domínguez Soler', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), aprobado_por_id: presi.id })
   const famPareja = await crear({ email: 'familia.pareja@test.com', nombre: 'Tomás', apellidos: 'Reyes Pastor', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), aprobado_por_id: presi.id })
   const famHijo = await crear({ email: 'familia.hijo@test.com', nombre: 'Mario', apellidos: 'Reyes Domínguez', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), fecha_nacimiento: new Date(2006, 4, 12), aprobado_por_id: presi.id })
   await prisma.relacionSocio.createMany({ data: [
-    { socio_principal_id: famTitular.id, socio_relacionado_id: famPareja.id, tipo_relacion: 'pareja', fecha_inicio: haceDias(400) },
-    { socio_principal_id: famTitular.id, socio_relacionado_id: famHijo.id, tipo_relacion: 'familiar_directo', fecha_inicio: haceDias(400) },
+    { socio_principal_id: famMadre.id, socio_relacionado_id: famPareja.id, tipo_relacion: 'pareja', fecha_inicio: haceDias(400) },
+    { socio_principal_id: famMadre.id, socio_relacionado_id: famHijo.id, tipo_relacion: 'familiar_directo', fecha_inicio: haceDias(400) },
   ] })
 
   // ── Solicitudes pendientes (individuales + una conjunta) ────────────────
   await crear({ email: 'pendiente1@test.com', nombre: 'Alba', apellidos: 'Santos Ferrer', estado: EstadoSocio.pendiente, comprobante_transferencia: COMPROBANTE, alias_telegram: 'alba_sf' })
   await crear({ email: 'pendiente2@test.com', nombre: 'Gonzalo', apellidos: 'Vicente Arias', dni: 'X1234567L', estado: EstadoSocio.pendiente, comprobante_transferencia: COMPROBANTE })
-  const pendTitular = await crear({ email: 'pendiente.titular@test.com', nombre: 'Beatriz', apellidos: 'Crespo Lara', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, comprobante_transferencia: COMPROBANTE })
-  const grupoPend = await prisma.solicitudGrupal.create({ data: { titular_id: pendTitular.id } })
-  await prisma.usuario.update({ where: { id: pendTitular.id }, data: { solicitud_grupal_id: grupoPend.id } })
+  const grupoPend = await prisma.solicitudGrupal.create({ data: { comprobante_transferencia: COMPROBANTE } })
+  const pendBeatriz = await crear({ email: 'pendiente.conjunta@test.com', nombre: 'Beatriz', apellidos: 'Crespo Lara', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, solicitud_grupal_id: grupoPend.id })
   const pendPareja = await crear({ email: 'pendiente.pareja@test.com', nombre: 'Rubén', apellidos: 'Ortiz Gallego', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, solicitud_grupal_id: grupoPend.id })
-  await prisma.relacionSocio.create({ data: { socio_principal_id: pendTitular.id, socio_relacionado_id: pendPareja.id, tipo_relacion: 'pareja' } })
+  await prisma.relacionSocio.create({ data: { socio_principal_id: pendBeatriz.id, socio_relacionado_id: pendPareja.id, tipo_relacion: 'pareja' } })
 
   // ── Bajas ───────────────────────────────────────────────────────────────
   const bajas = [
@@ -282,23 +280,24 @@ async function main() {
   ]
 
   // ── Historial de altas y bajas ──────────────────────────────────────────
-  const activos = [presi, secre, teso, vocal, ludo, socio, ...basicos, famTitular, famPareja, famHijo]
+  const activos = [presi, secre, teso, vocal, ludo, socio, ...basicos, famMadre, famPareja, famHijo]
   await prisma.historialEstadoSocio.createMany({ data: [
     ...[...activos, ...bajas].map((u) => ({ socio_id: u.id, tipo: 'alta' as const, por_id: u.aprobado_por_id, created_at: u.fecha_alta! })),
     ...bajas.map((u) => ({ socio_id: u.id, tipo: 'baja' as const, por_id: u.baja_por_id, created_at: u.fecha_baja! })),
   ] })
 
-  // ── Cuotas: últimos 6 meses (conjunta solo en el titular) ───────────────
+  // ── Cuotas: últimos 6 meses (la conjunta, una vez para el grupo) ────────
   const pagos: Prisma.PagoCuotaCreateManyInput[] = []
   const hoy = new Date()
   for (const [i, u] of activos.entries()) {
-    if (u.solicitud_grupal_id && u.id !== famTitular.id) continue
+    if (u.solicitud_grupal_id && u.id !== famMadre.id) continue
     for (let m = 0; m < 6; m++) {
       const f = new Date(hoy.getFullYear(), hoy.getMonth() - m, 1)
       if (f < new Date(u.fecha_alta!.getFullYear(), u.fecha_alta!.getMonth(), 1)) break
       if (m === 0 && i % 3 === 0) continue // mes en curso sin revisar
       const impago = (m === 0 && i % 4 === 1) || (m === 1 && i % 5 === 2)
-      pagos.push({ socio_id: u.id, anio: f.getFullYear(), mes: f.getMonth() + 1, estado: impago ? 'sin_pagar' : 'pagado', revisado_por_id: teso.id })
+      const de = u.solicitud_grupal_id ? { grupo_id: u.solicitud_grupal_id } : { socio_id: u.id }
+      pagos.push({ ...de, anio: f.getFullYear(), mes: f.getMonth() + 1, estado: impago ? 'sin_pagar' : 'pagado', revisado_por_id: teso.id })
     }
   }
   await prisma.pagoCuota.createMany({ data: pagos })
@@ -315,7 +314,7 @@ async function main() {
     ['Heat: Pedal to the Metal', 1, 6, 'Incluye expansión Heavy Rain'], ['Dune: Imperium', 1, 4], ['Mysterium', 2, 7],
     ['Twilight Struggle', 2, 2, 'Falta una ficha de influencia URSS'], ['Pictomania', 3, 6],
   ]
-  const propietarios = [ludo, basicos[2], basicos[7], famTitular]
+  const propietarios = [ludo, basicos[2], basicos[7], famMadre]
   const juegos = []
   for (const [i, [nombre, min, max, notas]] of catalogo.entries()) {
     const propietario = i % 7 === 3 ? propietarios[(i / 7) | 0] : null // algunos son cesiones de socios
@@ -367,7 +366,7 @@ async function main() {
   await prisma.solicitudJuego.createMany({ data: [
     { socio_id: socio.id, nombre: 'Lost Ruins of Arnak', notas: 'Completo, con fundas', created_at: haceDias(2) },
     { socio_id: basicos[4].id, nombre: 'Clank!', created_at: haceDias(5) },
-    { socio_id: famTitular.id, nombre: 'Kingdomino', notas: 'Ideal para jugar con peques', created_at: haceDias(1) },
+    { socio_id: famMadre.id, nombre: 'Kingdomino', notas: 'Ideal para jugar con peques', created_at: haceDias(1) },
     { socio_id: basicos[11].id, nombre: 'Monopoly', estado: 'rechazada', motivo_rechazo: 'Ya tenemos dos copias en la ludoteca', created_at: haceDias(40) },
   ] })
   for (const [s, j] of [[basicos[2], 8], [ludo, 3]] as const) {
@@ -396,8 +395,8 @@ async function main() {
   console.table([
     ['presidente@test.com', 'presidente'], ['19matu91@gmail.com', 'secretario (contraseña propia)'],
     ['tesorero@test.com', 'tesorero'], ['vocal@test.com', 'vocal'], ['ludotecario@test.com', 'ludotecario'],
-    ['socio@test.com', 'socio (con préstamos)'], ['familia.titular@test.com', 'titular cuota conjunta'],
-    ['pendiente1@test.com', 'pendiente (no puede entrar)'], ['baja1@test.com', 'baja'],
+    ['socio@test.com', 'socio (con préstamos)'], ['familia.madre@test.com', 'cuota conjunta'],
+    ['pendiente1@test.com', 'pendiente (solo edita su solicitud)'], ['baja1@test.com', 'baja'],
   ].map(([email, perfil]) => ({ email, perfil })))
 }
 

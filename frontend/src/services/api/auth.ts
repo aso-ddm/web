@@ -11,6 +11,23 @@ export interface TelegramUser {
   hash: string
 }
 
+export interface SolicitudAltaPayload {
+  nombre: string
+  apellidos: string
+  dni: string
+  telefono?: string
+  fecha_nacimiento: string
+  direccion?: string
+  apodo: string
+  consentimiento_tiendas: boolean
+}
+
+export interface SolicitudAlta extends Omit<SolicitudAltaPayload, 'fecha_nacimiento'> {
+  email: string
+  fecha_nacimiento: string | null
+  tipo_cuota: Usuario['tipo_cuota']
+}
+
 export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<LoginResponse>('/auth/login', payload),
@@ -27,6 +44,16 @@ export const authApi = {
       '/auth/register',
       fd,
     )
+  },
+
+  // Solo con la solicitud de alta pendiente
+  getSolicitud: () => api.get<{ data: SolicitudAlta }>('/auth/solicitud'),
+
+  updateSolicitud: (payload: SolicitudAltaPayload, comprobante?: File) => {
+    const fd = new FormData()
+    fd.append('data', JSON.stringify(payload))
+    if (comprobante) fd.append('comprobante', comprobante, comprobante.name)
+    return api.putForm<{ data: SolicitudAlta }>('/auth/solicitud', fd)
   },
 
   me: () => api.get<{ data: Usuario }>('/auth/me'),

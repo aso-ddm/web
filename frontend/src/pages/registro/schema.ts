@@ -42,6 +42,7 @@ const miembroAdicionalSchema = z
     email: z.string().trim().toLowerCase().email('Introduce un email válido'), // como el backend: Ana@x y ana@x son el mismo
     telefono: z.string().min(1, 'El teléfono es obligatorio'),
     fecha_nacimiento: fechaNacimientoSchema,
+    direccion: z.string().min(1, 'La dirección es obligatoria'),
     apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
     consentimiento_tiendas: z.boolean().default(false),
     password: passwordSchema,
@@ -56,7 +57,7 @@ const miembroAdicionalSchema = z
     }
   })
 
-const camposTitular = {
+const camposPersona = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
   apellidos: z.string().min(2, 'Los apellidos son obligatorios'),
   dni: dniSchema,
@@ -72,7 +73,7 @@ const camposTitular = {
 
 export const registroSchema = z.union([
   z
-    .object({ tipo_cuota: z.literal('individual'), ...camposTitular })
+    .object({ tipo_cuota: z.literal('individual'), ...camposPersona })
     .superRefine((d: { password: string; confirmPassword: string }, ctx: z.RefinementCtx) => {
         if (d.password !== d.confirmPassword) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contraseñas no coinciden', path: ['confirmPassword'] })
@@ -81,7 +82,7 @@ export const registroSchema = z.union([
   z
     .object({
       tipo_cuota: z.literal('conjunta'),
-      ...camposTitular,
+      ...camposPersona,
       miembros_adicionales: z
         .array(miembroAdicionalSchema)
         .min(1, 'Debes añadir al menos un miembro')

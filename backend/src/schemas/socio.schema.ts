@@ -27,7 +27,7 @@ export const llavesSchema = z.object({
   tiene_llaves: z.boolean(),
 })
 
-// Une al socio a la cuota conjunta de socio_id (o crea una con él como titular)
+// Une al socio a la cuota conjunta de socio_id (o crea una con los dos)
 export const unirCuotaConjuntaSchema = z.object({
   socio_id: z.string().uuid(),
   tipo_relacion: z.nativeEnum(TipoRelacion),

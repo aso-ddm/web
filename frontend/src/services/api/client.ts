@@ -57,6 +57,8 @@ export const api = {
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
   postForm: <T>(endpoint: string, formData: FormData) =>
     request<T>(endpoint, { method: 'POST', body: formData }),
+  putForm: <T>(endpoint: string, formData: FormData) =>
+    request<T>(endpoint, { method: 'PUT', body: formData }),
   action: <T>(endpoint: string) =>
     request<T>(endpoint, { method: 'POST' }),
   put: <T>(endpoint: string, body: unknown) =>

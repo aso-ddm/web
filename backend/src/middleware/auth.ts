@@ -18,32 +18,39 @@ export interface JwtPayload {
 // Verifica el JWT y carga estado y roles reales desde BD: una baja o un cambio de rol
 // se aplican en la siguiente petición, sin esperar a que caduque el token.
 // ponytail: una consulta por petición autenticada; cachear por id si algún día pesa.
-export async function authenticate(req: Request, res: Response, next: NextFunction) {
-  const auth = req.headers.authorization
-  if (!auth?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'No autorizado' })
-    return
-  }
-  let payload: JwtPayload
-  try {
-    payload = jwt.verify(auth.slice(7), JWT_SECRET) as JwtPayload
-  } catch {
-    res.status(401).json({ error: 'No autorizado' })
-    return
-  }
-  try {
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: payload.id },
-      select: { id: true, email: true, roles: true, estado: true },
-    })
-    if (!usuario || usuario.estado !== EstadoSocio.activo) {
-      res.status(401).json({ error: 'Sesión no válida' })
+export const authenticate = autenticarEstado(EstadoSocio.activo)
+
+// Solicitud de alta pendiente: solo puede ver y editar su formulario (/auth/solicitud)
+export const authenticatePendiente = autenticarEstado(EstadoSocio.pendiente)
+
+function autenticarEstado(estado: EstadoSocio) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const auth = req.headers.authorization
+    if (!auth?.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'No autorizado' })
       return
     }
-    req.user = { id: usuario.id, email: usuario.email, roles: usuario.roles }
-    next()
-  } catch (err) {
-    next(err)
+    let payload: JwtPayload
+    try {
+      payload = jwt.verify(auth.slice(7), JWT_SECRET) as JwtPayload
+    } catch {
+      res.status(401).json({ error: 'No autorizado' })
+      return
+    }
+    try {
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: payload.id },
+        select: { id: true, email: true, roles: true, estado: true },
+      })
+      if (!usuario || usuario.estado !== estado) {
+        res.status(401).json({ error: 'Sesión no válida' })
+        return
+      }
+      req.user = { id: usuario.id, email: usuario.email, roles: usuario.roles }
+      next()
+    } catch (err) {
+      next(err)
+    }
   }
 }
 

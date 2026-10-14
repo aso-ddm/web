@@ -120,7 +120,6 @@ model Usuario {
   // Cuota conjunta
   solicitud_grupal_id String?
   solicitud_grupal    SolicitudGrupal? @relation("MiembrosGrupo", fields: [solicitud_grupal_id], references: [id])
-  grupo_como_titular  SolicitudGrupal? @relation("TitularGrupo")
 
   // Relaciones de cuota (pareja / familia)
   relaciones_como_principal    RelacionSocio[] @relation("SocioPrincipal")
@@ -232,21 +231,22 @@ model Visita {
   @@index([fecha_visita])
 }
 
+// Cuota conjunta: todos sus miembros son iguales. Los pagos y el comprobante de alta son del grupo
 model SolicitudGrupal {
-  id         String          @id @default(uuid())
-  titular_id String          @unique
-  estado     EstadoSolicitud @default(pendiente)
-  created_at DateTime        @default(now())
-  updated_at DateTime        @updatedAt
+  id                        String          @id @default(uuid())
+  estado                    EstadoSolicitud @default(pendiente)
+  comprobante_transferencia String?
+  created_at                DateTime        @default(now())
+  updated_at                DateTime        @updatedAt
 
-  titular  Usuario   @relation("TitularGrupo",  fields: [titular_id], references: [id])
-  miembros Usuario[] @relation("MiembrosGrupo")
+  miembros Usuario[]   @relation("MiembrosGrupo")
+  pagos    PagoCuota[]
 }
 
 enum TipoCambioEstado {
   alta
   baja
-  cuota_conjunta   // entra en una cuota conjunta (o pasa a ser su titular)
+  cuota_conjunta   // entra en una cuota conjunta
   cuota_individual // sale de una cuota conjunta
   llaves_entregadas
   llaves_devueltas
@@ -313,19 +313,22 @@ model Configuracion {
 }
 
 // Estado de la cuota de un mes. Sin fila = mes sin revisar.
-// Cuota conjunta: solo se registra en el titular del grupo.
+// Cuota individual → socio_id; cuota conjunta → grupo_id (uno de los dos, nunca ambos: CHECK en la migración).
 model PagoCuota {
   id              String     @id @default(uuid())
-  socio_id        String
+  socio_id        String?
+  grupo_id        String?
   anio            Int
   mes             Int        // 1-12
   estado          EstadoPago
   revisado_por_id String?    // null = marcado automáticamente al aprobar el alta
 
-  socio        Usuario  @relation("PagosSocio",     fields: [socio_id],        references: [id], onDelete: Cascade)
-  revisado_por Usuario? @relation("PagosRevisados", fields: [revisado_por_id], references: [id], onDelete: SetNull)
+  socio        Usuario?         @relation("PagosSocio",     fields: [socio_id],        references: [id], onDelete: Cascade)
+  grupo        SolicitudGrupal? @relation(fields: [grupo_id], references: [id], onDelete: Cascade)
+  revisado_por Usuario?         @relation("PagosRevisados", fields: [revisado_por_id], references: [id], onDelete: SetNull)
 
   updated_at DateTime @updatedAt
 
   @@unique([socio_id, anio, mes])
+  @@unique([grupo_id, anio, mes])
 }

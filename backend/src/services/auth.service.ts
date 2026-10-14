@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { RegisterInput, LoginInput } from '../schemas/auth.schema'
+import { RegisterInput, LoginInput, SolicitudInput } from '../schemas/auth.schema'
 import { TelegramAuthInput } from '../schemas/telegram.schema'
 import { HttpError } from '../lib/httpError'
 import { eventos } from '../lib/eventos'
@@ -90,11 +90,18 @@ const SESSION_SELECT = { id: true, email: true, nombre: true, apellidos: true, r
 // Búsqueda sin distinguir mayúsculas: hay cuentas antiguas guardadas con mayúsculas
 const porEmail = (email: string) => ({ email: { equals: email.trim(), mode: 'insensitive' as const } })
 
-function comprobarEstado<T extends { estado: string }>(usuario: T): T {
+// Con contraseña entra también una solicitud pendiente, pero solo a editar su formulario (authenticatePendiente)
+function comprobarEstado<T extends { estado: string }>(usuario: T, permitirPendiente = false): T {
   if (usuario.estado === 'baja') throw new Error('Esta cuenta ha sido dada de baja')
-  if (usuario.estado === 'pendiente') throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
+  if (usuario.estado === 'pendiente' && !permitirPendiente) throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
   return usuario
 }
+
+const SOLICITUD_SELECT = {
+  nombre: true, apellidos: true, dni: true, email: true, telefono: true, fecha_nacimiento: true,
+  direccion: true, apodo: true, consentimiento_tiendas: true, tipo_cuota: true, comprobante_transferencia: true,
+  solicitud_grupal: { select: { id: true, comprobante_transferencia: true } },
+} as const
 
 export class AuthService {
   constructor(private prisma: PrismaClient) {}
@@ -202,79 +209,34 @@ export class AuthService {
       }
     }
 
-    // Transacción atómica
-    const resultado = await this.prisma.$transaction(async (tx) => {
-      // Crear SolicitudGrupal con titular_id temporal (se actualizará)
-      // Necesitamos crear el titular primero para tener su id
-      const password_hash_titular = await bcrypt.hash(data.password, SALT_ROUNDS)
-      const { password: _, miembros_adicionales, ...restoTitular } = data
-
-      // Crear SolicitudGrupal con un titular_id placeholder — lo actualizamos tras crear el titular
-      // Prisma requiere titular_id no nulo, así que creamos titular primero sin solicitud_grupal_id
-      // y luego creamos SolicitudGrupal con el id real del titular
-      const titular = await tx.usuario.create({
-        data: {
-          ...restoTitular,
-          password_hash: password_hash_titular,
-          comprobante_transferencia: comprobanteFilename,
-          roles: [Rol.socio_basico],
-          estado: 'pendiente',
-          fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
-        },
-        select: {
-          id: true,
-          email: true,
-          nombre: true,
-          apellidos: true,
-          roles: true,
-          estado: true,
-        },
-      })
-
-      // Crear SolicitudGrupal con el titular_id real
+    // Todos los miembros son iguales: el comprobante es del grupo y el parentesco se declara
+    // respecto a quien rellena el formulario
+    return this.prisma.$transaction(async (tx) => {
       const grupo = await tx.solicitudGrupal.create({
-        data: {
-          titular_id: titular.id,
-          estado: 'pendiente',
-        },
+        data: { estado: 'pendiente', comprobante_transferencia: comprobanteFilename },
       })
-
-      // Actualizar el titular con solicitud_grupal_id
-      await tx.usuario.update({
-        where: { id: titular.id },
-        data: { solicitud_grupal_id: grupo.id },
-      })
-
-      // Crear miembros adicionales y sus relaciones
-      for (const m of miembros_adicionales) {
-        const { password: _p, tipo_relacion, fecha_nacimiento, ...restoMiembro } = m
-        const password_hash_miembro = await bcrypt.hash(m.password, SALT_ROUNDS)
-
-        const miembro = await tx.usuario.create({
+      const { miembros_adicionales, tipo_cuota: _t, ...primero } = data
+      const crear = async ({ password, fecha_nacimiento, ...resto }: Omit<typeof primero, 'direccion'> & { direccion?: string }) =>
+        tx.usuario.create({
           data: {
-            ...restoMiembro,
-            password_hash: password_hash_miembro,
+            ...resto,
+            password_hash: await bcrypt.hash(password, SALT_ROUNDS),
             tipo_cuota: 'conjunta',
             roles: [Rol.socio_basico],
             estado: 'pendiente',
             solicitud_grupal_id: grupo.id,
-            fecha_nacimiento: fecha_nacimiento ? new Date(fecha_nacimiento) : undefined,
+            fecha_nacimiento: new Date(fecha_nacimiento),
           },
+          select: { id: true },
         })
 
-        await tx.relacionSocio.create({
-          data: {
-            socio_principal_id: titular.id,
-            socio_relacionado_id: miembro.id,
-            tipo_relacion,
-          },
-        })
+      const { id: primeroId } = await crear(primero)
+      for (const { tipo_relacion, ...m } of miembros_adicionales) {
+        const { id } = await crear(m)
+        await tx.relacionSocio.create({ data: { socio_principal_id: primeroId, socio_relacionado_id: id, tipo_relacion } })
       }
-
-      return { titular, miembros_adicionales_count: miembros_adicionales.length }
+      return { grupo_id: grupo.id, miembros: miembros_adicionales.length + 1 }
     })
-
-    return resultado
   }
 
   async login(data: LoginInput) {
@@ -297,7 +259,7 @@ export class AuthService {
     }
 
     const { password_hash: _, ...userWithoutHash } = usuario
-    return comprobarEstado(userWithoutHash)
+    return comprobarEstado(userWithoutHash, true)
   }
 
   // Solo cuentas ya vinculadas: Telegram se vincula tras el primer login con email + contraseña
@@ -308,6 +270,39 @@ export class AuthService {
       throw new Error('Esta cuenta de Telegram no está vinculada a ningún socio. Entra con tu email y contraseña y vincúlala desde el área de socios.')
     }
     return comprobarEstado(usuario)
+  }
+
+  async getSolicitud(id: string) {
+    const { comprobante_transferencia: _c, solicitud_grupal: _g, ...datos } = await this.prisma.usuario.findUniqueOrThrow({ where: { id }, select: SOLICITUD_SELECT })
+    return datos
+  }
+
+  // Cuota conjunta: el comprobante es del grupo y cualquier miembro puede sustituirlo
+  async updateSolicitud(id: string, data: SolicitudInput, comprobanteFilename?: string) {
+    const actual = await this.prisma.usuario.findUniqueOrThrow({ where: { id }, select: SOLICITUD_SELECT })
+    const conEseDni = await this.prisma.usuario.findUnique({ where: { dni: data.dni }, select: { id: true } })
+    if (conEseDni && conEseDni.id !== id) throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${data.dni}`)
+    const grupo = actual.solicitud_grupal
+    await this.prisma.usuario.update({
+      where: { id },
+      data: {
+        ...data,
+        fecha_nacimiento: new Date(data.fecha_nacimiento),
+        ...(comprobanteFilename && !grupo ? { comprobante_transferencia: comprobanteFilename } : {}),
+      },
+    })
+    if (comprobanteFilename) {
+      if (grupo) {
+        await this.prisma.solicitudGrupal.update({ where: { id: grupo.id }, data: { comprobante_transferencia: comprobanteFilename } })
+      }
+      const anterior = grupo ? grupo.comprobante_transferencia : actual.comprobante_transferencia
+      if (anterior) {
+        fs.promises.unlink(path.resolve(process.cwd(), 'uploads/transferencias', anterior))
+          .catch((err) => console.error('Borrar comprobante anterior:', err))
+      }
+    }
+    eventos.emit('cambio', 'pendientes')
+    return this.getSolicitud(id)
   }
 
   async getMe(id: string) {

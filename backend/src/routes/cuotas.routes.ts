@@ -7,7 +7,7 @@ import { prisma } from '../lib/prisma'
 const router = Router()
 
 // GET /api/cuotas — socios activos con sus pagos.
-// Cuota conjunta: los pagos se guardan en el titular y todos los miembros los comparten (cuota_id = titular).
+// Cuota conjunta: los pagos son del grupo y todos los miembros los comparten (cuota_id = id del grupo).
 // ponytail: solo activos; los de baja con deuda no aparecen. Añadir filtro si hace falta perseguirla.
 router.get('/', requireRoles(...ROLES.DIRECTIVA), async (_req, res, next) => {
   try {
@@ -21,7 +21,7 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA), async (_req, res, next) => {
         apodo: true,
         fecha_alta: true,
         pagos_cuota: pagos,
-        solicitud_grupal: { select: { titular_id: true, titular: { select: { pagos_cuota: pagos } } } },
+        solicitud_grupal: { select: { id: true, pagos } },
       },
       orderBy: [{ nombre: 'asc' }, { apellidos: 'asc' }],
     })
@@ -29,8 +29,8 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA), async (_req, res, next) => {
       data: socios.map(({ solicitud_grupal: grupo, ...s }) => ({
         ...s,
         conjunta: !!grupo,
-        cuota_id: grupo?.titular_id ?? s.id,
-        pagos_cuota: grupo?.titular.pagos_cuota ?? s.pagos_cuota,
+        cuota_id: grupo?.id ?? s.id,
+        pagos_cuota: grupo?.pagos ?? s.pagos_cuota,
       })),
     })
   } catch (err) {
@@ -56,25 +56,27 @@ router.put('/:socioId/:anio/:mes', requireRoles(...ROLES.DIRECTIVA), async (req,
   try {
     const socio = await prisma.usuario.findUnique({
       where: { id: req.params.socioId },
-      select: { id: true, solicitud_grupal: { select: { titular_id: true } } },
+      select: { id: true, solicitud_grupal_id: true },
     })
     if (!socio) {
       res.status(404).json({ error: 'Socio no encontrado' })
       return
     }
-    // Cuota conjunta: el pago se apunta en el titular y vale para todo el grupo
-    const socio_id = socio.solicitud_grupal?.titular_id ?? socio.id
-    const where = { socio_id_anio_mes: { socio_id, anio, mes } }
+    // Cuota conjunta: el pago se apunta en el grupo y vale para todos sus miembros
+    const grupo_id = socio.solicitud_grupal_id
+    const de = grupo_id ? { grupo_id } : { socio_id: socio.id }
     if (estado === null) {
-      await prisma.pagoCuota.deleteMany({ where: { socio_id, anio, mes } })
+      await prisma.pagoCuota.deleteMany({ where: { ...de, anio, mes } })
     } else {
       await prisma.pagoCuota.upsert({
-        where,
-        create: { socio_id, anio, mes, estado, revisado_por_id: req.user.id },
+        where: grupo_id
+          ? { grupo_id_anio_mes: { grupo_id, anio, mes } }
+          : { socio_id_anio_mes: { socio_id: socio.id, anio, mes } },
+        create: { ...de, anio, mes, estado, revisado_por_id: req.user.id },
         update: { estado, revisado_por_id: req.user.id },
       })
     }
-    res.json({ data: { socio_id, anio, mes, estado } })
+    res.json({ data: { ...de, anio, mes, estado } })
   } catch (err) {
     next(err)
   }

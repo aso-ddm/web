@@ -147,7 +147,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 
   const { mutate: aprobar, isPending: aprobando } = useMutation({
     mutationFn: () => sociosApi.aprobarGrupo(grupo.id),
-    onSuccess: () => { toast.success(`Solicitud conjunta aprobada (${grupo.miembros.length + 1} socios)`); invalidar() },
+    onSuccess: () => { toast.success(`Solicitud conjunta aprobada (${grupo.miembros.length} socios)`); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -157,15 +157,15 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const precioTotal = precioIndividual + precioAdicional * grupo.miembros.length
+  const precioTotal = precioIndividual + precioAdicional * (grupo.miembros.length - 1)
 
   return (
     <div className="py-4 border-b border-border last:border-0">
       <ConfirmDialog
         open={confirmRechazo}
         onOpenChange={setConfirmRechazo}
-        title={`¿Rechazar la solicitud conjunta de ${grupo.titular.nombre} ${grupo.titular.apellidos}?`}
-        description={`Se rechazarán los ${grupo.miembros.length + 1} miembros del grupo.`}
+        title={`¿Rechazar la solicitud conjunta de ${grupo.miembros.map((m) => m.nombre).join(', ')}?`}
+        description={`Se rechazarán los ${grupo.miembros.length} miembros del grupo.`}
         confirmLabel="Rechazar"
         onConfirm={() => rechazar()}
         pending={rechazando}
@@ -173,41 +173,24 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
       />
       <div className="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0 space-y-3">
-          {/* Titular */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-display font-bold">{grupo.titular.nombre} {grupo.titular.apellidos}</p>
-              {grupo.titular.apodo && <span className="text-xs text-muted-foreground">({grupo.titular.apodo})</span>}
-              <Badge variant="outline" className="text-xs font-display">Titular</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">{grupo.titular.email}</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-              <span>DNI: {grupo.titular.dni}</span>
-              <span>Solicitud: {formatDate(grupo.created_at)}</span>
-            </div>
-            {grupo.titular.alias_telegram && (
-              <p className="text-xs text-muted-foreground">Telegram: {grupo.titular.alias_telegram}</p>
-            )}
-          </div>
-
-          {/* Miembros adicionales */}
-          {grupo.miembros.length > 0 && (
-            <div className="space-y-2 pl-3 border-l-2 border-secondary/30">
-              {grupo.miembros.map((miembro) => (
-                <div key={miembro.id} className="space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-display font-bold">{miembro.nombre} {miembro.apellidos}</p>
-                    <Badge variant="secondary" className="text-xs font-display">{tipoRelacionLabel(miembro.tipo_relacion)}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{miembro.email} · DNI: {miembro.dni}</p>
+          <div className="space-y-3 pl-3 border-l-2 border-secondary/30">
+            {grupo.miembros.map((miembro) => (
+              <div key={miembro.id} className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-display font-bold">{miembro.nombre} {miembro.apellidos}</p>
+                  {miembro.apodo && <span className="text-xs text-muted-foreground">({miembro.apodo})</span>}
+                  {miembro.tipo_relacion && <Badge variant="secondary" className="text-xs font-display">{tipoRelacionLabel(miembro.tipo_relacion)}</Badge>}
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="text-xs text-muted-foreground">{miembro.email} · DNI: {miembro.dni}</p>
+                {miembro.alias_telegram && <p className="text-xs text-muted-foreground">Telegram: {miembro.alias_telegram}</p>}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">Solicitud: {formatDate(grupo.created_at)}</p>
 
           {/* Precio total */}
           <p className="text-sm font-display font-bold text-secondary">
-            {precioTotal}€/mes · {grupo.miembros.length + 1} socios
+            {precioTotal}€/mes · {grupo.miembros.length} socios
           </p>
         </div>
 
@@ -223,12 +206,12 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
               Rechazar
             </Button>
           </div>}
-          {grupo.titular.comprobante_transferencia ? (
+          {grupo.comprobante_transferencia ? (
             <Button
               size="sm"
               variant="ghost"
               className="font-display h-8 gap-1.5 text-xs text-secondary hover:text-secondary hover:bg-secondary/10"
-              onClick={() => abrirComprobante(grupo.titular.id)}
+              onClick={() => abrirComprobante(grupo.miembros[0].id)}
             >
               <FileText className="h-3.5 w-3.5" />
               Ver comprobante

@@ -88,15 +88,10 @@ export interface SolicitudGrupal {
   id: string
   estado: EstadoSolicitud
   created_at: string
-  titular: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & {
-    apodo?: string | null
-    alias_telegram?: string | null
-    tipo_cuota: TipoCuota
-    created_at: string
-    comprobante_transferencia?: string | null
-  }
+  comprobante_transferencia?: string | null
+  // tipo_relacion: parentesco declarado en el formulario (null en quien lo rellenó)
   miembros: Array<
-    Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email'> & {
+    Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email' | 'apodo' | 'alias_telegram'> & {
       tipo_relacion: TipoRelacion | null
     }
   >

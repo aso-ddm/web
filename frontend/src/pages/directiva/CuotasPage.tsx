@@ -19,6 +19,21 @@ const ETIQUETA = { pagado: 'Pago realizado', sin_pagar: 'Pago no realizado', sin
 const SIGUIENTE = (e: EstadoPago | undefined): EstadoPago | null =>
   e === undefined ? 'pagado' : e === 'pagado' ? 'sin_pagar' : null
 
+// Una fila por cuota: los miembros de una cuota conjunta comparten los pagos, así que van juntos.
+// El periodo empieza con el alta más antigua del grupo.
+function agruparCuotas(socios: SocioCuotas[]) {
+  const cuotas = new Map<string, SocioCuotas & { miembros: SocioCuotas[] }>()
+  for (const s of socios) {
+    const c = cuotas.get(s.cuota_id)
+    if (!c) cuotas.set(s.cuota_id, { ...s, miembros: [s] })
+    else {
+      c.miembros.push(s)
+      if (s.fecha_alta < c.fecha_alta) c.fecha_alta = s.fecha_alta
+    }
+  }
+  return [...cuotas.values()]
+}
+
 
 export function CuotasPage() {
   const qc = useQueryClient()
@@ -29,12 +44,12 @@ export function CuotasPage() {
   const [fijados, setFijados] = useState<Set<string>>(new Set())
 
   const { data, isLoading } = useQuery({ queryKey: QK.CUOTAS, queryFn: cuotasApi.getAll })
-  const socios = data?.data ?? []
+  const cuotas = agruparCuotas(data?.data ?? [])
 
   const { mutate: marcar } = useMutation({
-    // cuotaId: el titular en cuota conjunta, así el cambio se refleja en todos los miembros
-    mutationFn: (v: { cuotaId: string; mes: number; estado: EstadoPago | null }) =>
-      cuotasApi.marcar(v.cuotaId, anio, v.mes, v.estado),
+    // Basta un socio de la cuota: en una conjunta el backend lo apunta en el grupo
+    mutationFn: (v: { cuotaId: string; socioId: string; mes: number; estado: EstadoPago | null }) =>
+      cuotasApi.marcar(v.socioId, anio, v.mes, v.estado),
     // En serie: con clics rápidos los PUT podrían llegar desordenados y dejar otro estado en el servidor
     scope: { id: 'cuotas' },
     onMutate: async ({ cuotaId, mes, estado }) => {
@@ -54,10 +69,10 @@ export function CuotasPage() {
     },
   })
 
-  const morosos = socios.filter((s) => esMoroso(s.fecha_alta, s.pagos_cuota, hoy))
-  const visibles = tab === 'todos' ? socios : socios.filter((s) => fijados.has(s.cuota_id) || morosos.includes(s))
+  const morosos = cuotas.filter((c) => esMoroso(c.fecha_alta, c.pagos_cuota, hoy))
+  const visibles = tab === 'todos' ? cuotas : cuotas.filter((c) => fijados.has(c.cuota_id) || morosos.includes(c))
 
-  const primerAnio = Math.min(hoy.getFullYear(), ...socios.map((s) => new Date(s.fecha_alta).getFullYear()))
+  const primerAnio = Math.min(hoy.getFullYear(), ...cuotas.map((c) => new Date(c.fecha_alta).getFullYear()))
   const anios = Array.from({ length: hoy.getFullYear() - primerAnio + 1 }, (_, i) => hoy.getFullYear() - i)
 
   return (
@@ -86,7 +101,7 @@ export function CuotasPage() {
         <Tabs value={tab} onValueChange={(v) => { setTab(v as Tab); setFijados(new Set()) }}>
           <TabsList>
             <TabsTrigger value="todos" className="font-display font-bold">
-              Todos ({isLoading ? '…' : socios.length})
+              Todas ({isLoading ? '…' : cuotas.length})
             </TabsTrigger>
             <TabsTrigger value="morosos" className="font-display font-bold">
               Morosos ({isLoading ? '…' : morosos.length})
@@ -103,7 +118,7 @@ export function CuotasPage() {
             ) : visibles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-sm text-muted-foreground">{tab === 'morosos' ? 'No hay socios morosos' : 'No hay socios'}</p>
+                <p className="text-sm text-muted-foreground">{tab === 'morosos' ? 'No hay cuotas con impagos' : 'No hay socios'}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -111,7 +126,7 @@ export function CuotasPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="sticky left-0 bg-card text-left px-4 py-3 font-display font-bold text-muted-foreground text-xs uppercase tracking-wide">
-                        Socio
+                        Cuota
                       </th>
                       {MESES.map((m) => (
                         <th key={m} className="px-1 py-3 font-display font-bold text-muted-foreground text-xs uppercase">{m}</th>
@@ -121,12 +136,20 @@ export function CuotasPage() {
                   <tbody className="divide-y divide-border">
                     {visibles.map((s) => {
                       return (
-                        <tr key={s.id} className="hover:bg-accent/30 transition-colors">
+                        <tr key={s.cuota_id} className="hover:bg-accent/30 transition-colors">
                           <td className="sticky left-0 bg-card px-4 py-2 whitespace-nowrap">
-                            <p className="font-display font-bold">
-                              {s.nombre} {s.apellidos}
-                              {s.conjunta && <span className="text-xs text-muted-foreground font-normal"> (conjunta)</span>}
-                            </p>
+                            {s.conjunta ? (
+                              <div className="border-l-2 border-secondary/50 pl-2">
+                                <p className="text-xs font-display font-bold text-secondary uppercase tracking-wide flex items-center gap-1">
+                                  <Users className="h-3 w-3" />Cuota conjunta
+                                </p>
+                                {s.miembros.map((m) => (
+                                  <p key={m.id} className="font-display font-bold">{m.nombre} {m.apellidos}</p>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="font-display font-bold">{s.nombre} {s.apellidos}</p>
+                            )}
                           </td>
                           {MESES.map((nombreMes, i) => {
                             const mes = i + 1
@@ -139,9 +162,9 @@ export function CuotasPage() {
                               <td key={mes} className="px-1 py-1 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => marcar({ cuotaId: s.cuota_id, mes, estado: SIGUIENTE(estado) })}
+                                  onClick={() => marcar({ cuotaId: s.cuota_id, socioId: s.id, mes, estado: SIGUIENTE(estado) })}
                                   title={`${nombreMes} ${anio}: ${etiqueta}`}
-                                  aria-label={`${s.nombre} ${s.apellidos}, ${nombreMes} ${anio}: ${etiqueta}`}
+                                  aria-label={`${s.miembros.map((m) => `${m.nombre} ${m.apellidos}`).join(', ')}, ${nombreMes} ${anio}: ${etiqueta}`}
                                   className={cn(
                                     'w-24 min-h-10 px-1.5 py-1 rounded-md inline-flex items-center justify-center border text-xs leading-tight font-medium transition-colors',
                                     estado === 'pagado' && 'bg-emerald-700/15 border-emerald-600/40 text-emerald-800',
