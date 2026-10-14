@@ -62,6 +62,21 @@ No hay ESLint configurado: `tsc` con `strict`, `noUnusedLocals` y `noUnusedParam
 - Filtrar listas largas mientras se escribe: `useDeferredValue` (ver `LudotecaTable`).
 - Imágenes bajo el pliegue con `loading="lazy"` y `decoding="async"`.
 
+## Reglas del club que se reflejan en pantalla
+
+Las aplica el backend (ver `../CLAUDE.md`); el frontend no las sortea ni ofrece acciones que las contradigan:
+- **Telegram no se desvincula nunca** desde la app (ni el socio ni el admin): solo lo borra la baja.
+  No añadir botones de "desvincular".
+- **Las altas entran solo por registro + aprobación** en Solicitudes: no hay "nuevo usuario" en admin.
+- **Baja** (`directiva/socios/SocioDetalle` + `JuegosCedidosBaja`): botón desactivado si tiene préstamos sin devolver;
+  el diálogo pide decidir qué pasa con cada juego cedido ("se lo lleva" / "se queda en el club") y no confirma
+  hasta tenerlos todos (`ConfirmDialog` con `confirmDisabled`).
+- **Las bajas solo las ve la directiva**: a los vocales no se les ofrece el filtro "Baja" (el backend tampoco se las da).
+- **`tipo_cuota` no se edita** en formularios: cambia al unir o sacar de una cuota conjunta.
+- **Recuperar contraseña** muestra siempre el mismo mensaje, exista o no la cuenta.
+- **Datos personales de socios solo con sesión**: la ludoteca pública lee de Google Sheets, no de `/juegos`.
+- Cualquier cambio de estas reglas que afecte a datos personales se refleja también en `pages/RgpdPage.tsx`.
+
 ## Convenciones
 
 - Rutas en `config/routes.tsx`. La web pública va en el bundle inicial; el resto de páginas con `lazyPage()`,
