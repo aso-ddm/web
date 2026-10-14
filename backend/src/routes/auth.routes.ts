@@ -60,42 +60,19 @@ router.post('/register', registerLimit, upload.single('comprobante'), async (req
     return
   }
 
-  const dataRaw = req.body?.data
-  if (!dataRaw) {
-    fs.unlinkSync(req.file.path)
-    res.status(400).json({ error: 'Datos del formulario no recibidos' })
-    return
-  }
-
-  let body: unknown
+  // Cualquier fallo (datos, duplicado, BD) borra el comprobante subido y sigue al errorHandler
   try {
-    body = JSON.parse(dataRaw)
-  } catch {
-    fs.unlinkSync(req.file.path)
-    res.status(400).json({ error: 'Datos del formulario con formato inválido' })
-    return
-  }
-
-  const parsed = registerSchema.safeParse(body)
-  if (!parsed.success) {
-    fs.unlinkSync(req.file.path)
-    res.status(400).json({
-      error: 'Datos inválidos',
-      details: parsed.error.flatten().fieldErrors,
-    })
-    return
-  }
-
-  try {
-    const usuario = await authService.register(parsed.data, req.file.filename)
+    if (!req.body?.data) throw new HttpError(400, 'Datos del formulario no recibidos')
+    const data = registerSchema.parse(JSON.parse(req.body.data))
+    const usuario = await authService.register(data, req.file.filename)
     res.status(201).json({
       message: 'Solicitud de alta enviada correctamente. La directiva revisará tu solicitud.',
       data: usuario,
     })
   } catch (err) {
-    fs.unlinkSync(req.file.path)
-    const message = err instanceof Error ? err.message : 'Error al registrar'
-    res.status(409).json({ error: message })
+    fs.promises.unlink(req.file.path).catch(() => {})
+    if (err instanceof SyntaxError) throw new HttpError(400, 'Datos del formulario con formato inválido')
+    throw err
   }
 })
 
@@ -110,14 +87,9 @@ router.post('/login', loginLimit, async (req, res) => {
     return
   }
 
-  try {
-    const usuario = await authService.login(parsed.data)
-    const token = signToken({ id: usuario.id, email: usuario.email, roles: usuario.roles })
-    res.json({ data: { usuario, token } })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al iniciar sesión'
-    res.status(401).json({ error: message })
-  }
+  const usuario = await authService.login(parsed.data)
+  const token = signToken({ id: usuario.id, email: usuario.email, roles: usuario.roles })
+  res.json({ data: { usuario, token } })
 })
 
 // POST /api/auth/telegram — login con los datos firmados del widget (solo cuentas ya vinculadas)
@@ -128,25 +100,15 @@ router.post('/telegram', loginLimit, async (req, res) => {
     return
   }
 
-  try {
-    const usuario = await authService.loginTelegram(parsed.data)
-    const token = signToken({ id: usuario.id, email: usuario.email, roles: usuario.roles })
-    res.json({ data: { usuario, token } })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al iniciar sesión'
-    res.status(401).json({ error: message })
-  }
+  const usuario = await authService.loginTelegram(parsed.data)
+  const token = signToken({ id: usuario.id, email: usuario.email, roles: usuario.roles })
+  res.json({ data: { usuario, token } })
 })
 
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
-  try {
-    const usuario = await authService.getMe(req.user.id)
-    res.json({ data: usuario })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(404).json({ error: message })
-  }
+  const usuario = await authService.getMe(req.user.id)
+  res.json({ data: usuario })
 })
 
 // GET /api/auth/solicitud — la solicitud de alta propia, mientras está pendiente
@@ -174,13 +136,8 @@ router.post('/link-telegram', authenticate, async (req, res) => {
     return
   }
 
-  try {
-    const result = await authService.linkTelegram(req.user.id, parsed.data)
-    res.json({ data: result })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al vincular Telegram'
-    res.status(400).json({ error: message })
-  }
+  const result = await authService.linkTelegram(req.user.id, parsed.data)
+  res.json({ data: result })
 })
 
 // POST /api/auth/pedir-llaves — avisa al secretario por Telegram
@@ -197,13 +154,8 @@ router.post('/pedir-baja', pedirBajaLimit, authenticate, async (req, res) => {
 
 // DELETE /api/auth/link-telegram
 router.delete('/link-telegram', authenticate, async (req, res) => {
-  try {
-    await authService.unlinkTelegram(req.user.id)
-    res.json({ data: { ok: true } })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al desvincular Telegram'
-    res.status(400).json({ error: message })
-  }
+  await authService.unlinkTelegram(req.user.id)
+  res.json({ data: { ok: true } })
 })
 
 // POST /api/auth/reset-password/request — público
@@ -213,13 +165,8 @@ router.post('/reset-password/request', resetRequestLimit, async (req, res) => {
     res.status(400).json({ error: 'Email requerido' })
     return
   }
-  try {
-    const result = await authService.requestPasswordReset(email.toLowerCase().trim())
-    res.json({ data: result })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(500).json({ error: message })
-  }
+  const result = await authService.requestPasswordReset(email.toLowerCase().trim())
+  res.json({ data: result })
 })
 
 // POST /api/auth/reset-password/confirm — público
@@ -234,17 +181,12 @@ router.post('/reset-password/confirm', resetConfirmLimit, async (req, res) => {
     res.status(400).json({ error: passwordCheck.error.issues[0].message })
     return
   }
-  try {
-    await authService.confirmPasswordReset(
-      email.toLowerCase().trim(),
-      String(token).trim(),
-      password,
-    )
-    res.json({ data: { ok: true } })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  await authService.confirmPasswordReset(
+    email.toLowerCase().trim(),
+    String(token).trim(),
+    password,
+  )
+  res.json({ data: { ok: true } })
 })
 
 export default router

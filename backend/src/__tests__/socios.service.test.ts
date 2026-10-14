@@ -332,3 +332,39 @@ describe('salirDeCuotaConjunta', () => {
     await expect(salirDeCuotaConjunta(prisma as never, 'u1', 'dir', 'Sale')).rejects.toThrow('no pertenece a una cuota conjunta')
   })
 })
+
+describe('SociosService.cambiarEstado (panel de admin)', () => {
+  const conEstado = (estado: string) =>
+    (prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ estado })
+
+  it('pendiente → activo pasa por aprobar (cuota del mes de alta incluida)', async () => {
+    conEstado('pendiente')
+    const aprobar = vi.spyOn(service, 'aprobar').mockResolvedValue({} as never)
+    await service.cambiarEstado('u1', 'activo', 'admin1')
+    expect(aprobar).toHaveBeenCalledWith('u1', 'admin1', Rol.socio_basico)
+  })
+
+  it('activo → baja pasa por darDeBaja (cuota conjunta y aviso)', async () => {
+    conEstado('activo')
+    const baja = vi.spyOn(service, 'darDeBaja').mockResolvedValue({} as never)
+    await service.cambiarEstado('u1', 'baja', 'admin1')
+    expect(baja).toHaveBeenCalledWith('u1', 'admin1')
+  })
+
+  it('baja → activo pasa por reactivar', async () => {
+    conEstado('baja')
+    const reactivar = vi.spyOn(service, 'reactivar').mockResolvedValue({} as never)
+    await service.cambiarEstado('u1', 'activo', 'admin1')
+    expect(reactivar).toHaveBeenCalledWith('u1', 'admin1')
+  })
+
+  it('pendiente → baja se rechaza con 409: se gestiona desde Solicitudes', async () => {
+    conEstado('pendiente')
+    await expect(service.cambiarEstado('u1', 'baja', 'admin1')).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('socio inexistente → 404', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    await expect(service.cambiarEstado('u1', 'baja', 'admin1')).rejects.toMatchObject({ status: 404 })
+  })
+})

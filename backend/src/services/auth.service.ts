@@ -24,9 +24,9 @@ function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean 
 function checkTelegram(data: TelegramAuthInput): bigint {
   const botToken = process.env.BOT_TOKEN?.trim()
   if (!botToken) throw new Error('BOT_TOKEN no configurado')
-  if (!verifyTelegramData(data, botToken)) throw new Error('Firma de Telegram inválida')
+  if (!verifyTelegramData(data, botToken)) throw new HttpError(400, 'Firma de Telegram inválida')
   if (Math.floor(Date.now() / 1000) - data.auth_date > 86400) {
-    throw new Error('La autenticación de Telegram ha expirado, vuelve a intentarlo')
+    throw new HttpError(400, 'La autenticación de Telegram ha expirado, vuelve a intentarlo')
   }
   return BigInt(data.id)
 }
@@ -76,8 +76,8 @@ const porEmail = (email: string) => ({ email: { equals: email.trim(), mode: 'ins
 
 // Con contraseña entra también una solicitud pendiente, pero solo a editar su formulario (authenticatePendiente)
 function comprobarEstado<T extends { estado: string }>(usuario: T, permitirPendiente = false): T {
-  if (usuario.estado === 'baja') throw new Error('Esta cuenta ha sido dada de baja')
-  if (usuario.estado === 'pendiente' && !permitirPendiente) throw new Error('Tu solicitud está pendiente de aprobación por la directiva')
+  if (usuario.estado === 'baja') throw new HttpError(403, 'Esta cuenta ha sido dada de baja')
+  if (usuario.estado === 'pendiente' && !permitirPendiente) throw new HttpError(403, 'Tu solicitud está pendiente de aprobación por la directiva')
   return usuario
 }
 
@@ -120,14 +120,14 @@ export class AuthService {
       where: porEmail(data.email),
     })
     if (existing) {
-      throw new Error(`Ya existe una cuenta con ese email: ${data.email}`)
+      throw new HttpError(409, `Ya existe una cuenta con ese email: ${data.email}`)
     }
 
     const existingDni = await this.prisma.usuario.findUnique({
       where: { dni: data.dni },
     })
     if (existingDni) {
-      throw new Error(`Ya existe una cuenta con ese DNI: ${data.dni}`)
+      throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${data.dni}`)
     }
 
     const password_hash = await bcrypt.hash(data.password, SALT_ROUNDS)
@@ -165,7 +165,7 @@ export class AuthService {
     const emailsSet = new Set<string>()
     for (const email of todosEmails) {
       if (emailsSet.has(email)) {
-        throw new Error(`Ya existe una cuenta con ese email: ${email}`)
+        throw new HttpError(409, `Ya existe una cuenta con ese email: ${email}`)
       }
       emailsSet.add(email)
     }
@@ -173,7 +173,7 @@ export class AuthService {
     const dnisSet = new Set<string>()
     for (const dni of todosDnis) {
       if (dnisSet.has(dni)) {
-        throw new Error(`Ya existe una cuenta con ese DNI: ${dni}`)
+        throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${dni}`)
       }
       dnisSet.add(dni)
     }
@@ -182,14 +182,14 @@ export class AuthService {
     for (const email of todosEmails) {
       const existing = await this.prisma.usuario.findFirst({ where: porEmail(email) })
       if (existing) {
-        throw new Error(`Ya existe una cuenta con ese email: ${email}`)
+        throw new HttpError(409, `Ya existe una cuenta con ese email: ${email}`)
       }
     }
 
     for (const dni of todosDnis) {
       const existing = await this.prisma.usuario.findUnique({ where: { dni } })
       if (existing) {
-        throw new Error(`Ya existe una cuenta con ese DNI: ${dni}`)
+        throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${dni}`)
       }
     }
 
@@ -239,7 +239,7 @@ export class AuthService {
 
     // Contraseña antes que estado: no revelar si una cuenta existe sin conocer su contraseña
     if (!usuario || !(await bcrypt.compare(data.password, usuario.password_hash))) {
-      throw new Error('Credenciales incorrectas')
+      throw new HttpError(401, 'Credenciales incorrectas')
     }
 
     const { password_hash: _, ...userWithoutHash } = usuario
@@ -251,7 +251,7 @@ export class AuthService {
     const telegram_chat_id = checkTelegram(data)
     const usuario = await this.prisma.usuario.findUnique({ where: { telegram_chat_id }, select: SESSION_SELECT })
     if (!usuario) {
-      throw new Error('Esta cuenta de Telegram no está vinculada a ningún socio. Entra con tu email y contraseña y vincúlala desde el área de socios.')
+      throw new HttpError(401, 'Esta cuenta de Telegram no está vinculada a ningún socio. Entra con tu email y contraseña y vincúlala desde el área de socios.')
     }
     return comprobarEstado(usuario)
   }
@@ -315,7 +315,7 @@ export class AuthService {
     })
 
     if (!usuario) {
-      throw new Error('Usuario no encontrado')
+      throw new HttpError(404, 'Usuario no encontrado')
     }
 
     const { telegram_chat_id, ...rest } = usuario
@@ -328,7 +328,7 @@ export class AuthService {
     const existing = await this.prisma.usuario.findFirst({
       where: { telegram_chat_id: BigInt(data.id), NOT: { id: userId } },
     })
-    if (existing) throw new Error('Este usuario de Telegram ya está vinculado a otra cuenta')
+    if (existing) throw new HttpError(409, 'Este usuario de Telegram ya está vinculado a otra cuenta')
 
     const updated = await this.prisma.usuario.update({
       where: { id: userId },
@@ -395,7 +395,7 @@ export class AuthService {
     // Bot bloqueado por el socio o Telegram caído: no decir "código enviado" si no ha llegado
     if (!enviado) {
       await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
-      throw new Error('No hemos podido enviarte el código por Telegram. Comprueba que no has bloqueado el bot o contacta con la directiva.')
+      throw new HttpError(502, 'No hemos podido enviarte el código por Telegram. Comprueba que no has bloqueado el bot o contacta con la directiva.')
     }
 
     return { hasTelegram: true }
@@ -403,17 +403,17 @@ export class AuthService {
 
   async confirmPasswordReset(email: string, token: string, newPassword: string) {
     const usuario = await this.prisma.usuario.findFirst({ where: porEmail(email) })
-    if (!usuario || !usuario.reset_token) throw new Error('Código incorrecto o expirado')
+    if (!usuario || !usuario.reset_token) throw new HttpError(400, 'Código incorrecto o expirado')
 
     if (!usuario.reset_token_expiry || usuario.reset_token_expiry < new Date()) {
       await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
-      throw new Error('El código ha expirado. Solicita uno nuevo')
+      throw new HttpError(400, 'El código ha expirado. Solicita uno nuevo')
     }
 
     if (usuario.reset_token !== token) {
       // Invalidar token en intento fallido — previene fuerza bruta
       await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
-      throw new Error('Código incorrecto. Solicita un nuevo código para volver a intentarlo')
+      throw new HttpError(400, 'Código incorrecto. Solicita un nuevo código para volver a intentarlo')
     }
 
     const password_hash = await bcrypt.hash(newPassword, SALT_ROUNDS)

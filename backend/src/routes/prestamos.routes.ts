@@ -38,38 +38,21 @@ router.post('/', authenticate, async (req, res) => {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const prestamo = await prestamosService.solicitar(req.user.id, parsed.data)
-    res.status(201).json({ data: prestamo })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const prestamo = await prestamosService.solicitar(req.user.id, parsed.data)
+  res.status(201).json({ data: prestamo })
 })
 
 // POST /api/prestamos/:id/renovar — socio renueva su propio préstamo
 router.post('/:id/renovar', authenticate, async (req, res) => {
-  try {
-    const prestamo = await prestamosService.renovar(req.params.id, req.user.id)
-    res.json({ data: prestamo })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    const status = message.includes('permiso') ? 403 : 400
-    res.status(status).json({ error: message })
-  }
+  const prestamo = await prestamosService.renovar(req.params.id, req.user.id)
+  res.json({ data: prestamo })
 })
 
 // POST /api/prestamos/:id/devolucion — socio o admin confirma devolución
 router.post('/:id/devolucion', authenticate, async (req, res) => {
   const esAdmin = ROLES.DIRECTIVA_Y_LUDOTECARIO.some((r) => req.user.roles.includes(r))
-  try {
-    const prestamo = await prestamosService.devolucion(req.params.id, req.user.id, esAdmin)
-    res.json({ data: prestamo })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    const status = message.includes('permiso') ? 403 : 400
-    res.status(status).json({ error: message })
-  }
+  const prestamo = await prestamosService.devolucion(req.params.id, req.user.id, esAdmin)
+  res.json({ data: prestamo })
 })
 
 export default router

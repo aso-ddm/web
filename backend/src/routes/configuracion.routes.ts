@@ -25,12 +25,7 @@ const soloSociosSiPrivada: RequestHandler = (req, res, next) =>
   CLAVES_SOCIOS.has(req.params.clave) ? authenticate(req, res, next) : next()
 
 router.get('/:clave', soloSociosSiPrivada, async (req, res) => {
-  try {
-    const config = await configService.getByKey(req.params.clave)
-    res.json({ data: config })
-  } catch {
-    res.status(404).json({ error: `Configuración '${req.params.clave}' no encontrada` })
-  }
+  res.json({ data: await configService.getByKey(req.params.clave) })
 })
 
 // PUT /api/config/:clave — actualizar (directiva)

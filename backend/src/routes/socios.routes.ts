@@ -42,13 +42,8 @@ router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (_re
 
 // GET /api/socios/me — perfil propio
 router.get('/me', authenticate, async (req, res) => {
-  try {
-    const socio = await sociosService.getById(req.user.id)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(404).json({ error: message })
-  }
+  const socio = await sociosService.getById(req.user.id)
+  res.json({ data: socio })
 })
 
 // GET /api/socios/:id/comprobante — directiva descarga comprobante
@@ -96,13 +91,8 @@ router.get('/:id', authenticate, async (req, res) => {
     res.status(403).json({ error: 'No tienes permisos para ver este perfil' })
     return
   }
-  try {
-    const socio = await sociosService.getById(id)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(404).json({ error: message })
-  }
+  const socio = await sociosService.getById(id)
+  res.json({ data: socio })
 })
 
 // PUT /api/socios/:id — editar socio
@@ -123,13 +113,8 @@ router.put('/:id', authenticate, async (req, res) => {
     res.status(403).json({ error: 'Solo la directiva puede cambiar el tipo de cuota' })
     return
   }
-  try {
-    const socio = await sociosService.update(id, parsed.data)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(404).json({ error: message })
-  }
+  const socio = await sociosService.update(id, parsed.data)
+  res.json({ data: socio })
 })
 
 // PUT /api/socios/:id/roles — solo directiva
@@ -140,14 +125,8 @@ router.put('/:id/roles', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const socio = await sociosService.updateRoles(id, parsed.data.roles, req.user.id)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    const status = message === 'Socio no encontrado' ? 404 : message.startsWith('Solo se puede') ? 400 : 403
-    res.status(status).json({ error: message })
-  }
+  const socio = await sociosService.updateRoles(id, parsed.data.roles, req.user.id)
+  res.json({ data: socio })
 })
 
 // POST /api/socios/:id/aprobar
@@ -158,49 +137,29 @@ router.post('/:id/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) =
     res.status(400).json({ error: 'Debe asignar un rol válido al socio antes de aprobar', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const socio = await sociosService.aprobar(id, req.user.id, parsed.data.rol)
-    res.json({ message: 'Socio aprobado correctamente', data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const socio = await sociosService.aprobar(id, req.user.id, parsed.data.rol)
+  res.json({ message: 'Socio aprobado correctamente', data: socio })
 })
 
 // POST /api/socios/:id/rechazar
 router.post('/:id/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
-  try {
-    await sociosService.rechazar(id)
-    res.json({ message: 'Solicitud rechazada' })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  await sociosService.rechazar(id)
+  res.json({ message: 'Solicitud rechazada' })
 })
 
 // POST /api/socios/:id/baja
 router.post('/:id/baja', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
-  try {
-    const socio = await sociosService.darDeBaja(id, req.user.id)
-    res.json({ message: 'Socio dado de baja correctamente', data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const socio = await sociosService.darDeBaja(id, req.user.id)
+  res.json({ message: 'Socio dado de baja correctamente', data: socio })
 })
 
 // POST /api/socios/:id/reactivar
 router.post('/:id/reactivar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
-  try {
-    const socio = await sociosService.reactivar(id, req.user.id)
-    res.json({ message: 'Socio reactivado correctamente', data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const socio = await sociosService.reactivar(id, req.user.id)
+  res.json({ message: 'Socio reactivado correctamente', data: socio })
 })
 
 // POST /api/socios/:id/cuota-conjunta — une al socio a la cuota conjunta de otro
@@ -210,24 +169,14 @@ router.post('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req,
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const socio = await sociosService.unirCuotaConjunta(req.params.id, parsed.data.socio_id, req.user.id)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const socio = await sociosService.unirCuotaConjunta(req.params.id, parsed.data.socio_id, req.user.id)
+  res.json({ data: socio })
 })
 
 // DELETE /api/socios/:id/cuota-conjunta — saca al socio de su cuota conjunta (pasa a individual)
 router.delete('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  try {
-    const socio = await sociosService.salirCuotaConjunta(req.params.id, req.user.id)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const socio = await sociosService.salirCuotaConjunta(req.params.id, req.user.id)
+  res.json({ data: socio })
 })
 
 // PUT /api/socios/:id/llaves — directiva registra si el socio tiene llaves
@@ -238,39 +187,22 @@ router.put('/:id/llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => 
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const socio = await sociosService.setLlaves(id, parsed.data.tiene_llaves, req.user.id)
-    res.json({ data: socio })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const socio = await sociosService.setLlaves(id, parsed.data.tiene_llaves, req.user.id)
+  res.json({ data: socio })
 })
 
 // POST /api/socios/grupos/:grupoId/aprobar
 router.post('/grupos/:grupoId/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { grupoId } = req.params
-  try {
-    const resultado = await sociosService.aprobarGrupo(grupoId, req.user.id)
-    res.json({ message: 'Solicitud grupal aprobada correctamente', data: resultado })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    const status = message.includes('no encontrada') ? 404 : 400
-    res.status(status).json({ error: message })
-  }
+  const resultado = await sociosService.aprobarGrupo(grupoId, req.user.id)
+  res.json({ message: 'Solicitud grupal aprobada correctamente', data: resultado })
 })
 
 // POST /api/socios/grupos/:grupoId/rechazar
 router.post('/grupos/:grupoId/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { grupoId } = req.params
-  try {
-    await sociosService.rechazarGrupo(grupoId)
-    res.json({ message: 'Solicitud grupal rechazada' })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    const status = message.includes('no encontrada') ? 404 : 400
-    res.status(status).json({ error: message })
-  }
+  await sociosService.rechazarGrupo(grupoId)
+  res.json({ message: 'Solicitud grupal rechazada' })
 })
 
 export default router

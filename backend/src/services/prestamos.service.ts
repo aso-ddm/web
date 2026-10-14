@@ -2,6 +2,7 @@ import { PrismaClient, EstadoPrestamo, TipoLogJuego } from '@prisma/client'
 import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema'
 import type { LogsJuegoService } from './logs_juego.service'
 import { finDelDiaMadrid } from '../lib/fechas'
+import { HttpError } from '../lib/httpError'
 
 export class PrestamosService {
   constructor(
@@ -41,20 +42,20 @@ export class PrestamosService {
 
   async solicitar(socioId: string, input: SolicitarPrestamoInput) {
     const juego = await this.prisma.juego.findUnique({ where: { id: input.juego_id } })
-    if (!juego) throw new Error('Juego no encontrado')
-    if (juego.estado !== 'en_estanteria') throw new Error('El juego no está disponible para préstamo')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
+    if (juego.estado !== 'en_estanteria') throw new HttpError(409, 'El juego no está disponible para préstamo')
 
     const prestamoExistente = await this.prisma.prestamo.findFirst({
       where: { socio_id: socioId, juego_id: input.juego_id, estado: EstadoPrestamo.activo },
     })
-    if (prestamoExistente) throw new Error('Ya tienes un préstamo activo para este juego')
+    if (prestamoExistente) throw new HttpError(409, 'Ya tienes un préstamo activo para este juego')
 
     const [prestamosActivos, maxPrestamos] = await Promise.all([
       this.prisma.prestamo.count({ where: { socio_id: socioId, estado: EstadoPrestamo.activo } }),
       this.getConfigNum('max_prestamos_activos', 3),
     ])
     if (prestamosActivos >= maxPrestamos) {
-      throw new Error(`Has alcanzado el límite de ${maxPrestamos} préstamos simultáneos`)
+      throw new HttpError(409, `Has alcanzado el límite de ${maxPrestamos} préstamos simultáneos`)
     }
 
     const diasPrestamo = await this.getConfigNum('dias_prestamo', 14)
@@ -67,7 +68,7 @@ export class PrestamosService {
         where: { id: input.juego_id, estado: 'en_estanteria' },
         data: { estado: 'prestado' },
       })
-      if (count !== 1) throw new Error('El juego no está disponible para préstamo')
+      if (count !== 1) throw new HttpError(409, 'El juego no está disponible para préstamo')
       return tx.prestamo.create({
         data: {
           juego_id: input.juego_id,
@@ -93,9 +94,9 @@ export class PrestamosService {
 
   async renovar(prestamoId: string, socioId: string) {
     const prestamo = await this.prisma.prestamo.findUnique({ where: { id: prestamoId } })
-    if (!prestamo) throw new Error('Préstamo no encontrado')
-    if (prestamo.socio_id !== socioId) throw new Error('No tienes permiso para renovar este préstamo')
-    if (prestamo.estado !== EstadoPrestamo.activo) throw new Error('Solo se pueden renovar préstamos activos')
+    if (!prestamo) throw new HttpError(404, 'Préstamo no encontrado')
+    if (prestamo.socio_id !== socioId) throw new HttpError(403, 'No tienes permiso para renovar este préstamo')
+    if (prestamo.estado !== EstadoPrestamo.activo) throw new HttpError(409, 'Solo se pueden renovar préstamos activos')
 
     const [maxRenovaciones, diasRenovacion] = await Promise.all([
       this.getConfigNum('max_renovaciones', 2),
@@ -103,7 +104,7 @@ export class PrestamosService {
     ])
 
     if (prestamo.renovaciones >= maxRenovaciones) {
-      throw new Error(`Máximo de renovaciones alcanzado (${maxRenovaciones})`)
+      throw new HttpError(409, `Máximo de renovaciones alcanzado (${maxRenovaciones})`)
     }
 
     const nuevaFechaLimite = finDelDiaMadrid(prestamo.fecha_limite, diasRenovacion)
@@ -116,15 +117,15 @@ export class PrestamosService {
         renovaciones: { increment: 1 },
       },
     })
-    if (count !== 1) throw new Error('El préstamo ha cambiado, recarga e inténtalo de nuevo')
+    if (count !== 1) throw new HttpError(409, 'El préstamo ha cambiado, recarga e inténtalo de nuevo')
     return this.prisma.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })
   }
 
   async devolucion(prestamoId: string, usuarioId: string, esAdmin = false) {
     const prestamo = await this.prisma.prestamo.findUnique({ where: { id: prestamoId } })
-    if (!prestamo) throw new Error('Préstamo no encontrado')
-    if (!esAdmin && prestamo.socio_id !== usuarioId) throw new Error('No tienes permiso para devolver este préstamo')
-    if (prestamo.estado !== EstadoPrestamo.activo) throw new Error('Solo se pueden devolver préstamos activos')
+    if (!prestamo) throw new HttpError(404, 'Préstamo no encontrado')
+    if (!esAdmin && prestamo.socio_id !== usuarioId) throw new HttpError(403, 'No tienes permiso para devolver este préstamo')
+    if (prestamo.estado !== EstadoPrestamo.activo) throw new HttpError(409, 'Solo se pueden devolver préstamos activos')
 
     const juego = await this.prisma.juego.findUnique({
       where: { id: prestamo.juego_id },
@@ -141,7 +142,7 @@ export class PrestamosService {
           usuario_confirmo_dev_id: usuarioId,
         },
       })
-      if (count !== 1) throw new Error('Solo se pueden devolver préstamos activos')
+      if (count !== 1) throw new HttpError(409, 'Solo se pueden devolver préstamos activos')
       await tx.juego.update({
         where: { id: prestamo.juego_id },
         data: { estado: 'en_estanteria' as const },

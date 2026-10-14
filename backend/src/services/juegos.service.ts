@@ -86,7 +86,7 @@ export class JuegosService {
       where: { id },
       include: { propietario: propietarioSelect },
     })
-    if (!juego) throw new Error('Juego no encontrado')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
     return juego
   }
 
@@ -111,7 +111,7 @@ export class JuegosService {
 
   async update(id: string, data: UpdateJuegoInput) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
-    if (!juego) throw new Error('Juego no encontrado')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
     // Si solo llega uno de los dos, se compara con el guardado
     comprobarJugadores(
       data.num_jugadores_min !== undefined ? data.num_jugadores_min : juego.num_jugadores_min,
@@ -126,16 +126,16 @@ export class JuegosService {
 
   async retirar(id: string, usuario_id: string) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
-    if (!juego) throw new Error('Juego no encontrado')
-    if (juego.estado === 'retirado') throw new Error('El juego ya está retirado')
-    if (juego.estado === 'prestado') throw new Error('No se puede retirar un juego prestado')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
+    if (juego.estado === 'retirado') throw new HttpError(409, 'El juego ya está retirado')
+    if (juego.estado === 'prestado') throw new HttpError(409, 'No se puede retirar un juego prestado')
 
     // Solo desde la estantería: si alguien lo presta a la vez, no queda retirado con préstamo activo
     const { count } = await this.prisma.juego.updateMany({
       where: { id, estado: 'en_estanteria' },
       data: { estado: 'retirado' },
     })
-    if (count !== 1) throw new Error('No se puede retirar un juego prestado')
+    if (count !== 1) throw new HttpError(409, 'No se puede retirar un juego prestado')
     const updated = await this.prisma.juego.findUniqueOrThrow({
       where: { id },
       include: { propietario: propietarioSelect },
@@ -153,8 +153,8 @@ export class JuegosService {
 
   async reactivar(id: string, usuario_id: string) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
-    if (!juego) throw new Error('Juego no encontrado')
-    if (juego.estado !== 'retirado') throw new Error('Solo se pueden reactivar juegos retirados')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
+    if (juego.estado !== 'retirado') throw new HttpError(409, 'Solo se pueden reactivar juegos retirados')
 
     const updated = await this.prisma.juego.update({
       where: { id },
@@ -174,12 +174,12 @@ export class JuegosService {
 
   async delete(id: string) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
-    if (!juego) throw new Error('Juego no encontrado')
+    if (!juego) throw new HttpError(404, 'Juego no encontrado')
 
     // Cualquier préstamo (también devuelto) lo referencia sin onDelete: borrar daría error de FK
     const prestamos = await this.prisma.prestamo.count({ where: { juego_id: id } })
     if (prestamos > 0) {
-      throw new Error('El juego tiene historial de préstamos y no puede eliminarse: retíralo del catálogo')
+      throw new HttpError(409, 'El juego tiene historial de préstamos y no puede eliminarse: retíralo del catálogo')
     }
 
     return this.prisma.juego.delete({ where: { id } })

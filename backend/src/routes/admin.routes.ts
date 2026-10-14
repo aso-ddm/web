@@ -1,14 +1,16 @@
-import { Router, Response } from 'express'
+import { Router } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
-import { comprobarCambioAdmin, normalizarRoles, salirDeCuotaConjunta } from '../services/socios.service'
+import { comprobarCambioAdmin, normalizarRoles, SociosService } from '../services/socios.service'
 import { Rol, EstadoSocio, TipoCuota, TipoCambioEstado } from '@prisma/client'
+import { HttpError } from '../lib/httpError'
 import { dniSchema, emailSchema, passwordSchema } from '../schemas/auth.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 
 const router = Router()
+const sociosService = new SociosService(prisma)
 
 // Todos los endpoints requieren rol administrador
 router.use(requireRoles(Rol.administrador))
@@ -38,13 +40,6 @@ const USUARIO_SELECT = {
   comprobante_transferencia: true,
   created_at: true,
 } as const
-
-function prismaErrorResponse(res: Response, err: unknown) {
-  const code = (err as { code?: string }).code
-  if (code === 'P2025') return res.status(404).json({ error: 'Usuario no encontrado' })
-  if (code === 'P2002' || code === 'P2003') return res.status(409).json({ error: 'No se puede completar la operación: el usuario tiene datos asociados en el sistema' })
-  return res.status(500).json({ error: 'Error interno del servidor' })
-}
 
 const filtrosAdminSchema = z.object({
   search: z.string().optional(),
@@ -105,13 +100,8 @@ router.post('/usuarios', async (req, res) => {
     return
   }
   const { password: rawPassword, ...rest } = parsed.data
-  try {
-    rest.roles = normalizarRoles(rest.roles)
-    comprobarCambioAdmin([], rest.roles)
-  } catch (err) {
-    res.status(403).json({ error: (err as Error).message })
-    return
-  }
+  rest.roles = normalizarRoles(rest.roles)
+  comprobarCambioAdmin([], rest.roles)
   const existing = await prisma.usuario.findFirst({
     where: { OR: [{ email: { equals: rest.email, mode: 'insensitive' } }, { dni: rest.dni }] },
   })
@@ -157,82 +147,44 @@ const updateUsuarioSchema = z.object({
 })
 
 // PUT /api/admin/usuarios/:id
+// Estado, roles y llaves pasan por SociosService (cuota del mes de alta, cuota conjunta, aviso de baja, historial).
+// ponytail: cada paso es su propia transacción; si uno falla, los anteriores quedan aplicados.
+// Se valida todo lo posible antes de escribir para que eso no pase con datos normales.
 router.put('/usuarios/:id', async (req, res) => {
   const parsed = updateUsuarioSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  const { password: newPassword, ...rest } = parsed.data
-  if (rest.telegram_chat_id === null) Object.assign(rest, { telegram_linked_at: null })
-  const pedido = { ...rest } // lo que el admin fija a mano prevalece sobre los valores automáticos
-  let saleDeGrupo = false // una baja también saca de la cuota conjunta, como al dar de baja desde Socios
-  if (rest.roles || rest.estado || rest.tiene_llaves) {
-    const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true, estado: true, fecha_alta: true, solicitud_grupal_id: true } })
-    if (!actual) {
-      res.status(404).json({ error: 'Usuario no encontrado' })
-      return
-    }
-    if (rest.estado && actual.roles.includes(Rol.administrador)) {
-      res.status(403).json({ error: 'El estado de una cuenta de administrador no se puede cambiar desde la aplicación' })
-      return
-    }
-    // Mismo ciclo de vida que aprobar / dar de baja / reactivar
-    saleDeGrupo = rest.estado === EstadoSocio.baja && actual.estado !== EstadoSocio.baja && !!actual.solicitud_grupal_id
-    if (rest.estado && rest.estado !== actual.estado) {
-      if (rest.estado === EstadoSocio.activo) {
-        Object.assign(rest, { fecha_baja: null, baja_por_id: null, ...(actual.fecha_alta ? {} : { fecha_alta: new Date(), aprobado_por_id: req.user.id }), ...pedido })
-      } else if (rest.estado === EstadoSocio.baja) {
-        Object.assign(rest, { fecha_baja: new Date(), baja_por_id: req.user.id, tiene_llaves: false, ...pedido })
-      }
-      // De pendiente a baja es un rechazo, no una baja: nunca fue socio
-      const tipo = rest.estado === EstadoSocio.activo ? TipoCambioEstado.alta
-        : rest.estado === EstadoSocio.baja && actual.fecha_alta ? TipoCambioEstado.baja : null
-      if (tipo) Object.assign(rest, { historial_estado: { create: { tipo, por_id: req.user.id } } })
-    }
-    if (rest.tiene_llaves && (rest.estado ?? actual.estado) !== EstadoSocio.activo) {
-      res.status(400).json({ error: 'Solo se pueden asignar llaves a socios activos' })
-      return
-    }
-    if (rest.roles) {
-      if (req.params.id === req.user.id) {
-        res.status(403).json({ error: 'No puedes cambiar tus propios roles' })
-        return
-      }
-      try {
-        rest.roles = normalizarRoles(rest.roles)
-        comprobarCambioAdmin(actual.roles, rest.roles)
-      } catch (err) {
-        res.status(403).json({ error: (err as Error).message })
-        return
-      }
-    }
+  const { id } = req.params
+  const { password, estado, roles, tiene_llaves, ...datos } = parsed.data
+  const actual = await prisma.usuario.findUnique({ where: { id }, select: { roles: true, estado: true, tiene_llaves: true } })
+  if (!actual) throw new HttpError(404, 'Usuario no encontrado')
+
+  const nuevosRoles = roles && normalizarRoles(roles)
+  const cambiaRoles = nuevosRoles && nuevosRoles.join() !== normalizarRoles(actual.roles).join()
+  if (cambiaRoles) {
+    if (id === req.user.id) throw new HttpError(403, 'No puedes cambiar tus propios roles')
+    comprobarCambioAdmin(actual.roles, nuevosRoles)
   }
-  const updateData: Record<string, unknown> = { ...rest }
-  if (newPassword) {
-    updateData.password_hash = await bcrypt.hash(newPassword as string, 12)
+
+  if (estado && estado !== actual.estado) await sociosService.cambiarEstado(id, estado, req.user.id)
+  if (cambiaRoles) await sociosService.updateRoles(id, nuevosRoles, req.user.id)
+  if (tiene_llaves !== undefined && tiene_llaves !== actual.tiene_llaves) {
+    await sociosService.setLlaves(id, tiene_llaves, req.user.id)
   }
-  try {
-    const usuario = await prisma.$transaction(async (tx) => {
-      if (saleDeGrupo) await salirDeCuotaConjunta(tx, req.params.id, req.user.id, 'Sale de la cuota conjunta por la baja')
-      const antes = await tx.usuario.findUnique({ where: { id: req.params.id }, select: { tiene_llaves: true } })
-      const usuario = await tx.usuario.update({ where: { id: req.params.id }, data: updateData, select: USUARIO_SELECT })
-      // Entrega o devolución de llaves (también la devolución implícita de una baja) al historial
-      if (antes && antes.tiene_llaves !== usuario.tiene_llaves) {
-        await tx.historialEstadoSocio.create({
-          data: {
-            socio_id: req.params.id,
-            tipo: usuario.tiene_llaves ? TipoCambioEstado.llaves_entregadas : TipoCambioEstado.llaves_devueltas,
-            por_id: req.user.id,
-          },
-        })
-      }
-      return usuario
-    })
-    res.json({ data: { ...usuario, telegram_chat_id: usuario.telegram_chat_id?.toString() ?? null } })
-  } catch (err) {
-    prismaErrorResponse(res, err)
-  }
+
+  // Datos sueltos al final: lo que el admin fija a mano (p. ej. fechas de alta/baja) prevalece sobre lo automático
+  const usuario = await prisma.usuario.update({
+    where: { id },
+    data: {
+      ...datos,
+      ...(datos.telegram_chat_id === null && { telegram_linked_at: null }),
+      ...(password && { password_hash: await bcrypt.hash(password, 12) }),
+    },
+    select: USUARIO_SELECT,
+  })
+  res.json({ data: { ...usuario, telegram_chat_id: usuario.telegram_chat_id?.toString() ?? null } })
 })
 
 // DELETE /api/admin/usuarios/:id
@@ -251,12 +203,8 @@ router.delete('/usuarios/:id', async (req, res) => {
     res.status(400).json({ error: 'El usuario tiene préstamos activos. Devuelve los juegos antes de eliminar la cuenta.' })
     return
   }
-  try {
-    await prisma.usuario.delete({ where: { id } })
-    res.json({ data: { ok: true } })
-  } catch (err) {
-    prismaErrorResponse(res, err)
-  }
+  await prisma.usuario.delete({ where: { id } })
+  res.json({ data: { ok: true } })
 })
 
 export default router

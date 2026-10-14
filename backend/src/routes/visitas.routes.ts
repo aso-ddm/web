@@ -44,16 +44,11 @@ router.post('/', authenticate, async (req, res) => {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  try {
-    const visita = await visitasService.registrar({
-      nombre_completo: parsed.data.nombre_completo,
-      socio_registro_id: req.user.id,
-    })
-    res.status(201).json({ data: visita })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error'
-    res.status(400).json({ error: message })
-  }
+  const visita = await visitasService.registrar({
+    nombre_completo: parsed.data.nombre_completo,
+    socio_registro_id: req.user.id,
+  })
+  res.status(201).json({ data: visita })
 })
 
 export default router

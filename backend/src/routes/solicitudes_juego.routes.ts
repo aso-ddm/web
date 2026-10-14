@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express'
+import { Router, Request, Response } from 'express'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { SolicitudesJuegoService } from '../services/solicitudes_juego.service'
@@ -16,14 +16,10 @@ router.get(
   '/pendientes',
   authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const filtros = filtrosSolicitudesJuegoSchema.parse({ ...req.query, estado: 'pendiente' })
-      const result = await service.getAll(filtros)
-      res.json(result)
-    } catch (err) {
-      next(err)
-    }
+  async (req: Request, res: Response) => {
+    const filtros = filtrosSolicitudesJuegoSchema.parse({ ...req.query, estado: 'pendiente' })
+    const result = await service.getAll(filtros)
+    res.json(result)
   },
 )
 
@@ -32,14 +28,10 @@ router.get(
   '/todas',
   authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const filtros = filtrosSolicitudesJuegoSchema.parse(req.query)
-      const result = await service.getAll(filtros)
-      res.json(result)
-    } catch (err) {
-      next(err)
-    }
+  async (req: Request, res: Response) => {
+    const filtros = filtrosSolicitudesJuegoSchema.parse(req.query)
+    const result = await service.getAll(filtros)
+    res.json(result)
   },
 )
 
@@ -47,14 +39,10 @@ router.get(
 router.get(
   '/',
   authenticate,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const filtros = filtrosSolicitudesJuegoSchema.parse(req.query)
-      const result = await service.getMias(req.user!.id, filtros)
-      res.json(result)
-    } catch (err) {
-      next(err)
-    }
+  async (req: Request, res: Response) => {
+    const filtros = filtrosSolicitudesJuegoSchema.parse(req.query)
+    const result = await service.getMias(req.user!.id, filtros)
+    res.json(result)
   },
 )
 
@@ -62,14 +50,10 @@ router.get(
 router.post(
   '/',
   authenticate,
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const input = crearSolicitudJuegoSchema.parse(req.body)
-      const result = await service.crear(req.user!.id, input)
-      res.status(201).json(result)
-    } catch (err) {
-      next(err)
-    }
+  async (req: Request, res: Response) => {
+    const input = crearSolicitudJuegoSchema.parse(req.body)
+    const result = await service.crear(req.user!.id, input)
+    res.status(201).json(result)
   },
 )
 
@@ -78,13 +62,9 @@ router.post(
   '/:id/aprobar',
   authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await service.aprobar(req.params.id, req.user!.id)
-      res.json(result)
-    } catch (err) {
-      next(err)
-    }
+  async (req: Request, res: Response) => {
+    const result = await service.aprobar(req.params.id, req.user!.id)
+    res.json(result)
   },
 )
 
@@ -93,14 +73,10 @@ router.post(
   '/:id/rechazar',
   authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const input = rechazarSolicitudJuegoSchema.parse(req.body)
-      const result = await service.rechazar(req.params.id, input)
-      res.json(result)
-    } catch (err) {
-      next(err)
-    }
+  async (req: Request, res: Response) => {
+    const input = rechazarSolicitudJuegoSchema.parse(req.body)
+    const result = await service.rechazar(req.params.id, input)
+    res.json(result)
   },
 )
 

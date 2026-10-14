@@ -4,6 +4,7 @@ import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
 import fs from 'fs'
 import path from 'path'
+import { HttpError } from '../lib/httpError'
 
 function borrarComprobantes(nombres: (string | null)[]) {
   for (const nombre of new Set(nombres)) {
@@ -51,7 +52,7 @@ const SOCIO_PUBLIC_SELECT = {
 // El rol administrador no se asigna ni se retira desde la app (solo BD/seed).
 export function comprobarCambioAdmin(actuales: Rol[], nuevos: Rol[]) {
   if (actuales.includes(Rol.administrador) !== nuevos.includes(Rol.administrador)) {
-    throw new Error('El rol de administrador no se puede asignar ni retirar desde la aplicación')
+    throw new HttpError(403, 'El rol de administrador no se puede asignar ni retirar desde la aplicación')
   }
 }
 
@@ -66,7 +67,7 @@ export function normalizarRoles(roles: Rol[]): Rol[] {
   const unicos = [...new Set(roles)]
   const base = unicos.filter((r) => ROLES_BASE.includes(r))
   if (base.length > 1) {
-    throw new Error('Solo se puede tener un rol, además de ludotecario')
+    throw new HttpError(400, 'Solo se puede tener un rol, además de ludotecario')
   }
   const esAdmin = unicos.includes(Rol.administrador)
   if (base.length === 0 && !esAdmin) base.push(Rol.socio_basico)
@@ -116,7 +117,7 @@ export async function salirDeCuotaConjunta(tx: Tx, socioId: string, porId: strin
     },
   })
   const grupo = socio?.solicitud_grupal
-  if (!socio || !grupo) throw new Error('El socio no pertenece a una cuota conjunta')
+  if (!socio || !grupo) throw new HttpError(409, 'El socio no pertenece a una cuota conjunta')
   const restantes = grupo.miembros.filter((m) => m.id !== socioId)
   const historial = (socio_id: string, tipo: TipoCambioEstado, detalle: string) =>
     tx.historialEstadoSocio.create({ data: { socio_id, tipo, detalle, por_id: porId } })
@@ -223,13 +224,13 @@ export class SociosService {
       where: { id: grupoId },
       include: { miembros: true },
     })
-    if (!grupo) throw new Error('Solicitud grupal no encontrada')
+    if (!grupo) throw new HttpError(404, 'Solicitud grupal no encontrada')
     if (grupo.estado !== 'pendiente') {
-      throw new Error('La solicitud grupal no está en estado pendiente')
+      throw new HttpError(409, 'La solicitud grupal no está en estado pendiente')
     }
     for (const u of grupo.miembros) {
       if (u.estado !== EstadoSocio.pendiente) {
-        throw new Error(`El usuario ${u.nombre} no está en estado pendiente`)
+        throw new HttpError(409, `El usuario ${u.nombre} no está en estado pendiente`)
       }
     }
 
@@ -267,13 +268,13 @@ export class SociosService {
       where: { id: grupoId },
       include: { miembros: true },
     })
-    if (!grupo) throw new Error('Solicitud grupal no encontrada')
+    if (!grupo) throw new HttpError(404, 'Solicitud grupal no encontrada')
     if (grupo.estado !== 'pendiente') {
-      throw new Error('La solicitud grupal no está en estado pendiente')
+      throw new HttpError(409, 'La solicitud grupal no está en estado pendiente')
     }
     for (const u of grupo.miembros) {
       if (u.estado !== EstadoSocio.pendiente) {
-        throw new Error(`El usuario ${u.nombre} no está en estado pendiente`)
+        throw new HttpError(409, `El usuario ${u.nombre} no está en estado pendiente`)
       }
     }
 
@@ -306,13 +307,13 @@ export class SociosService {
       },
     })
 
-    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
     return socio
   }
 
   async update(id: string, data: UpdateSocioInput) {
     const exists = await this.prisma.usuario.findUnique({ where: { id } })
-    if (!exists) throw new Error('Socio no encontrado')
+    if (!exists) throw new HttpError(404, 'Socio no encontrado')
 
     return this.prisma.usuario.update({
       where: { id },
@@ -326,13 +327,13 @@ export class SociosService {
 
   async aprobar(id: string, aprobadoPorId: string, rol: Rol) {
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
-    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (socio.estado !== EstadoSocio.pendiente) {
-      throw new Error('Solo se pueden aprobar solicitudes en estado pendiente')
+      throw new HttpError(409, 'Solo se pueden aprobar solicitudes en estado pendiente')
     }
     // Los miembros de una solicitud conjunta se aprueban o rechazan juntos
     if (socio.solicitud_grupal_id) {
-      throw new Error('Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
+      throw new HttpError(409, 'Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
     comprobarCambioAdmin(socio.roles, [rol])
 
@@ -355,13 +356,13 @@ export class SociosService {
   // Un rechazado nunca fue socio: se borra para que pueda volver a solicitar el alta con el mismo email/DNI
   async rechazar(id: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
-    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (socio.estado !== EstadoSocio.pendiente) {
-      throw new Error('Solo se pueden rechazar solicitudes en estado pendiente')
+      throw new HttpError(409, 'Solo se pueden rechazar solicitudes en estado pendiente')
     }
     // Los miembros de una solicitud conjunta se aprueban o rechazan juntos
     if (socio.solicitud_grupal_id) {
-      throw new Error('Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
+      throw new HttpError(409, 'Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
 
     await this.prisma.usuario.delete({ where: { id } })
@@ -369,16 +370,16 @@ export class SociosService {
   }
 
   async darDeBaja(id: string, bajaPorId: string) {
-    if (id === bajaPorId) throw new Error('No puedes darte de baja a ti mismo')
+    if (id === bajaPorId) throw new HttpError(403, 'No puedes darte de baja a ti mismo')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
-    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (socio.roles.includes(Rol.administrador)) {
-      throw new Error('Una cuenta de administrador no se puede dar de baja desde la aplicación')
+      throw new HttpError(403, 'Una cuenta de administrador no se puede dar de baja desde la aplicación')
     }
     if (socio.estado === EstadoSocio.baja) {
-      throw new Error('El socio ya está dado de baja')
+      throw new HttpError(409, 'El socio ya está dado de baja')
     }
-    if (socio.estado === EstadoSocio.pendiente) throw new Error(PENDIENTE_EN_SOLICITUDES)
+    if (socio.estado === EstadoSocio.pendiente) throw new HttpError(409, PENDIENTE_EN_SOLICITUDES)
 
     const actualizado = await this.prisma.$transaction(async (tx) => {
       if (socio.solicitud_grupal_id) {
@@ -427,7 +428,7 @@ export class SociosService {
 
   /** Une al socio a la cuota conjunta de otro; si el otro es individual, se crea una con los dos. */
   async unirCuotaConjunta(id: string, otroId: string, porId: string) {
-    if (id === otroId) throw new Error('Elige a otro socio')
+    if (id === otroId) throw new HttpError(400, 'Elige a otro socio')
     return this.prisma.$transaction(async (tx) => {
       const select = {
         id: true,
@@ -440,11 +441,11 @@ export class SociosService {
         tx.usuario.findUnique({ where: { id }, select }),
         tx.usuario.findUnique({ where: { id: otroId }, select }),
       ])
-      if (!socio || !otro) throw new Error('Socio no encontrado')
+      if (!socio || !otro) throw new HttpError(404, 'Socio no encontrado')
       if (socio.estado !== EstadoSocio.activo || otro.estado !== EstadoSocio.activo) {
-        throw new Error('Solo los socios activos pueden compartir cuota')
+        throw new HttpError(409, 'Solo los socios activos pueden compartir cuota')
       }
-      if (socio.solicitud_grupal) throw new Error('El socio ya pertenece a una cuota conjunta')
+      if (socio.solicitud_grupal) throw new HttpError(409, 'El socio ya pertenece a una cuota conjunta')
       const historial = (socio_id: string, detalle: string) =>
         tx.historialEstadoSocio.create({ data: { socio_id, tipo: TipoCambioEstado.cuota_conjunta, detalle, por_id: porId } })
 
@@ -466,13 +467,13 @@ export class SociosService {
 
   async reactivar(id: string, reactivadoPorId: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
-    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (socio.estado !== EstadoSocio.baja) {
-      throw new Error('Solo se pueden reactivar socios dados de baja')
+      throw new HttpError(409, 'Solo se pueden reactivar socios dados de baja')
     }
     // Un rechazado nunca fue socio: reactivarlo se saltaría la aprobación
     if (!socio.fecha_alta) {
-      throw new Error('Solo se pueden reactivar socios que llegaron a darse de alta')
+      throw new HttpError(409, 'Solo se pueden reactivar socios que llegaron a darse de alta')
     }
 
     return this.prisma.usuario.update({
@@ -487,11 +488,29 @@ export class SociosService {
     })
   }
 
+  /** Cambio de estado genérico (panel de admin) por el mismo ciclo de vida que Socios y Solicitudes. */
+  async cambiarEstado(id: string, estado: EstadoSocio, porId: string) {
+    const socio = await this.prisma.usuario.findUnique({ where: { id }, select: { estado: true } })
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
+    if (socio.estado === estado) return
+    if (socio.estado === EstadoSocio.pendiente) {
+      // Aprobar desde aquí equivale a Solicitudes con rol socio_basico; rechazar borra la solicitud: solo desde Solicitudes
+      if (estado !== EstadoSocio.activo) throw new HttpError(409, PENDIENTE_EN_SOLICITUDES)
+      await this.aprobar(id, porId, Rol.socio_basico)
+    } else if (estado === EstadoSocio.baja) {
+      await this.darDeBaja(id, porId)
+    } else if (estado === EstadoSocio.activo) {
+      await this.reactivar(id, porId)
+    } else {
+      throw new HttpError(409, 'Un socio dado de alta no puede volver a pendiente')
+    }
+  }
+
   async updateRoles(id: string, roles: Rol[], actorId: string) {
-    if (id === actorId) throw new Error('No puedes cambiar tus propios roles')
+    if (id === actorId) throw new HttpError(403, 'No puedes cambiar tus propios roles')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
-    if (!socio) throw new Error('Socio no encontrado')
-    if (socio.estado === EstadoSocio.pendiente) throw new Error(PENDIENTE_EN_SOLICITUDES)
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
+    if (socio.estado === EstadoSocio.pendiente) throw new HttpError(409, PENDIENTE_EN_SOLICITUDES)
     roles = normalizarRoles(roles)
     comprobarCambioAdmin(socio.roles, roles)
 
@@ -505,9 +524,9 @@ export class SociosService {
   // Llaves: solo se registra si el socio las tiene o no.
   async setLlaves(socioId: string, tieneLlaves: boolean, porId: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
-    if (!socio) throw new Error('Socio no encontrado')
+    if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (tieneLlaves && socio.estado !== EstadoSocio.activo) {
-      throw new Error('Solo se pueden asignar llaves a socios activos')
+      throw new HttpError(409, 'Solo se pueden asignar llaves a socios activos')
     }
 
     return this.prisma.usuario.update({

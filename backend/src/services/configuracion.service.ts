@@ -21,7 +21,7 @@ export class ConfiguracionService {
 
   async getByKey(clave: string) {
     const config = await this.prisma.configuracion.findUnique({ where: { clave } })
-    if (!config) throw new Error(`Configuración '${clave}' no encontrada`)
+    if (!config) throw new HttpError(404, `Configuración '${clave}' no encontrada`)
     return config
   }
 
