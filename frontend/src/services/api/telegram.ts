@@ -1,4 +1,5 @@
 import { api } from './client'
+import type { PaginatedResponse } from '@/types/api'
 
 export interface AnuncioResult {
   enviados: number
@@ -41,7 +42,7 @@ export const telegramAdminApi = {
     if (f.contexto) q.set('contexto', f.contexto)
     if (f.desde) q.set('desde', f.desde)
     if (f.hasta) q.set('hasta', `${f.hasta}T23:59:59`)
-    return api.get<{ data: TelegramLog[]; contextos: string[]; pagination: { total: number; page: number; totalPages: number } }>(
+    return api.get<PaginatedResponse<TelegramLog> & { contextos: string[] }>(
       `/telegram/logs?${q.toString()}`,
     )
   },

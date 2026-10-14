@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { EstadoJuego } from '@prisma/client'
+import { paginacion } from '../lib/paginacion'
 
 // null = vaciar el campo al editar (propietario null = del club)
 const jugadores = z.union([z.null(), z.coerce.number().int().positive()]).optional()
@@ -19,8 +20,7 @@ export const updateJuegoSchema = crearJuegoSchema.partial()
 export const filtrosJuegosSchema = z.object({
   search: z.string().optional(),
   estado: z.nativeEnum(EstadoJuego).optional(),
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  ...paginacion(20, 100),
 })
 
 export type CrearJuegoInput = z.infer<typeof crearJuegoSchema>

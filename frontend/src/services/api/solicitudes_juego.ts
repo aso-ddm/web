@@ -9,11 +9,11 @@ export const solicitudesJuegoApi = {
     api.get<PaginatedResponse<SolicitudJuego>>(`/solicitudes-juego/pendientes?page=${page}&limit=50`),
 
   crear: (data: { nombre: string; notas?: string }) =>
-    api.post<SolicitudJuego>('/solicitudes-juego', data),
+    api.post<{ data: SolicitudJuego }>('/solicitudes-juego', data),
 
   aprobar: (id: string) =>
-    api.action<SolicitudJuego>(`/solicitudes-juego/${id}/aprobar`),
+    api.action<{ data: SolicitudJuego }>(`/solicitudes-juego/${id}/aprobar`),
 
   rechazar: (id: string, motivo_rechazo?: string) =>
-    api.post<SolicitudJuego>(`/solicitudes-juego/${id}/rechazar`, { motivo_rechazo }),
+    api.post<{ data: SolicitudJuego }>(`/solicitudes-juego/${id}/rechazar`, { motivo_rechazo }),
 }

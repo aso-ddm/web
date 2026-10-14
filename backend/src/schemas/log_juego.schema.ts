@@ -1,12 +1,12 @@
 import { z } from 'zod'
+import { paginacion } from '../lib/paginacion'
 
 export const crearLogManualSchema = z.object({
   texto: z.string().min(1).max(500),
 })
 
 export const filtrosLogsSchema = z.object({
-  page:  z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  ...paginacion(20, 100),
 })
 
 export type CrearLogManualInput = z.infer<typeof crearLogManualSchema>

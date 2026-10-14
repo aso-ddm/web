@@ -110,7 +110,7 @@ export function AdminTelegramPage() {
     placeholderData: keepPreviousData,
   })
   const logs = data?.data ?? []
-  const pag = data?.pagination
+  const pag = data
 
   return (
     <>

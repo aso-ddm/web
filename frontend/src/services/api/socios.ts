@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Usuario, Rol, EstadoSocio, SolicitudGrupal } from '@/types/api'
+import type { Usuario, Rol, EstadoSocio, SolicitudGrupal, PaginatedResponse } from '@/types/api'
 
 export interface UpdateSocioPayload {
   nombre?: string
@@ -59,7 +59,7 @@ export const sociosApi = {
     if (params.search) q.set('search', params.search)
     if (params.page) q.set('page', String(params.page))
     if (params.limit) q.set('limit', String(params.limit))
-    return api.get<{ data: SocioListado[]; pagination: { total: number; page: number; limit: number; totalPages: number } }>(
+    return api.get<PaginatedResponse<SocioListado>>(
       `/socios?${q.toString()}`,
     )
   },

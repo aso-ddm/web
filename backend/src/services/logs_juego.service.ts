@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, TipoLogJuego } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
 import type { FiltrosLogsInput } from '../schemas/log_juego.schema'
+import { paginado } from '../lib/paginacion'
 
 const usuarioSelect = { select: { id: true, nombre: true, apellidos: true } }
 const juegoSelect   = { select: { id: true, nombre: true } }
@@ -22,7 +23,7 @@ export class LogsJuegoService {
       this.prisma.logJuego.count(),
     ])
 
-    return { data: logs, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(logs, total, filtros)
   }
 
   async getByJuego(juego_id: string, filtros: FiltrosLogsInput) {
@@ -40,7 +41,7 @@ export class LogsJuegoService {
       this.prisma.logJuego.count({ where: { juego_id } }),
     ])
 
-    return { data: logs, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(logs, total, filtros)
   }
 
   async crearManual(juego_id: string, usuario_id: string, texto: string) {

@@ -27,7 +27,7 @@ router.post(
     const { juegoId } = req.params
     const { texto } = crearLogManualSchema.parse(req.body)
     const log = await logsService.crearManual(juegoId, req.user!.id, texto)
-    res.status(201).json(log)
+    res.status(201).json({ data: log })
   },
 )
 

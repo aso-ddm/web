@@ -3,9 +3,16 @@ import { z } from 'zod'
 import { VisitasService } from '../services/visitas.service'
 import { authenticate } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
+import { paginacion } from '../lib/paginacion'
 
 const buscarSchema = z.object({
   nombre: z.string().min(2, 'Introduce al menos 2 caracteres'),
+})
+
+const filtrosVisitasSchema = z.object({
+  ...paginacion(50, 100),
+  // Menos de 2 caracteres = sin filtro
+  search: z.string().trim().optional().transform((s) => (s && s.length >= 2 ? s : undefined)),
 })
 
 const registrarSchema = z.object({
@@ -27,13 +34,7 @@ router.get('/buscar', authenticate, async (req, res) => {
 
 // GET /api/visitas — listado paginado (cualquier socio autenticado)
 router.get('/', authenticate, async (req, res) => {
-  const page   = Math.max(1, parseInt(String(req.query.page  ?? '1'),  10) || 1)
-  const limit  = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? '50'), 10) || 50))
-  const search = typeof req.query.search === 'string' && req.query.search.trim().length >= 2
-    ? req.query.search.trim()
-    : undefined
-  const result = await visitasService.getAll({ page, limit, search })
-  res.json(result)
+  res.json(await visitasService.getAll(filtrosVisitasSchema.parse(req.query)))
 })
 
 // POST /api/visitas — registrar visita

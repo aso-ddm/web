@@ -9,5 +9,5 @@ export const logsJuegoApi = {
     api.get<PaginatedResponse<LogJuego>>(`/juegos/${juegoId}/logs?page=${page}&limit=20`),
 
   crearManual: (juegoId: string, texto: string) =>
-    api.post<LogJuego>(`/juegos/${juegoId}/logs`, { texto }),
+    api.post<{ data: LogJuego }>(`/juegos/${juegoId}/logs`, { texto }),
 }

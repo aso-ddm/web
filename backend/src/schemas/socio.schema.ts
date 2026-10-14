@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { Rol, EstadoSocio } from '@prisma/client'
 import { fechaNacimientoEdicionSchema } from './auth.schema'
+import { paginacion } from '../lib/paginacion'
 
 export const updateSocioSchema = z.object({
   nombre: z.string().min(1).optional(),
@@ -35,8 +36,7 @@ export const unirCuotaConjuntaSchema = z.object({
 export const filtrosSociosSchema = z.object({
   estado: z.nativeEnum(EstadoSocio).optional(),
   search: z.string().optional(),
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(500).default(20),
+  ...paginacion(20, 500),
 })
 
 export type UpdateSocioInput = z.infer<typeof updateSocioSchema>

@@ -6,6 +6,7 @@ import { requireRoles, ROLES } from '../middleware/auth'
 import { HttpError } from '../lib/httpError'
 import { registrarErrorTelegram, telegram } from '../lib/telegram'
 import { igualesSeguro } from '../lib/seguridad'
+import { paginacion, paginado } from '../lib/paginacion'
 
 const router = Router()
 // Telegram admite ~30 mensajes/s a chats distintos: lotes de 25 con 1 s entre lotes
@@ -147,13 +148,13 @@ const filtrosLogSchema = z.object({
   contexto: z.string().optional(),
   desde: z.coerce.date().optional(),
   hasta: z.coerce.date().optional(),
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(200).default(50),
+  ...paginacion(50, 200),
 })
 
 // GET /api/telegram/logs — errores registrados, más recientes primero
 router.get('/logs', requireRoles(Rol.administrador), async (req, res) => {
-  const { direccion, contexto, desde, hasta, page, limit } = filtrosLogSchema.parse(req.query)
+  const filtros = filtrosLogSchema.parse(req.query)
+  const { direccion, contexto, desde, hasta, page, limit } = filtros
   const where: Prisma.TelegramLogWhereInput = {
     direccion,
     contexto,
@@ -164,11 +165,7 @@ router.get('/logs', requireRoles(Rol.administrador), async (req, res) => {
     prisma.telegramLog.count({ where }),
     prisma.telegramLog.findMany({ distinct: ['contexto'], select: { contexto: true }, orderBy: { contexto: 'asc' } }),
   ])
-  res.json({
-    data,
-    contextos: contextos.map((c) => c.contexto),
-    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
-  })
+  res.json({ ...paginado(data, total, filtros), contextos: contextos.map((c) => c.contexto) })
 })
 
 // POST /api/telegram/logs/:id/reintentar — vuelve a enviar un mensaje que falló (si falla otra vez, genera otro log)

@@ -296,7 +296,7 @@ export function AdminUsuariosPage() {
   })
 
   const usuarios = data?.data ?? []
-  const pag = data?.pagination
+  const pag = data
   // Tras una baja o un borrado la última página puede quedar vacía: volver a la última que existe
   useEffect(() => {
     if (pag && page > Math.max(1, pag.totalPages)) setPage(Math.max(1, pag.totalPages))

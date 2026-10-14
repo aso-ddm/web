@@ -3,6 +3,7 @@ import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../s
 import type { LogsJuegoService } from './logs_juego.service'
 import { HttpError } from '../lib/httpError'
 import { likePattern } from '../lib/search'
+import { paginado } from '../lib/paginacion'
 
 const propietarioSelect = { select: { id: true, nombre: true, apellidos: true } }
 
@@ -62,7 +63,7 @@ export class JuegosService {
           })
         : []
 
-      return { data: juegos, total, page, limit, totalPages: Math.ceil(total / limit) }
+      return paginado(juegos, total, filtros)
     }
 
     const where = { ...(estado ? { estado } : {}) }
@@ -78,7 +79,7 @@ export class JuegosService {
       this.prisma.juego.count({ where }),
     ])
 
-    return { data: juegos, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(juegos, total, filtros)
   }
 
   async getById(id: string) {

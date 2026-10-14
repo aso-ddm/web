@@ -53,7 +53,7 @@ router.post(
   async (req: Request, res: Response) => {
     const input = crearSolicitudJuegoSchema.parse(req.body)
     const result = await service.crear(req.user!.id, input)
-    res.status(201).json(result)
+    res.status(201).json({ data: result })
   },
 )
 
@@ -64,7 +64,7 @@ router.post(
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
     const result = await service.aprobar(req.params.id, req.user!.id)
-    res.json(result)
+    res.json({ data: result })
   },
 )
 
@@ -76,7 +76,7 @@ router.post(
   async (req: Request, res: Response) => {
     const input = rechazarSolicitudJuegoSchema.parse(req.body)
     const result = await service.rechazar(req.params.id, input)
-    res.json(result)
+    res.json({ data: result })
   },
 )
 

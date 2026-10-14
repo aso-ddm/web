@@ -7,6 +7,7 @@ import { anioMesMadrid } from '../lib/fechas'
 import fs from 'fs'
 import path from 'path'
 import { HttpError } from '../lib/httpError'
+import { paginado } from '../lib/paginacion'
 
 function borrarComprobantes(nombres: (string | null)[]) {
   for (const nombre of new Set(nombres)) {
@@ -161,10 +162,7 @@ export class SociosService {
           })
         : []
 
-      return {
-        data: socios,
-        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
-      }
+      return paginado(socios, total, filtros)
     }
 
     const where = { ...(estado && { estado }) }
@@ -180,10 +178,7 @@ export class SociosService {
       this.prisma.usuario.count({ where }),
     ])
 
-    return {
-      data: socios,
-      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
-    }
+    return paginado(socios, total, filtros)
   }
 
   /** Socios activos para selectores (solo id y nombre). */

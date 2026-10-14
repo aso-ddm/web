@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 import { configNumero } from '../lib/config'
 import { likePattern } from '../lib/search'
+import { paginado } from '../lib/paginacion'
 
 const normalizarNombre = (s: string) => s.trim().replace(/\s+/g, ' ')
 
@@ -97,6 +98,6 @@ export class VisitasService {
       this.prisma.visita.count({ where }),
     ])
 
-    return { data: visitas, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(visitas, total, filtros)
   }
 }

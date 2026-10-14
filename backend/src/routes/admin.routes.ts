@@ -7,6 +7,7 @@ import { Rol, TipoCambioEstado } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
 import { filtrosAdminSchema, createUsuarioSchema, updateUsuarioSchema } from '../schemas/admin.schema'
 import { buscarIdsUsuarios } from '../lib/search'
+import { paginado } from '../lib/paginacion'
 
 const router = Router()
 const sociosService = new SociosService(prisma)
@@ -42,32 +43,28 @@ const USUARIO_SELECT = {
 
 // GET /api/admin/usuarios
 router.get('/usuarios', async (req, res) => {
-  const { search, estado, page: pageNum, limit: limitNum } = filtrosAdminSchema.parse(req.query)
-  const skip = (pageNum - 1) * limitNum
+  const filtros = filtrosAdminSchema.parse(req.query)
+  const { search, estado, page, limit } = filtros
+  const skip = (page - 1) * limit
+  const conChatId = <T extends { telegram_chat_id: bigint | null }>(u: T) => ({ ...u, telegram_chat_id: u.telegram_chat_id?.toString() ?? null })
 
   if (search) {
-    const { ids, total } = await buscarIdsUsuarios(prisma, { search, estado, limit: limitNum, skip })
+    const { ids, total } = await buscarIdsUsuarios(prisma, { search, estado, limit, skip })
     const usuarios = ids.length > 0
       ? await prisma.usuario.findMany({ where: { id: { in: ids } }, select: USUARIO_SELECT, orderBy: { created_at: 'desc' } })
       : []
 
-    res.json({
-      data: usuarios.map((u) => ({ ...u, telegram_chat_id: u.telegram_chat_id?.toString() ?? null })),
-      pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
-    })
+    res.json(paginado(usuarios.map(conChatId), total, filtros))
     return
   }
 
   const where = { ...(estado && { estado }) }
   const [usuarios, total] = await Promise.all([
-    prisma.usuario.findMany({ where, select: USUARIO_SELECT, orderBy: { created_at: 'desc' }, skip, take: limitNum }),
+    prisma.usuario.findMany({ where, select: USUARIO_SELECT, orderBy: { created_at: 'desc' }, skip, take: limit }),
     prisma.usuario.count({ where }),
   ])
 
-  res.json({
-    data: usuarios.map((u) => ({ ...u, telegram_chat_id: u.telegram_chat_id?.toString() ?? null })),
-    pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
-  })
+  res.json(paginado(usuarios.map(conChatId), total, filtros))
 })
 
 // POST /api/admin/usuarios

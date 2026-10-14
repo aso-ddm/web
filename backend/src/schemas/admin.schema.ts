@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import { Rol, EstadoSocio } from '@prisma/client'
 import { dniSchema, emailSchema, passwordSchema } from './auth.schema'
+import { paginacion } from '../lib/paginacion'
 
 // tipo_cuota no está: lo fija la pertenencia a una cuota conjunta (POST/DELETE /socios/:id/cuota-conjunta)
 export const filtrosAdminSchema = z.object({
   search: z.string().optional(),
   estado: z.nativeEnum(EstadoSocio).optional(),
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(500).default(50),
+  ...paginacion(50, 500),
 })
 
 export const createUsuarioSchema = z.object({

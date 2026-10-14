@@ -4,6 +4,7 @@ import type { LogsJuegoService } from './logs_juego.service'
 import { finDelDiaMadrid } from '../lib/fechas'
 import { HttpError } from '../lib/httpError'
 import { configNumero } from '../lib/config'
+import { paginado } from '../lib/paginacion'
 
 export class PrestamosService {
   constructor(
@@ -30,7 +31,7 @@ export class PrestamosService {
       this.prisma.prestamo.count({ where: { socio_id: socioId } }),
     ])
 
-    return { data: prestamos, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(prestamos, total, filtros)
   }
 
   async solicitar(socioId: string, input: SolicitarPrestamoInput) {
@@ -161,6 +162,6 @@ export class PrestamosService {
       this.prisma.prestamo.count({ where }),
     ])
 
-    return { data: prestamos, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(prestamos, total, filtros)
   }
 }

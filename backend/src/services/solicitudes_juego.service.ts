@@ -1,5 +1,6 @@
 import { PrismaClient, TipoLogJuego } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
+import { paginado } from '../lib/paginacion'
 import type {
   CrearSolicitudJuegoInput,
   RechazarSolicitudJuegoInput,
@@ -29,7 +30,7 @@ export class SolicitudesJuegoService {
       this.prisma.solicitudJuego.count({ where }),
     ])
 
-    return { data: solicitudes, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(solicitudes, total, filtros)
   }
 
   async getMias(socio_id: string, filtros: FiltrosSolicitudesJuegoInput) {
@@ -47,7 +48,7 @@ export class SolicitudesJuegoService {
       this.prisma.solicitudJuego.count({ where }),
     ])
 
-    return { data: solicitudes, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return paginado(solicitudes, total, filtros)
   }
 
   async crear(socio_id: string, input: CrearSolicitudJuegoInput) {
