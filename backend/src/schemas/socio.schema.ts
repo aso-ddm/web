@@ -1,15 +1,15 @@
 import { z } from 'zod'
-import { TipoCuota, Rol, EstadoSocio } from '@prisma/client'
+import { Rol, EstadoSocio } from '@prisma/client'
+import { fechaNacimientoEdicionSchema } from './auth.schema'
 
 export const updateSocioSchema = z.object({
   nombre: z.string().min(1).optional(),
   apellidos: z.string().min(1).optional(),
   telefono: z.string().optional(),
-  fecha_nacimiento: z.string().optional(),
+  fecha_nacimiento: fechaNacimientoEdicionSchema.optional(),
   direccion: z.string().optional(),
   alias_telegram: z.string().optional(),
   apodo: z.string().optional(),
-  tipo_cuota: z.nativeEnum(TipoCuota).optional(),
   consentimiento_tiendas: z.boolean().optional(),
 })
 

@@ -1,12 +1,11 @@
 import { Router } from 'express'
-import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { comprobarCambioAdmin, normalizarRoles, SociosService } from '../services/socios.service'
-import { Rol, EstadoSocio, TipoCuota, TipoCambioEstado } from '@prisma/client'
+import { Rol, TipoCambioEstado } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
-import { dniSchema, emailSchema, passwordSchema } from '../schemas/auth.schema'
+import { filtrosAdminSchema, createUsuarioSchema, updateUsuarioSchema } from '../schemas/admin.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 
 const router = Router()
@@ -41,13 +40,6 @@ const USUARIO_SELECT = {
   created_at: true,
 } as const
 
-const filtrosAdminSchema = z.object({
-  search: z.string().optional(),
-  estado: z.nativeEnum(EstadoSocio).optional(),
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(500).default(50),
-})
-
 // GET /api/admin/usuarios
 router.get('/usuarios', async (req, res) => {
   const { search, estado, page: pageNum, limit: limitNum } = filtrosAdminSchema.parse(req.query)
@@ -66,7 +58,7 @@ router.get('/usuarios', async (req, res) => {
     return
   }
 
-  const where = { ...(estado && { estado: estado as EstadoSocio }) }
+  const where = { ...(estado && { estado }) }
   const [usuarios, total] = await Promise.all([
     prisma.usuario.findMany({ where, select: USUARIO_SELECT, orderBy: { created_at: 'desc' }, skip, take: limitNum }),
     prisma.usuario.count({ where }),
@@ -76,20 +68,6 @@ router.get('/usuarios', async (req, res) => {
     data: usuarios.map((u) => ({ ...u, telegram_chat_id: u.telegram_chat_id?.toString() ?? null })),
     pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
   })
-})
-
-const createUsuarioSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-  nombre: z.string().min(1),
-  apellidos: z.string().min(1),
-  dni: dniSchema,
-  telefono: z.string().optional(),
-  roles: z.array(z.nativeEnum(Rol)).min(1),
-  estado: z.nativeEnum(EstadoSocio).optional().default(EstadoSocio.activo),
-  tipo_cuota: z.nativeEnum(TipoCuota).optional().default(TipoCuota.individual),
-  alias_telegram: z.string().optional(),
-  apodo: z.string().optional(),
 })
 
 // POST /api/admin/usuarios
@@ -122,28 +100,6 @@ router.post('/usuarios', async (req, res) => {
     select: USUARIO_SELECT,
   })
   res.status(201).json({ data: { ...usuario, telegram_chat_id: usuario.telegram_chat_id?.toString() ?? null } })
-})
-
-const updateUsuarioSchema = z.object({
-  email: emailSchema.optional(),
-  nombre: z.string().min(1).optional(),
-  apellidos: z.string().min(1).optional(),
-  dni: dniSchema.optional(),
-  telefono: z.string().optional().nullable(),
-  roles: z.array(z.nativeEnum(Rol)).min(1).optional(),
-  estado: z.nativeEnum(EstadoSocio).optional(),
-  tipo_cuota: z.nativeEnum(TipoCuota).optional(),
-  alias_telegram: z.string().optional().nullable(),
-  apodo: z.string().optional().nullable(),
-  fecha_nacimiento: z.coerce.date().nullable().optional(),
-  direccion: z.string().nullable().optional(),
-  consentimiento_tiendas: z.boolean().optional(),
-  tiene_llaves: z.boolean().optional(),
-  fecha_alta: z.coerce.date().nullable().optional(),
-  fecha_baja: z.coerce.date().nullable().optional(),
-  // Solo para desvincular: la vinculación la hace el propio socio con el bot
-  telegram_chat_id: z.null().optional(),
-  password: passwordSchema.optional(),
 })
 
 // PUT /api/admin/usuarios/:id

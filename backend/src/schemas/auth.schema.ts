@@ -41,6 +41,12 @@ export const fechaNacimientoSchema = z
   .refine((f) => f < hoy(), 'La fecha de nacimiento debe ser anterior a hoy')
   .refine((f) => `${Number(f.slice(0, 4)) + 18}${f.slice(4)}` <= hoy(), 'Debes ser mayor de edad para registrarte')
 
+// Edición de un socio ya dado de alta: fecha real y pasada (sin la regla de mayoría de edad del alta)
+export const fechaNacimientoEdicionSchema = z
+  .string()
+  .date('Fecha de nacimiento no válida')
+  .refine((f) => f < hoy(), 'La fecha de nacimiento debe ser anterior a hoy')
+
 // ─── Campos de quien rellena el formulario ───────────────────────────────────
 
 // Mismas reglas que el formulario (frontend/src/pages/registro/schema.ts): lo vigila contrato_frontend.test.ts

@@ -44,7 +44,6 @@ const CAMPOS_TEXTO = [
 ] as const
 
 type FormDatos = Record<(typeof CAMPOS_TEXTO)[number][0], string> & {
-  tipo_cuota: string
   estado: string
   tiene_llaves: boolean
   consentimiento_tiendas: boolean
@@ -63,7 +62,6 @@ function aFormulario(u: SocioAdmin): FormDatos {
     alias_telegram: u.alias_telegram ?? '',
     fecha_alta: u.fecha_alta?.slice(0, 10) ?? '',
     fecha_baja: u.fecha_baja?.slice(0, 10) ?? '',
-    tipo_cuota: u.tipo_cuota,
     estado: u.estado,
     tiene_llaves: u.tiene_llaves,
     consentimiento_tiendas: !!u.consentimiento_tiendas,
@@ -147,12 +145,10 @@ function UsuarioDetalle({
                 <Input id={campo} type={type} className="text-sm" {...register(campo)} />
               </div>
             ))}
+            {/* La cuota conjunta se gestiona desde Gestión de socios (unir / pasar a individual) */}
             <div className="space-y-1">
-              <Label htmlFor="tipo_cuota" className="text-xs text-muted-foreground font-display">Cuota</Label>
-              <select id="tipo_cuota" className={SELECT_CLASS} {...register('tipo_cuota')}>
-                <option value="individual">Individual</option>
-                <option value="conjunta">Conjunta</option>
-              </select>
+              <p className="text-xs text-muted-foreground font-display">Cuota</p>
+              <p className="text-sm h-9 flex items-center capitalize">{usuario.tipo_cuota}</p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="estado" className="text-xs text-muted-foreground font-display">Estado</Label>

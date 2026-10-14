@@ -108,11 +108,6 @@ router.put('/:id', authenticate, async (req, res) => {
     res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  // El tipo de cuota afecta al precio: solo la directiva puede cambiarlo
-  if (!isDirectiva && parsed.data.tipo_cuota !== undefined) {
-    res.status(403).json({ error: 'Solo la directiva puede cambiar el tipo de cuota' })
-    return
-  }
   const socio = await sociosService.update(id, parsed.data)
   res.json({ data: socio })
 })
