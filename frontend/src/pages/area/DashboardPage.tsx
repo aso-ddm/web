@@ -147,7 +147,8 @@ export function DashboardPage() {
           </Card>
 
           {/* Préstamos activos */}
-          <Card className="border-t-2 border-t-secondary overflow-hidden">
+          <Link to="/area/prestamos" className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="border-t-2 border-t-secondary overflow-hidden h-full transition-shadow hover:shadow-md">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -169,6 +170,7 @@ export function DashboardPage() {
               </p>
             </CardContent>
           </Card>
+          </Link>
 
           {/* Llaves */}
           <Card className="border-t-2 border-t-primary/40 overflow-hidden">
