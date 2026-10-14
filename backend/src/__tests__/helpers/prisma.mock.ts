@@ -24,7 +24,6 @@ export function createPrismaMock() {
     prestamo: makeModel(),
     visita: makeModel(),
     configuracion: makeModel(),
-    relacionSocio: makeModel(),
     logJuego: makeModel(),
     solicitudJuego: makeModel(),
     pagoCuota: makeModel(),

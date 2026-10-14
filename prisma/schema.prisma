@@ -116,10 +116,6 @@ model Usuario {
   solicitud_grupal_id String?
   solicitud_grupal    SolicitudGrupal? @relation("MiembrosGrupo", fields: [solicitud_grupal_id], references: [id])
 
-  // Relaciones de cuota (pareja / familia)
-  relaciones_como_principal   RelacionSocio[] @relation("SocioPrincipal")
-  relaciones_como_relacionado RelacionSocio[] @relation("SocioRelacionado")
-
   // Préstamos
   prestamos            Prestamo[] @relation("SocioPrestamo")
   prestamos_devolucion Prestamo[] @relation("ConfirmoDevolucionRel")
@@ -145,20 +141,6 @@ model Usuario {
 
   @@index([estado])
   @@index([solicitud_grupal_id])
-}
-
-model RelacionSocio {
-  id                   String       @id @default(uuid())
-  socio_principal_id   String
-  socio_relacionado_id String
-  activa               Boolean      @default(true)
-  fecha_inicio         DateTime     @default(now())
-  fecha_fin            DateTime?
-
-  socio_principal   Usuario @relation("SocioPrincipal", fields: [socio_principal_id], references: [id], onDelete: Cascade)
-  socio_relacionado Usuario @relation("SocioRelacionado", fields: [socio_relacionado_id], references: [id], onDelete: Cascade)
-
-  created_at DateTime @default(now())
 }
 
 model Juego {

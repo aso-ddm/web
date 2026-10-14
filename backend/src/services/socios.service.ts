@@ -105,10 +105,6 @@ async function copiarPagos(tx: Tx, grupoId: string, aId: string) {
 
 async function pasarAIndividual(tx: Tx, socioId: string) {
   await tx.usuario.update({ where: { id: socioId }, data: { solicitud_grupal_id: null, tipo_cuota: TipoCuota.individual } })
-  await tx.relacionSocio.updateMany({
-    where: { activa: true, OR: [{ socio_principal_id: socioId }, { socio_relacionado_id: socioId }] },
-    data: { activa: false, fecha_fin: new Date() },
-  })
 }
 
 /**
@@ -447,7 +443,6 @@ export class SociosService {
       }
       // Desde ahora cuentan los pagos del grupo; los suyos de antes se conservan pero no se muestran
       await tx.usuario.update({ where: { id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
-      await tx.relacionSocio.create({ data: { socio_principal_id: otro.id, socio_relacionado_id: id } })
       await historial(id, `Se une a la cuota conjunta de ${nombreCompleto(otro)}`)
       return tx.usuario.findUnique({ where: { id }, select: SOCIO_LIST_SELECT })
     })

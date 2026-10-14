@@ -187,9 +187,8 @@ export class AuthService {
       const grupo = await tx.solicitudGrupal.create({
         data: { estado: 'pendiente', comprobante_transferencia: comprobanteFilename },
       })
-      const ids: string[] = []
       for (const [i, { password: _p, fecha_nacimiento, ...resto }] of personas.entries()) {
-        const { id } = await tx.usuario.create({
+        await tx.usuario.create({
           data: {
             ...resto,
             password_hash: hashes[i],
@@ -201,12 +200,7 @@ export class AuthService {
           },
           select: { id: true },
         })
-        ids.push(id)
       }
-      const [primeroId, ...otros] = ids
-      await tx.relacionSocio.createMany({
-        data: otros.map((id) => ({ socio_principal_id: primeroId, socio_relacionado_id: id })),
-      })
       return { grupo_id: grupo.id, miembros: personas.length }
     })
   }
