@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { SolicitudGrupal, Rol } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { useConfigNumero } from '@/hooks/useConfigValor'
+import { ApiRequestError } from '@/services/api/client'
 
 function abrirComprobante(socioId: string) {
   sociosApi.getComprobante(socioId).catch((err: Error) => toast.error(err.message))
@@ -227,14 +228,23 @@ export function SolicitudesPage() {
     staleTime: 0,
   })
 
-  // Altas nuevas en vivo. Si la conexión se corta, reintenta a los 5 s y recarga por si se perdió algún aviso
+  // Altas nuevas en vivo. Si la conexión se corta, reintenta con espera creciente (5 s → 1 min) y recarga
+  // por si se perdió algún aviso. Un 4xx (sin permiso, sesión caducada) no se arregla reintentando: se deja
   useEffect(() => {
     const ctrl = new AbortController()
     void (async () => {
+      let espera = 5000
       while (!ctrl.signal.aborted) {
-        await escucharEventos((key) => queryClient.invalidateQueries({ queryKey: [key] }), ctrl.signal).catch(() => {})
+        const inicio = Date.now()
+        try {
+          await escucharEventos((key) => queryClient.invalidateQueries({ queryKey: [key] }), ctrl.signal)
+        } catch (err) {
+          if (err instanceof ApiRequestError && err.status < 500) return
+        }
         if (ctrl.signal.aborted) return
-        await new Promise((r) => setTimeout(r, 5000))
+        if (Date.now() - inicio > 60_000) espera = 5000 // estuvo conectado un rato: corte puntual
+        await new Promise((r) => setTimeout(r, espera))
+        espera = Math.min(espera * 2, 60_000)
         queryClient.invalidateQueries({ queryKey: QK.PENDIENTES })
       }
     })()

@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, Ti
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
+import { eventos } from '../lib/eventos'
 import fs from 'fs'
 import path from 'path'
 import { HttpError } from '../lib/httpError'
@@ -260,6 +261,7 @@ export class SociosService {
       this.prisma.pagoCuota.create({ data: { grupo_id: grupoId, ...mesPagadoAlAlta(ahora) } }),
     ])
 
+    eventos.emit('cambio', 'pendientes')
     return this.prisma.solicitudGrupal.findUnique({
       where: { id: grupoId },
       include: { miembros: { select: SOCIO_LIST_SELECT } },
@@ -287,6 +289,7 @@ export class SociosService {
       this.prisma.solicitudGrupal.delete({ where: { id: grupoId } }),
     ])
     borrarComprobantes([grupo.comprobante_transferencia])
+    eventos.emit('cambio', 'pendientes')
   }
 
   async getById(id: string) {
@@ -322,7 +325,7 @@ export class SociosService {
     comprobarCambioAdmin(socio.roles, [rol])
 
     const ahora = new Date()
-    return this.prisma.usuario.update({
+    const aprobado = await this.prisma.usuario.update({
       where: { id },
       data: {
         estado: EstadoSocio.activo,
@@ -335,6 +338,8 @@ export class SociosService {
       },
       select: SOCIO_LIST_SELECT,
     })
+    eventos.emit('cambio', 'pendientes')
+    return aprobado
   }
 
   // Un rechazado nunca fue socio: se borra para que pueda volver a solicitar el alta con el mismo email/DNI
@@ -351,6 +356,7 @@ export class SociosService {
 
     await this.prisma.usuario.delete({ where: { id } })
     borrarComprobantes([socio.comprobante_transferencia])
+    eventos.emit('cambio', 'pendientes')
   }
 
   async darDeBaja(id: string, bajaPorId: string) {

@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/authStore'
+import { ApiRequestError } from './client'
 
 /**
  * Escucha GET /api/eventos (SSE) y llama a onEvento con la queryKey que ha cambiado.
@@ -7,7 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 export async function escucharEventos(onEvento: (queryKey: string) => void, signal: AbortSignal) {
   const token = useAuthStore.getState().token
   const res = await fetch('/api/eventos', { headers: { Authorization: `Bearer ${token}` }, signal })
-  if (!res.ok || !res.body) throw new Error(`Eventos: ${res.status}`)
+  if (!res.ok || !res.body) throw new ApiRequestError(`Eventos: ${res.status}`, res.status)
 
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
   let pendiente = ''
