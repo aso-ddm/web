@@ -16,11 +16,11 @@ import { SEOHead } from '@/components/atoms/SEOHead'
 import { QueryError } from '@/components/molecules/QueryError'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
-import { prestamosApi } from '@/services/api/prestamos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
-import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
+import { QK } from '@/lib/queryKeys'
 import type { Juego, SolicitudJuego, EstadoSolicitudJuego } from '@/types/api'
 import { formatJugadores } from '@/lib/format'
+import { SolicitarPrestamoDialog } from '@/components/organisms/SolicitarPrestamoDialog'
 
 const estadoJuegoLabel: Record<string, string> = {
   en_estanteria: 'Disponible',
@@ -87,56 +87,6 @@ const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego
     </Card>
   )
 })
-
-function SolicitarDialog({
-  juego,
-  onClose,
-}: {
-  juego: Juego | null
-  onClose: () => void
-}) {
-  const queryClient = useQueryClient()
-  const [notas, setNotas] = useState('')
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: () => prestamosApi.solicitar(juego!.id, notas || undefined),
-    onSuccess: () => {
-      toast.success('Préstamo solicitado')
-      invalidarPrestamos(queryClient)
-      invalidarJuegos(queryClient)
-      onClose()
-      setNotas('')
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
-  return (
-    <Dialog open={!!juego} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="font-display">Solicitar préstamo</DialogTitle>
-          <DialogDescription>{juego?.nombre}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 py-2">
-          <Label className="font-display text-sm">Notas (opcional)</Label>
-          <Textarea
-            placeholder="Alguna nota para el ludotecario..."
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
-            rows={3}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="font-display">Cancelar</Button>
-          <Button onClick={() => mutate()} disabled={isPending} className="font-display">
-            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Confirmar préstamo
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -338,7 +288,7 @@ export function LudotecaPage() {
       </div>
 
       {/* key: cada juego abre el diálogo limpio (sin las notas del anterior) */}
-      <SolicitarDialog key={selectedJuego?.id} juego={selectedJuego} onClose={() => setSelectedJuego(null)} />
+      <SolicitarPrestamoDialog key={selectedJuego?.id} open={!!selectedJuego} juegoInicial={selectedJuego} onClose={() => setSelectedJuego(null)} />
       <CederJuegoDialog open={cederOpen} onClose={() => setCederOpen(false)} />
     </>
   )
