@@ -7,6 +7,7 @@ import { RegisterInput, LoginInput, SolicitudInput } from '../schemas/auth.schem
 import { TelegramAuthInput } from '../schemas/telegram.schema'
 import { HttpError } from '../lib/httpError'
 import { eventos } from '../lib/eventos'
+import { telegram } from '../lib/telegram'
 
 function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
   const { hash, ...rest } = data
@@ -36,38 +37,21 @@ const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 // Envía un mensaje HTML a los secretarios activos con Telegram vinculado. Con `archivo`, lo adjunta
 // como documento y el texto va de pie (máx. 1024 caracteres). Devuelve si llegó a alguno
-async function avisarSecretarios(prisma: PrismaClient, texto: string, archivo?: string): Promise<boolean> {
-  const botToken = process.env.BOT_TOKEN
-  if (!botToken) throw new Error('BOT_TOKEN no configurado')
+async function avisarSecretarios(prisma: PrismaClient, contexto: string, texto: string, archivo?: string): Promise<boolean> {
+  if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN no configurado')
 
   const secretarios = await prisma.usuario.findMany({
     where: { roles: { has: Rol.secretario }, estado: 'activo', telegram_chat_id: { not: null } },
     select: { telegram_chat_id: true },
   })
 
-  const enviar = async (chatId: string) => {
-    if (!archivo) {
-      return fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: texto, parse_mode: 'HTML' }),
-      })
-    }
-    const form = new FormData()
-    form.append('chat_id', chatId)
-    form.append('caption', texto)
-    form.append('parse_mode', 'HTML')
-    form.append('document', await fs.openAsBlob(archivo), path.basename(archivo))
-    return fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method: 'POST', body: form })
-  }
-
-  const resultados = await Promise.all(secretarios.map((s) =>
-    enviar(s.telegram_chat_id!.toString())
-      .then((r) => r.json() as Promise<{ ok?: boolean }>)
-      .then((r) => r.ok === true)
-      .catch(() => false),
-  ))
-  return resultados.includes(true)
+  const resultados = await Promise.all(secretarios.map((s) => {
+    const chat_id = s.telegram_chat_id!.toString()
+    return archivo
+      ? telegram(prisma, 'sendDocument', { chat_id, caption: texto, parse_mode: 'HTML' }, contexto, { archivo })
+      : telegram(prisma, 'sendMessage', { chat_id, text: texto, parse_mode: 'HTML' }, contexto)
+  }))
+  return resultados.some((r) => r.ok)
 }
 export const MESES_PARA_LLAVES = 6
 
@@ -126,7 +110,7 @@ export class AuthService {
 ` +
       `Revísala en Directiva → Solicitudes.`
     const comprobante = path.resolve(process.cwd(), 'uploads/transferencias', comprobanteFilename)
-    avisarSecretarios(this.prisma, texto, comprobante).catch((err) => console.error('Aviso de alta por Telegram:', err))
+    avisarSecretarios(this.prisma, 'aviso_alta', texto, comprobante).catch((err) => console.error('Aviso de alta por Telegram:', err))
 
     return resultado
   }
@@ -340,7 +324,6 @@ export class AuthService {
 
   async linkTelegram(userId: string, data: TelegramAuthInput) {
     checkTelegram(data)
-    const botToken = process.env.BOT_TOKEN!.trim()
 
     const existing = await this.prisma.usuario.findFirst({
       where: { telegram_chat_id: BigInt(data.id), NOT: { id: userId } },
@@ -370,11 +353,7 @@ export class AuthService {
       `Soy el bot de Dragón de Madera 🐉\n\n` +
       `No hace falta que respondas a este mensaje. ¡Bienvenido/a al club!`
 
-    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: mensajeBienvenida }),
-    }).catch(() => { /* ignorar errores del bot */ })
+    void telegram(this.prisma, 'sendMessage', { chat_id: chatId, text: mensajeBienvenida }, 'bienvenida_vinculacion')
 
     const { nombre: _, ...rest } = updated
     return { ...rest, telegram_chat_id: rest.telegram_chat_id?.toString() ?? null }
@@ -394,8 +373,7 @@ export class AuthService {
       return { hasTelegram: false }
     }
 
-    const botToken = process.env.BOT_TOKEN
-    if (!botToken) throw new Error('BOT_TOKEN no configurado')
+    if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN no configurado')
 
     const token = crypto.randomInt(100000, 999999).toString()
     const expiry = new Date(Date.now() + 15 * 60 * 1000) // 15 min
@@ -407,18 +385,12 @@ export class AuthService {
 
     const texto = `🔐 <b>Recuperación de contraseña — Dragón de Madera</b>\n\nHola ${usuario.nombre}, tu código de recuperación es:\n\n<code>${token}</code>\n\nVálido durante <b>15 minutos</b>. No lo compartas con nadie.`
 
-    const enviado = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: usuario.telegram_chat_id.toString(),
-        text: texto,
-        parse_mode: 'HTML',
-      }),
-    })
-      .then((r) => r.json() as Promise<{ ok?: boolean }>)
-      .then((r) => r.ok === true)
-      .catch(() => false)
+    // sensible: el código no se guarda en el log (y no tendría sentido reintentarlo)
+    const { ok: enviado } = await telegram(this.prisma, 'sendMessage', {
+      chat_id: usuario.telegram_chat_id.toString(),
+      text: texto,
+      parse_mode: 'HTML',
+    }, 'reset_password', { sensible: true })
 
     // Bot bloqueado por el socio o Telegram caído: no decir "código enviado" si no ha llegado
     if (!enviado) {
@@ -478,7 +450,7 @@ export class AuthService {
       (socio.alias_telegram ? `
 Telegram: ${esc(socio.alias_telegram)}` : '')
 
-    if (!(await avisarSecretarios(this.prisma, texto))) {
+    if (!(await avisarSecretarios(this.prisma, 'solicitud_llaves', texto))) {
       throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
     }
 
@@ -501,7 +473,7 @@ Telegram: ${esc(socio.alias_telegram)}` : '')
       `Email: ${esc(socio.email)}` +
       (socio.alias_telegram ? `\nTelegram: ${esc(socio.alias_telegram)}` : '')
 
-    if (!(await avisarSecretarios(this.prisma, texto))) {
+    if (!(await avisarSecretarios(this.prisma, 'solicitud_baja', texto))) {
       throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
     }
   }

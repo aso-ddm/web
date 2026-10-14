@@ -28,6 +28,7 @@ export function createPrismaMock() {
     logJuego: makeModel(),
     solicitudJuego: makeModel(),
     pagoCuota: makeModel(),
+    telegramLog: makeModel(),
     historialEstadoSocio: makeModel(),
   }
 

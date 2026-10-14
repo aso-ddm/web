@@ -79,71 +79,71 @@ enum EstadoSolicitudJuego {
 // ============================================================
 
 model Usuario {
-  id                      String      @id @default(uuid())
-  email                   String      @unique
-  password_hash           String
-  nombre                  String
-  apellidos               String
-  dni                     String      @unique
-  telefono                String?
-  fecha_nacimiento        DateTime?
-  direccion               String?
-  alias_telegram              String?
-  telegram_chat_id            BigInt?   @unique
-  telegram_linked_at          DateTime?
-  reset_token                 String?   @unique
-  reset_token_expiry          DateTime?
-  apodo                   String?
-  tipo_cuota              TipoCuota   @default(individual)
-  consentimiento_tiendas      Boolean     @default(false)
-  comprobante_transferencia   String?
-  roles                       Rol[]
-  estado                      EstadoSocio @default(pendiente)
-  fecha_alta              DateTime?
-  fecha_baja              DateTime?
-  tiene_llaves            Boolean     @default(false)
-  llaves_solicitadas_at   DateTime?
+  id                        String      @id @default(uuid())
+  email                     String      @unique
+  password_hash             String
+  nombre                    String
+  apellidos                 String
+  dni                       String      @unique
+  telefono                  String?
+  fecha_nacimiento          DateTime?
+  direccion                 String?
+  alias_telegram            String?
+  telegram_chat_id          BigInt?     @unique
+  telegram_linked_at        DateTime?
+  reset_token               String?     @unique
+  reset_token_expiry        DateTime?
+  apodo                     String?
+  tipo_cuota                TipoCuota   @default(individual)
+  consentimiento_tiendas    Boolean     @default(false)
+  comprobante_transferencia String?
+  roles                     Rol[]
+  estado                    EstadoSocio @default(pendiente)
+  fecha_alta                DateTime?
+  fecha_baja                DateTime?
+  tiene_llaves              Boolean     @default(false)
+  llaves_solicitadas_at     DateTime?
 
   // Trazabilidad — quién aprobó el alta, quién dio de baja
-  aprobado_por_id        String?
-  baja_por_id            String?
+  aprobado_por_id String?
+  baja_por_id     String?
 
-  aprobado_por            Usuario?  @relation("AproboAlta",   fields: [aprobado_por_id],        references: [id])
-  socios_aprobados        Usuario[] @relation("AproboAlta")
-  baja_por                Usuario?  @relation("DioBaja",      fields: [baja_por_id],             references: [id])
-  socios_dados_baja       Usuario[] @relation("DioBaja")
+  aprobado_por      Usuario?  @relation("AproboAlta", fields: [aprobado_por_id], references: [id])
+  socios_aprobados  Usuario[] @relation("AproboAlta")
+  baja_por          Usuario?  @relation("DioBaja", fields: [baja_por_id], references: [id])
+  socios_dados_baja Usuario[] @relation("DioBaja")
 
   // Historial de altas y bajas
-  historial_estado        HistorialEstadoSocio[] @relation("HistorialSocio")
-  cambios_estado_hechos   HistorialEstadoSocio[] @relation("HistorialPor")
+  historial_estado      HistorialEstadoSocio[] @relation("HistorialSocio")
+  cambios_estado_hechos HistorialEstadoSocio[] @relation("HistorialPor")
 
   // Cuota conjunta
   solicitud_grupal_id String?
   solicitud_grupal    SolicitudGrupal? @relation("MiembrosGrupo", fields: [solicitud_grupal_id], references: [id])
 
   // Relaciones de cuota (pareja / familia)
-  relaciones_como_principal    RelacionSocio[] @relation("SocioPrincipal")
-  relaciones_como_relacionado  RelacionSocio[] @relation("SocioRelacionado")
+  relaciones_como_principal   RelacionSocio[] @relation("SocioPrincipal")
+  relaciones_como_relacionado RelacionSocio[] @relation("SocioRelacionado")
 
   // Préstamos
-  prestamos              Prestamo[]  @relation("SocioPrestamo")
-  prestamos_devolucion   Prestamo[]  @relation("ConfirmoDevolucionRel")
+  prestamos            Prestamo[] @relation("SocioPrestamo")
+  prestamos_devolucion Prestamo[] @relation("ConfirmoDevolucionRel")
 
   // Juegos en propiedad
-  juegos_en_propiedad    Juego[]     @relation("PropietarioJuego")
+  juegos_en_propiedad Juego[] @relation("PropietarioJuego")
 
   // Logs de juegos generados por este usuario
-  logs_juego_generados   LogJuego[]  @relation("LogsGenerados")
+  logs_juego_generados LogJuego[] @relation("LogsGenerados")
 
   // Solicitudes de donación de juegos
-  solicitudes_juego      SolicitudJuego[] @relation("SolicitudesJuego")
+  solicitudes_juego SolicitudJuego[] @relation("SolicitudesJuego")
 
   // Visitas registradas por este socio
-  visitas_registradas    Visita[]
+  visitas_registradas Visita[]
 
   // Cuotas mensuales
-  pagos_cuota            PagoCuota[] @relation("PagosSocio")
-  pagos_revisados        PagoCuota[] @relation("PagosRevisados")
+  pagos_cuota     PagoCuota[] @relation("PagosSocio")
+  pagos_revisados PagoCuota[] @relation("PagosRevisados")
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -162,26 +162,26 @@ model RelacionSocio {
   fecha_inicio         DateTime     @default(now())
   fecha_fin            DateTime?
 
-  socio_principal    Usuario @relation("SocioPrincipal",   fields: [socio_principal_id],   references: [id], onDelete: Cascade)
-  socio_relacionado  Usuario @relation("SocioRelacionado", fields: [socio_relacionado_id], references: [id], onDelete: Cascade)
+  socio_principal   Usuario @relation("SocioPrincipal", fields: [socio_principal_id], references: [id], onDelete: Cascade)
+  socio_relacionado Usuario @relation("SocioRelacionado", fields: [socio_relacionado_id], references: [id], onDelete: Cascade)
 
   created_at DateTime @default(now())
 }
 
 model Juego {
-  id                 String      @id @default(uuid())
-  nombre             String
-  localizacion       String?
-  num_jugadores_min  Int?
-  num_jugadores_max  Int?
-  notas              String?
-  estado             EstadoJuego @default(en_estanteria)
-  propietario_id     String?
+  id                String      @id @default(uuid())
+  nombre            String
+  localizacion      String?
+  num_jugadores_min Int?
+  num_jugadores_max Int?
+  notas             String?
+  estado            EstadoJuego @default(en_estanteria)
+  propietario_id    String?
 
-  propietario  Usuario?         @relation("PropietarioJuego", fields: [propietario_id], references: [id], onDelete: SetNull)
-  prestamos    Prestamo[]
-  logs         LogJuego[]
-  solicitudes  SolicitudJuego[]
+  propietario Usuario?         @relation("PropietarioJuego", fields: [propietario_id], references: [id], onDelete: SetNull)
+  prestamos   Prestamo[]
+  logs        LogJuego[]
+  solicitudes SolicitudJuego[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -202,8 +202,8 @@ model Prestamo {
   renovaciones            Int            @default(0)
   notas                   String?
 
-  juego                       Juego    @relation(fields: [juego_id],               references: [id])
-  socio                       Usuario  @relation("SocioPrestamo",       fields: [socio_id],                references: [id])
+  juego                       Juego    @relation(fields: [juego_id], references: [id])
+  socio                       Usuario  @relation("SocioPrestamo", fields: [socio_id], references: [id])
   usuario_confirmo_devolucion Usuario? @relation("ConfirmoDevolucionRel", fields: [usuario_confirmo_dev_id], references: [id])
 
   created_at DateTime @default(now())
@@ -246,7 +246,7 @@ model SolicitudGrupal {
 enum TipoCambioEstado {
   alta
   baja
-  cuota_conjunta   // entra en una cuota conjunta
+  cuota_conjunta // entra en una cuota conjunta
   cuota_individual // sale de una cuota conjunta
   llaves_entregadas
   llaves_devueltas
@@ -291,8 +291,8 @@ model SolicitudJuego {
   motivo_rechazo String?
   juego_id       String?
 
-  socio Usuario  @relation("SolicitudesJuego", fields: [socio_id], references: [id])
-  juego Juego?   @relation(fields: [juego_id], references: [id], onDelete: SetNull)
+  socio Usuario @relation("SolicitudesJuego", fields: [socio_id], references: [id])
+  juego Juego?  @relation(fields: [juego_id], references: [id], onDelete: SetNull)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -305,7 +305,7 @@ model Configuracion {
   id          String  @id @default(uuid())
   clave       String  @unique
   valor       String
-  tipo        String  // 'numero' | 'texto' | 'boolean'
+  tipo        String // 'numero' | 'texto' | 'boolean'
   descripcion String?
 
   created_at DateTime @default(now())
@@ -319,11 +319,11 @@ model PagoCuota {
   socio_id        String?
   grupo_id        String?
   anio            Int
-  mes             Int        // 1-12
+  mes             Int // 1-12
   estado          EstadoPago
-  revisado_por_id String?    // null = marcado automáticamente al aprobar el alta
+  revisado_por_id String? // null = marcado automáticamente al aprobar el alta
 
-  socio        Usuario?         @relation("PagosSocio",     fields: [socio_id],        references: [id], onDelete: Cascade)
+  socio        Usuario?         @relation("PagosSocio", fields: [socio_id], references: [id], onDelete: Cascade)
   grupo        SolicitudGrupal? @relation(fields: [grupo_id], references: [id], onDelete: Cascade)
   revisado_por Usuario?         @relation("PagosRevisados", fields: [revisado_por_id], references: [id], onDelete: SetNull)
 
@@ -331,4 +331,22 @@ model PagoCuota {
 
   @@unique([socio_id, anio, mes])
   @@unique([grupo_id, anio, mes])
+}
+
+// Errores del bot de Telegram (solo fallos; se purgan a los 90 días al registrar uno nuevo).
+// envío → payload = { params, archivo? } para poder reintentar; null si el mensaje era sensible.
+// recepción → payload = el update recibido por el webhook.
+model TelegramLog {
+  id             String    @id @default(uuid())
+  direccion      String // 'envio' | 'recepcion'
+  metodo         String // sendMessage, sendDocument, webhook...
+  contexto       String // qué acción lo provocó: 'anuncio', 'aviso_baja'...
+  chat_id        String?
+  error          String
+  payload        Json?
+  reintentado_at DateTime?
+
+  created_at DateTime @default(now())
+
+  @@index([created_at])
 }

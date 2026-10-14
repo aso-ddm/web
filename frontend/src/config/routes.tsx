@@ -64,6 +64,7 @@ const LlavesPage = lazyPage(() => import('@/pages/directiva/LlavesPage'), 'Llave
 const CuotasPage = lazyPage(() => import('@/pages/directiva/CuotasPage'), 'CuotasPage')
 const AnunciosPage = lazyPage(() => import('@/pages/directiva/AnunciosPage'), 'AnunciosPage')
 const AdminUsuariosPage = lazyPage(() => import('@/pages/admin/AdminUsuariosPage'), 'AdminUsuariosPage')
+const AdminTelegramPage = lazyPage(() => import('@/pages/admin/AdminTelegramPage'), 'AdminTelegramPage')
 
 export function AppRoutes() {
   return (
@@ -144,6 +145,7 @@ export function AppRoutes() {
         <Route element={<AreaLayout />}>
           <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
           <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
+          <Route path="/admin/telegram" element={<AdminTelegramPage />} />
         </Route>
       </Route>
 

@@ -18,6 +18,7 @@ import {
   Megaphone,
   ShieldAlert,
   Wallet,
+  Bot,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -75,6 +76,7 @@ function useSidebarItems(): NavEntry[] {
     items.push(
       { type: 'section', label: 'Administración' },
       { type: 'item', label: 'Usuarios', to: '/admin/usuarios', icon: <ShieldAlert className="h-4 w-4" /> },
+      { type: 'item', label: 'Bot de Telegram', to: '/admin/telegram', icon: <Bot className="h-4 w-4" /> },
     )
   }
 

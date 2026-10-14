@@ -1,6 +1,10 @@
 import { Router } from 'express'
+import { z } from 'zod'
+import { Prisma, Rol } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { requireRoles, ROLES } from '../middleware/auth'
+import { HttpError } from '../lib/httpError'
+import { registrarErrorTelegram, telegram } from '../lib/telegram'
 
 const router = Router()
 const BATCH_SIZE = 25
@@ -13,17 +17,9 @@ async function sendBatch(
   let errores = 0
   for (let i = 0; i < mensajes.length; i += BATCH_SIZE) {
     const batch = mensajes.slice(i, i + BATCH_SIZE)
-    const results = await Promise.allSettled(
-      batch.map((msg) =>
-        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(msg),
-        }).then((r) => r.json() as Promise<{ ok: boolean }>),
-      ),
-    )
+    const results = await Promise.all(batch.map((msg) => telegram(prisma, 'sendMessage', msg, 'anuncio')))
     for (const r of results) {
-      if (r.status === 'fulfilled' && r.value?.ok) enviados++
+      if (r.ok) enviados++
       else errores++
     }
   }
@@ -75,19 +71,14 @@ router.post('/bienvenida/:socioId', requireRoles(...ROLES.DIRECTIVA), async (req
   if (!socio.telegram_chat_id) { res.status(400).json({ error: 'Este socio no tiene Telegram vinculado' }); return }
   if (!BOT_TOKEN) { res.status(500).json({ error: 'BOT_TOKEN no configurado' }); return }
   const texto = `¡Hola, ${socio.nombre}! 👋\n\nGracias por vincular tu cuenta de Telegram con tu perfil de Dragón de Madera.\n\n¿Confirmas que deseas recibir los avisos del club por aquí? 🐉`
-  const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: socio.telegram_chat_id.toString(),
-      text: texto,
-      reply_markup: { inline_keyboard: [[
-        { text: '✅ Confirmar', callback_data: `confirm_avisos:${req.params.socioId}` },
-        { text: '❌ Cancelar', callback_data: `cancel_avisos:${req.params.socioId}` },
-      ]] },
-    }),
-  })
-  const data = await response.json() as { ok: boolean; description?: string }
+  const data = await telegram(prisma, 'sendMessage', {
+    chat_id: socio.telegram_chat_id.toString(),
+    text: texto,
+    reply_markup: { inline_keyboard: [[
+      { text: '✅ Confirmar', callback_data: `confirm_avisos:${req.params.socioId}` },
+      { text: '❌ Cancelar', callback_data: `cancel_avisos:${req.params.socioId}` },
+    ]] },
+  }, 'bienvenida')
   if (!data.ok) { res.status(502).json({ error: `Error de Telegram: ${data.description ?? 'desconocido'}` }); return }
   res.json({ message: 'Mensaje enviado correctamente' })
 })
@@ -102,53 +93,94 @@ router.post('/webhook', async (req, res) => {
   }
 
   const update = req.body as TelegramUpdate
-  const botToken = process.env.BOT_TOKEN
-
-  if (!botToken || !update.callback_query) {
-    res.sendStatus(200)
-    return
+  // Siempre 200: si Telegram recibe un error reintenta el mismo update una y otra vez
+  try {
+    await procesarUpdate(update)
+  } catch (err) {
+    await registrarErrorTelegram(prisma, {
+      direccion: 'recepcion',
+      metodo: 'webhook',
+      contexto: update.callback_query?.data?.split(':')[0] ?? 'update',
+      chat_id: update.callback_query?.message?.chat?.id?.toString() ?? null,
+      error: err instanceof Error ? err.message : String(err),
+      payload: update as Prisma.InputJsonValue,
+    })
   }
+  res.sendStatus(200)
+})
+
+async function procesarUpdate(update: TelegramUpdate) {
+  if (!update.callback_query) return
 
   const { id: callbackId, data, message } = update.callback_query
   const chatId = message?.chat?.id
   const messageId = message?.message_id
-
-  if (!data || !chatId) {
-    res.sendStatus(200)
-    return
-  }
+  if (!data || !chatId) return
 
   // Botones de mensajes antiguos (la columna avisos_confirmado ya no existe)
-  if (data.startsWith('confirm_avisos:')) {
-    await answerCallback(botToken, callbackId, '✅ ¡Confirmado! Recibirás los avisos del club.')
-  } else if (data.startsWith('cancel_avisos:')) {
-    await answerCallback(botToken, callbackId, '❌ Cancelado. Puedes confirmar más adelante desde tu perfil.')
-  } else {
-    await answerCallback(botToken, callbackId, '')
-  }
+  const texto = data.startsWith('confirm_avisos:') ? '✅ ¡Confirmado! Recibirás los avisos del club.'
+    : data.startsWith('cancel_avisos:') ? '❌ Cancelado. Puedes confirmar más adelante desde tu perfil.'
+    : ''
+  await telegram(prisma, 'answerCallbackQuery', { callback_query_id: callbackId, text: texto }, 'webhook')
 
   if (messageId) {
-    await removeInlineKeyboard(botToken, chatId, messageId)
+    await telegram(prisma, 'editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }, 'webhook')
   }
+}
 
-  res.sendStatus(200)
+// ── Administración: estado del bot y log de errores ─────────────────────────
+
+// GET /api/telegram/estado — lo que Telegram sabe del bot (token válido, webhook, último error)
+router.get('/estado', requireRoles(Rol.administrador), async (_req, res) => {
+  if (!BOT_TOKEN) throw new HttpError(500, 'BOT_TOKEN no configurado')
+  // ponytail: sin pasar por telegram() para no llenar el log con las consultas del propio panel
+  const llamar = (metodo: string) => fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${metodo}`)
+    .then((r) => r.json() as Promise<{ ok: boolean; description?: string; result?: Record<string, unknown> }>)
+    .catch((err: Error) => ({ ok: false, description: err.message, result: undefined }))
+  const [me, webhook] = await Promise.all([llamar('getMe'), llamar('getWebhookInfo')])
+  res.json({ data: { me, webhook } })
 })
 
-async function answerCallback(token: string, callbackQueryId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
-  })
-}
+const filtrosLogSchema = z.object({
+  direccion: z.enum(['envio', 'recepcion']).optional(),
+  contexto: z.string().optional(),
+  desde: z.coerce.date().optional(),
+  hasta: z.coerce.date().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(200).default(50),
+})
 
-async function removeInlineKeyboard(token: string, chatId: number, messageId: number) {
-  await fetch(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
+// GET /api/telegram/logs — errores registrados, más recientes primero
+router.get('/logs', requireRoles(Rol.administrador), async (req, res) => {
+  const { direccion, contexto, desde, hasta, page, limit } = filtrosLogSchema.parse(req.query)
+  const where: Prisma.TelegramLogWhereInput = {
+    direccion,
+    contexto,
+    created_at: desde || hasta ? { gte: desde, lte: hasta } : undefined,
+  }
+  const [data, total, contextos] = await Promise.all([
+    prisma.telegramLog.findMany({ where, orderBy: { created_at: 'desc' }, skip: (page - 1) * limit, take: limit }),
+    prisma.telegramLog.count({ where }),
+    prisma.telegramLog.findMany({ distinct: ['contexto'], select: { contexto: true }, orderBy: { contexto: 'asc' } }),
+  ])
+  res.json({
+    data,
+    contextos: contextos.map((c) => c.contexto),
+    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
   })
-}
+})
+
+// POST /api/telegram/logs/:id/reintentar — vuelve a enviar un mensaje que falló (si falla otra vez, genera otro log)
+router.post('/logs/:id/reintentar', requireRoles(Rol.administrador), async (req, res) => {
+  const log = await prisma.telegramLog.findUniqueOrThrow({ where: { id: req.params.id } })
+  const payload = log.payload as { params?: Record<string, unknown>; archivo?: string } | null
+  if (log.direccion !== 'envio' || !payload?.params) throw new HttpError(400, 'Este error no se puede reintentar')
+
+  const r = await telegram(prisma, log.metodo, payload.params, log.contexto, { archivo: payload.archivo })
+  if (!r.ok) throw new HttpError(502, `Telegram sigue fallando: ${r.description ?? 'desconocido'}`)
+  const actualizado = await prisma.telegramLog.update({ where: { id: log.id }, data: { reintentado_at: new Date() } })
+  res.json({ data: actualizado })
+})
 
 interface TelegramUpdate {
   callback_query?: {

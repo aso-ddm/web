@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, TipoCuota, TipoRelacion } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
+import { telegram } from '../lib/telegram'
 import fs from 'fs'
 import path from 'path'
 
@@ -417,17 +418,12 @@ export class SociosService {
 
   // Fire and forget: un fallo del bot no debe deshacer ni bloquear la baja
   private avisarBaja(chatId: bigint, nombre: string) {
-    const botToken = process.env.BOT_TOKEN
-    if (!botToken) return
+    if (!process.env.BOT_TOKEN) return
     this.prisma.configuracion.findUnique({ where: { clave: 'texto_baja_confirmada' } })
       .then((config) => {
         if (!config?.valor.trim()) return
         // Texto plano (sin parse_mode): lo escribe la directiva y no hay que escapar nada
-        return fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId.toString(), text: config.valor.split('{nombre}').join(nombre) }),
-        })
+        return telegram(this.prisma, 'sendMessage', { chat_id: chatId.toString(), text: config.valor.split('{nombre}').join(nombre) }, 'aviso_baja')
       })
       .catch((err) => console.error('Aviso de baja por Telegram:', err))
   }
