@@ -17,7 +17,7 @@ router.get('/logs', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO)
 })
 
 // GET /api/juegos/export/csv — exportar catálogo (staff)
-router.get('/export/csv', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (req, res) => {
+router.get('/export/csv', authenticate, requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO), async (_req, res) => {
   const csv = await juegosService.exportCsv()
   const fecha = new Date().toISOString().split('T')[0]
   res.setHeader('Content-Type', 'text/csv; charset=utf-8')

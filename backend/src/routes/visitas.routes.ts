@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { VisitasService } from '../services/visitas.service'
-import { authenticate, requireRoles, ROLES } from '../middleware/auth'
+import { authenticate } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 
 const buscarSchema = z.object({
