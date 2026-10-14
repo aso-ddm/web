@@ -5,9 +5,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi } from '@/services/api/socios'
 import { QK } from '@/lib/queryKeys'
+import { QueryError } from '@/components/molecules/QueryError'
 
 export function LlavesPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: QK.SOCIOS_LLAVES,
     queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 500 }),
   })
@@ -37,6 +38,8 @@ export function LlavesPage() {
               <div className="p-4 space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
               </div>
+            ) : isError ? (
+              <QueryError onRetry={() => refetch()} />
             ) : titulares.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />

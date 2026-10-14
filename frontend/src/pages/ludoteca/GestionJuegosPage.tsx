@@ -20,6 +20,7 @@ import { JuegoRow } from './juegos/JuegoRow'
 import { JuegoFormDialog } from './juegos/JuegoFormDialog'
 import { SolicitudesTab } from './juegos/SolicitudesTab'
 import { HistorialLogsTab } from './juegos/HistorialLogsTab'
+import { QueryError } from '@/components/molecules/QueryError'
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export function GestionJuegosPage() {
   const puedeEliminar = useAuthStore((s) => s.isDirectiva()) // ludotecario: retirar sí, eliminar no
 
   const debouncedSearch = useDebouncedValue(search)
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: QK.JUEGOS_GESTION(debouncedSearch, estadoFiltro),
     queryFn: ({ pageParam }) =>
       juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, page: pageParam, limit: 50 }),
@@ -168,6 +169,8 @@ export function GestionJuegosPage() {
                   <div className="p-4 space-y-3">
                     {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
                   </div>
+                ) : isError && juegos.length === 0 ? (
+                  <QueryError onRetry={() => refetch()} />
                 ) : juegos.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <Library className="h-12 w-12 text-muted-foreground/30 mb-4" />

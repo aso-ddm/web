@@ -17,6 +17,7 @@ import type { EstadoSocio } from '@/types/api'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { RolBadge } from '@/components/atoms/RolBadge'
 import { SocioDetalle } from './socios/SocioDetalle'
+import { QueryError } from '@/components/molecules/QueryError'
 
 export function GestionSociosPage() {
   const [search, setSearch] = useState('')
@@ -26,7 +27,7 @@ export function GestionSociosPage() {
   const [socioId, setSocioId] = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: QK.SOCIOS_GESTION_LISTA(debouncedSearch, estadoFiltro, page),
     placeholderData: keepPreviousData,
     queryFn: () =>
@@ -98,6 +99,8 @@ export function GestionSociosPage() {
               <div className="p-4 space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
               </div>
+            ) : isError && socios.length === 0 ? (
+              <QueryError onRetry={() => refetch()} />
             ) : socios.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />

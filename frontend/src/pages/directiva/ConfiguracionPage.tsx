@@ -190,10 +190,10 @@ function RichTextConfigField({
 
 function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
   const queryClient = useQueryClient()
-  const [enlaces, setEnlaces] = useState(initial)
+  const [enlaces, setEnlaces] = useState(() => initial.map((e) => ({ ...e, id: crypto.randomUUID() })))
 
   const { mutate: guardar, isPending } = useMutation({
-    mutationFn: () => enlacesInteresApi.save(enlaces),
+    mutationFn: () => enlacesInteresApi.save(enlaces.map(({ label, url }) => ({ label, url }))),
     onSuccess: () => {
       toast.success('Enlaces de interés actualizados')
       invalidarConfig(queryClient, 'enlaces_interes')
@@ -204,7 +204,7 @@ function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
   const editar = (i: number, campo: keyof EnlaceInteres, valor: string) =>
     setEnlaces((prev) => prev.map((e, j) => (j === i ? { ...e, [campo]: valor } : e)))
 
-  const changed = JSON.stringify(enlaces) !== JSON.stringify(initial)
+  const changed = JSON.stringify(enlaces.map(({ label, url }) => ({ label, url }))) !== JSON.stringify(initial)
 
   return (
     <form
@@ -218,7 +218,7 @@ function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
         <p className="text-sm text-muted-foreground">No hay enlaces. Añade el primero.</p>
       )}
       {enlaces.map((e, i) => (
-        <div key={i} className="flex flex-col sm:flex-row gap-2">
+        <div key={e.id} className="flex flex-col sm:flex-row gap-2">
           <Input
             aria-label={`Nombre del enlace ${i + 1}`}
             placeholder="Nombre (ej: Grupo de partidas)"
@@ -255,7 +255,7 @@ function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
           variant="outline"
           size="sm"
           className="font-display font-bold gap-1"
-          onClick={() => setEnlaces((prev) => [...prev, { label: '', url: '' }])}
+          onClick={() => setEnlaces((prev) => [...prev, { label: '', url: '', id: crypto.randomUUID() }])}
           disabled={enlaces.length >= 50}
         >
           <Plus className="h-3 w-3" />

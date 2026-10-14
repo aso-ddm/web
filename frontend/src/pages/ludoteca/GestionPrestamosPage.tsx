@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { prestamosApi } from '@/services/api/prestamos'
 import type { Prestamo } from '@/types/api'
 import { formatDate, diasRestantes } from '@/lib/format'
+import { QueryError } from '@/components/molecules/QueryError'
 
 function nombreSocio(p: Prestamo) {
   if (!p.socio) return 'Socio desconocido'
@@ -90,7 +91,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
 }
 
 function PrestamosActivos() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: QK.PRESTAMOS_GESTION_ESTADO('activo'),
     // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
     queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
@@ -105,6 +106,8 @@ function PrestamosActivos() {
       {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
     </div>
   )
+
+  if (isError && prestamos.length === 0) return <QueryError onRetry={() => refetch()} />
 
   if (prestamos.length === 0) return (
     <div className="text-center py-12 text-muted-foreground">
@@ -144,7 +147,7 @@ function PrestamosActivos() {
 }
 
 function HistorialPrestamos() {
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: QK.PRESTAMOS_GESTION_ESTADO('devuelto'),
     queryFn: ({ pageParam }) => prestamosApi.getAll({ estado: 'devuelto', page: pageParam }),
     initialPageParam: 1,
@@ -158,6 +161,8 @@ function HistorialPrestamos() {
       {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
     </div>
   )
+
+  if (isError && prestamos.length === 0) return <QueryError onRetry={() => refetch()} />
 
   if (prestamos.length === 0) return (
     <div className="text-center py-12 text-muted-foreground">

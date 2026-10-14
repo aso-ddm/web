@@ -127,6 +127,8 @@ export function ClubPage() {
                 <img
                   src={images.club.local}
                   alt="Nuestro local"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               </div>

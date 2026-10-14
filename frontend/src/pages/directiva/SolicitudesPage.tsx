@@ -16,6 +16,7 @@ import type { SolicitudGrupal, Rol } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { useConfigNumero } from '@/hooks/useConfigValor'
 import { ApiRequestError } from '@/services/api/client'
+import { QueryError } from '@/components/molecules/QueryError'
 
 function abrirComprobante(socioId: string) {
   sociosApi.getComprobante(socioId).catch((err: Error) => toast.error(err.message))
@@ -222,7 +223,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 
 export function SolicitudesPage() {
   const queryClient = useQueryClient()
-  const { data: pendientesData, isLoading: loadingAltas } = useQuery({
+  const { data: pendientesData, isLoading: loadingAltas, isError, refetch } = useQuery({
     queryKey: QK.PENDIENTES,
     queryFn: () => sociosApi.getPendientes(),
     staleTime: 0,
@@ -283,6 +284,8 @@ export function SolicitudesPage() {
           <CardContent>
             {loadingAltas ? (
               <div className="space-y-4">{[1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+            ) : isError ? (
+              <QueryError onRetry={() => refetch()} />
             ) : individuales.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -305,6 +308,8 @@ export function SolicitudesPage() {
           <CardContent>
             {loadingAltas ? (
               <div className="space-y-4">{[1].map((i) => <Skeleton key={i} className="h-28 w-full" />)}</div>
+            ) : isError ? (
+              <QueryError onRetry={() => refetch()} />
             ) : grupos.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
