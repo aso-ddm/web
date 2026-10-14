@@ -113,6 +113,8 @@ pnpm prisma:studio
 # Tests
 pnpm -C backend test:run   # tests unitarios + errorHandler sobre Express real (vitest)
 pnpm -C frontend test      # vitest + jsdom
+# Integración con Postgres real (concurrencia, SQL a mano). Base de PRUEBAS ya migrada, nunca la de desarrollo:
+DATABASE_URL_TEST=postgresql://... pnpm -C backend test:db
 
 # Docker
 docker build -t asoddm/dragondemadera-backend:latest -f backend/Dockerfile .

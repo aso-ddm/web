@@ -14,7 +14,8 @@
     "prisma:studio": "prisma studio --schema=../prisma/schema.prisma",
     "seed": "ts-node ../prisma/seed.ts",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:db": "vitest run src/__tests__/integracion.db.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
