@@ -7,7 +7,9 @@ export interface SocioCuotas {
   apellidos: string
   apodo?: string | null
   fecha_alta: string
-  grupo_como_titular: { _count: { miembros: number } } | null
+  conjunta: boolean
+  // Socio en el que se guardan los pagos (el titular si es cuota conjunta)
+  cuota_id: string
   pagos_cuota: PagoMes[]
 }
 

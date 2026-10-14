@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Rol } from '@prisma/client'
-import { SociosService, normalizarRoles } from '../services/socios.service'
+import { SociosService, normalizarRoles, salirDeCuotaConjunta } from '../services/socios.service'
 import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
 
@@ -25,7 +25,7 @@ describe('SociosService.setLlaves', () => {
   it('socio no encontrado → throws', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(service.setLlaves('u1', true)).rejects.toThrow('Socio no encontrado')
+    await expect(service.setLlaves('u1', true, 'admin1')).rejects.toThrow('Socio no encontrado')
   })
 
   it('asignar a socio no activo → throws', async () => {
@@ -34,7 +34,7 @@ describe('SociosService.setLlaves', () => {
       estado: 'baja',
     })
 
-    await expect(service.setLlaves('u1', true)).rejects.toThrow(
+    await expect(service.setLlaves('u1', true, 'admin1')).rejects.toThrow(
       'Solo se pueden asignar llaves a socios activos',
     )
   })
@@ -43,10 +43,13 @@ describe('SociosService.setLlaves', () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(socioActivo)
     ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, tiene_llaves: true })
 
-    await service.setLlaves('u1', true)
+    await service.setLlaves('u1', true, 'admin1')
 
     expect(prisma.usuario.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'u1' }, data: { tiene_llaves: true } }),
+      expect.objectContaining({
+        where: { id: 'u1' },
+        data: { tiene_llaves: true, historial_estado: { create: { tipo: 'llaves_entregadas', por_id: 'admin1' } } },
+      }),
     )
   })
 
@@ -58,7 +61,7 @@ describe('SociosService.setLlaves', () => {
     })
     ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue(socioActivo)
 
-    await expect(service.setLlaves('u1', false)).resolves.toBeDefined()
+    await expect(service.setLlaves('u1', false, 'admin1')).resolves.toBeDefined()
   })
 })
 
@@ -174,7 +177,7 @@ describe('SociosService.darDeBaja', () => {
         data: expect.objectContaining({
           estado: 'baja',
           baja_por_id: 'admin1',
-          historial_estado: { create: { tipo: 'baja', por_id: 'admin1' } },
+          historial_estado: { create: [{ tipo: 'baja', por_id: 'admin1' }] },
         }),
       }),
     )
@@ -298,5 +301,63 @@ describe('SociosService — socios pendientes', () => {
   it('updateRoles → throws', async () => {
     await expect(service.updateRoles('u1', [Rol.vocal], 'admin')).rejects.toThrow('pendiente')
     expect(prisma.usuario.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('salirDeCuotaConjunta', () => {
+  const pago = { anio: 2026, mes: 9, estado: 'pagado', revisado_por_id: 'dir' }
+  const conGrupo = (titular_id: string, miembros: string[]) => ({
+    nombre: 'Ana',
+    apellidos: 'López',
+    solicitud_grupal: { id: 'g1', titular_id, miembros: miembros.map((id) => ({ id })) },
+  })
+  const mock = (m: unknown) => m as ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    mock(prisma.pagoCuota.findMany).mockResolvedValue([pago])
+  })
+
+  it('sale un miembro de un grupo de 3 → copia los pagos del titular y el grupo sigue', async () => {
+    mock(prisma.usuario.findUnique).mockResolvedValue(conGrupo('t', ['t', 'm1', 'm2']))
+
+    await salirDeCuotaConjunta(prisma as never, 'm1', 'dir', 'Sale')
+
+    expect(prisma.pagoCuota.findMany).toHaveBeenCalledWith({ where: { socio_id: 't' } })
+    expect(prisma.pagoCuota.createMany).toHaveBeenCalledWith({ data: [{ ...pago, socio_id: 'm1' }] })
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'm1' }, data: { solicitud_grupal_id: null, tipo_cuota: 'individual' },
+    }))
+    expect(prisma.solicitudGrupal.update).not.toHaveBeenCalled()
+    expect(prisma.solicitudGrupal.delete).not.toHaveBeenCalled()
+  })
+
+  it('sale el titular de un grupo de 3 → la titularidad y la copia pasan al siguiente', async () => {
+    mock(prisma.usuario.findUnique).mockResolvedValue(conGrupo('t', ['t', 'm1', 'm2']))
+
+    await salirDeCuotaConjunta(prisma as never, 't', 'dir', 'Sale')
+
+    expect(prisma.pagoCuota.createMany).toHaveBeenCalledWith({ data: [{ ...pago, socio_id: 'm1' }] })
+    expect(prisma.solicitudGrupal.update).toHaveBeenCalledWith({ where: { id: 'g1' }, data: { titular_id: 'm1' } })
+    expect(prisma.solicitudGrupal.delete).not.toHaveBeenCalled()
+  })
+
+  it('grupo de 2 → se disuelve y los dos pasan a individual', async () => {
+    mock(prisma.usuario.findUnique).mockResolvedValue(conGrupo('t', ['t', 'm1']))
+
+    await salirDeCuotaConjunta(prisma as never, 'm1', 'dir', 'Sale')
+
+    for (const id of ['m1', 't']) {
+      expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id }, data: { solicitud_grupal_id: null, tipo_cuota: 'individual' },
+      }))
+    }
+    expect(prisma.solicitudGrupal.delete).toHaveBeenCalledWith({ where: { id: 'g1' } })
+    expect(prisma.historialEstadoSocio.create).toHaveBeenCalledTimes(2)
+  })
+
+  it('socio sin grupo → throws', async () => {
+    mock(prisma.usuario.findUnique).mockResolvedValue({ nombre: 'Ana', apellidos: 'López', solicitud_grupal: null })
+
+    await expect(salirDeCuotaConjunta(prisma as never, 'u1', 'dir', 'Sale')).rejects.toThrow('no pertenece a una cuota conjunta')
   })
 })

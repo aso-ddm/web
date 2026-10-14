@@ -14,8 +14,23 @@ import { ROL_LABELS, toggleRol as toggleRolLista, ROLES_ASIGNABLES } from '@/lib
 import type { Rol } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
+import { CuotaConjunta } from './CuotaConjunta'
 
-export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: () => void }) {
+const CAMBIO_LABEL = {
+  alta: 'Alta',
+  baja: 'Baja',
+  cuota_conjunta: 'Conjunta',
+  cuota_individual: 'Individual',
+  llaves_entregadas: 'Entrega llaves',
+  llaves_devueltas: 'Devuelve llaves',
+}
+
+export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
+  socio: SocioAdmin
+  onClose: () => void
+  onAbrirSocio: (id: string) => void
+}) {
+  const grupo = socio.solicitud_grupal
   const queryClient = useQueryClient()
   const puedeEditar = useAuthStore((s) => s.isDirectiva()) // vocales: solo lectura
   const pendiente = socio.estado === 'pendiente' // se aprueba o rechaza en Solicitudes
@@ -87,7 +102,9 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
           </div>
           <div>
             <p className="text-xs text-muted-foreground font-display">Cuota</p>
-            <p className="font-medium capitalize">{socio.tipo_cuota}</p>
+            <p className="font-medium">
+              {grupo ? (grupo.titular_id === socio.id ? 'Conjunta (titular)' : 'Conjunta') : 'Individual'}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground font-display">DNI</p>
@@ -117,23 +134,36 @@ export function SocioDetalle({ socio, onClose }: { socio: SocioAdmin; onClose: (
           )}
         </div>
 
+        {(grupo || (puedeGestionar && socio.estado === 'activo')) && (
+          <>
+            <Separator />
+            <CuotaConjunta socio={socio} puedeGestionar={puedeGestionar} onAbrirSocio={onAbrirSocio} />
+          </>
+        )}
+
         {!!socio.historial_estado?.length && (
           <>
             <Separator />
             <div className="space-y-2">
-              <p className="font-display font-bold text-sm">Historial de altas y bajas</p>
+              <p className="font-display font-bold text-sm">Historial de cambios</p>
               <ul className="space-y-1.5 text-sm">
                 {socio.historial_estado.map((h) => (
-                  <li key={h.id} className="flex items-center gap-2">
-                    <Badge variant={h.tipo === 'alta' ? 'default' : 'destructive'} className="w-12 justify-center capitalize">
-                      {h.tipo}
+                  <li key={h.id} className="flex items-start gap-2">
+                    <Badge
+                      variant={h.tipo === 'alta' ? 'default' : h.tipo === 'baja' ? 'destructive' : 'outline'}
+                      className="w-28 justify-center shrink-0"
+                    >
+                      {CAMBIO_LABEL[h.tipo]}
                     </Badge>
-                    <span className="font-medium">{formatDate(h.created_at)}</span>
-                    {h.por && (
-                      <span className="text-xs text-muted-foreground">
-                        por {h.por.nombre} {h.por.apellidos}
-                      </span>
-                    )}
+                    <div className="min-w-0">
+                      <span className="font-medium">{formatDate(h.created_at)}</span>
+                      {h.por && (
+                        <span className="text-xs text-muted-foreground">
+                          {' '}por {h.por.nombre} {h.por.apellidos}
+                        </span>
+                      )}
+                      {h.detalle && <p className="text-xs text-muted-foreground">{h.detalle}</p>}
+                    </div>
                   </li>
                 ))}
               </ul>

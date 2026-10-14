@@ -9,6 +9,8 @@ const makeModel = () => ({
   create: vi.fn(),
   update: vi.fn(),
   updateMany: vi.fn(),
+  deleteMany: vi.fn(),
+  createMany: vi.fn(),
   delete: vi.fn(),
   count: vi.fn(),
   upsert: vi.fn(),
@@ -26,6 +28,7 @@ export function createPrismaMock() {
     logJuego: makeModel(),
     solicitudJuego: makeModel(),
     pagoCuota: makeModel(),
+    historialEstadoSocio: makeModel(),
   }
 
   mock.$transaction = vi.fn().mockImplementation((ops: unknown) => {

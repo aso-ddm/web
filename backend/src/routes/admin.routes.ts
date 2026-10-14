@@ -3,7 +3,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
-import { comprobarCambioAdmin, normalizarRoles } from '../services/socios.service'
+import { comprobarCambioAdmin, normalizarRoles, salirDeCuotaConjunta } from '../services/socios.service'
 import { Rol, EstadoSocio, TipoCuota, TipoCambioEstado } from '@prisma/client'
 import { dniSchema, emailSchema, passwordSchema } from '../schemas/auth.schema'
 import { buscarIdsUsuarios } from '../lib/search'
@@ -166,8 +166,9 @@ router.put('/usuarios/:id', async (req, res) => {
   const { password: newPassword, ...rest } = parsed.data
   if (rest.telegram_chat_id === null) Object.assign(rest, { telegram_linked_at: null })
   const pedido = { ...rest } // lo que el admin fija a mano prevalece sobre los valores automáticos
+  let saleDeGrupo = false // una baja también saca de la cuota conjunta, como al dar de baja desde Socios
   if (rest.roles || rest.estado || rest.tiene_llaves) {
-    const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true, estado: true, fecha_alta: true } })
+    const actual = await prisma.usuario.findUnique({ where: { id: req.params.id }, select: { roles: true, estado: true, fecha_alta: true, solicitud_grupal_id: true } })
     if (!actual) {
       res.status(404).json({ error: 'Usuario no encontrado' })
       return
@@ -177,6 +178,7 @@ router.put('/usuarios/:id', async (req, res) => {
       return
     }
     // Mismo ciclo de vida que aprobar / dar de baja / reactivar
+    saleDeGrupo = rest.estado === EstadoSocio.baja && actual.estado !== EstadoSocio.baja && !!actual.solicitud_grupal_id
     if (rest.estado && rest.estado !== actual.estado) {
       if (rest.estado === EstadoSocio.activo) {
         Object.assign(rest, { fecha_baja: null, baja_por_id: null, ...(actual.fecha_alta ? {} : { fecha_alta: new Date(), aprobado_por_id: req.user.id }), ...pedido })
@@ -211,10 +213,21 @@ router.put('/usuarios/:id', async (req, res) => {
     updateData.password_hash = await bcrypt.hash(newPassword as string, 12)
   }
   try {
-    const usuario = await prisma.usuario.update({
-      where: { id: req.params.id },
-      data: updateData,
-      select: USUARIO_SELECT,
+    const usuario = await prisma.$transaction(async (tx) => {
+      if (saleDeGrupo) await salirDeCuotaConjunta(tx, req.params.id, req.user.id, 'Sale de la cuota conjunta por la baja')
+      const antes = await tx.usuario.findUnique({ where: { id: req.params.id }, select: { tiene_llaves: true } })
+      const usuario = await tx.usuario.update({ where: { id: req.params.id }, data: updateData, select: USUARIO_SELECT })
+      // Entrega o devolución de llaves (también la devolución implícita de una baja) al historial
+      if (antes && antes.tiene_llaves !== usuario.tiene_llaves) {
+        await tx.historialEstadoSocio.create({
+          data: {
+            socio_id: req.params.id,
+            tipo: usuario.tiene_llaves ? TipoCambioEstado.llaves_entregadas : TipoCambioEstado.llaves_devueltas,
+            por_id: req.user.id,
+          },
+        })
+      }
+      return usuario
     })
     res.json({ data: { ...usuario, telegram_chat_id: usuario.telegram_chat_id?.toString() ?? null } })
   } catch (err) {

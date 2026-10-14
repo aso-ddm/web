@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Search, Users, ChevronRight } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -112,6 +113,9 @@ export function GestionSociosPage() {
                           <Badge variant={ESTADO_SOCIO_VARIANT[socio.estado]} className="text-xs font-display capitalize">
                             {socio.estado}
                           </Badge>
+                          {socio.solicitud_grupal && (
+                            <Badge variant="outline" className="text-xs font-display">Cuota conjunta</Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{socio.email}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -170,8 +174,14 @@ export function GestionSociosPage() {
               </SheetHeader>
               <div className="px-4 pb-6">
                 <SocioDetalle
+                  key={socioSeleccionado.id}
                   socio={socioSeleccionado}
                   onClose={() => setSocioSeleccionado(null)}
+                  onAbrirSocio={(id) =>
+                    sociosApi.getById(id)
+                      .then((r) => setSocioSeleccionado(r.data))
+                      .catch((err: Error) => toast.error(err.message))
+                  }
                 />
               </div>
             </>

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { TipoCuota, Rol, EstadoSocio } from '@prisma/client'
+import { TipoCuota, Rol, EstadoSocio, TipoRelacion } from '@prisma/client'
 
 export const updateSocioSchema = z.object({
   nombre: z.string().min(1).optional(),
@@ -25,6 +25,12 @@ export type AprobarSocioInput = z.infer<typeof aprobarSocioSchema>
 
 export const llavesSchema = z.object({
   tiene_llaves: z.boolean(),
+})
+
+// Une al socio a la cuota conjunta de socio_id (o crea una con él como titular)
+export const unirCuotaConjuntaSchema = z.object({
+  socio_id: z.string().uuid(),
+  tipo_relacion: z.nativeEnum(TipoRelacion),
 })
 
 export const filtrosSociosSchema = z.object({

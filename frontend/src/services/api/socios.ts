@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Usuario, Rol, EstadoSocio, SolicitudGrupal } from '@/types/api'
+import type { Usuario, Rol, EstadoSocio, SolicitudGrupal, TipoRelacion } from '@/types/api'
 
 export interface UpdateSocioPayload {
   nombre?: string
@@ -24,10 +24,16 @@ export type SocioAdmin = Usuario & {
   baja_por?: { id: string; nombre: string; apellidos: string } | null
   historial_estado?: {
     id: string
-    tipo: 'alta' | 'baja'
+    tipo: 'alta' | 'baja' | 'cuota_conjunta' | 'cuota_individual' | 'llaves_entregadas' | 'llaves_devueltas'
+    detalle: string | null
     created_at: string
     por: { id: string; nombre: string; apellidos: string } | null
   }[]
+  // null = cuota individual
+  solicitud_grupal?: {
+    titular_id: string
+    miembros: { id: string; nombre: string; apellidos: string; estado: EstadoSocio }[]
+  } | null
 }
 
 // Socio del listado (paginado)
@@ -53,6 +59,8 @@ export const sociosApi = {
       `/socios?${q.toString()}`,
     )
   },
+
+  getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 
   getOpciones: () => api.get<{ data: { id: string; nombre: string; apellidos: string; apodo: string | null }[] }>('/socios/opciones'),
 
@@ -83,6 +91,11 @@ export const sociosApi = {
 
   updateRoles: (id: string, roles: Rol[]) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/roles`, { roles }),
+
+  // Une a la cuota conjunta de otro socio (si es individual, se crea con él de titular)
+  unirCuotaConjunta: (id: string, socio_id: string, tipo_relacion: TipoRelacion) =>
+    api.post<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`, { socio_id, tipo_relacion }),
+  salirCuotaConjunta: (id: string) => api.delete<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`),
 
   setLlaves: (id: string, tiene_llaves: boolean) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/llaves`, { tiene_llaves }),

@@ -246,12 +246,17 @@ model SolicitudGrupal {
 enum TipoCambioEstado {
   alta
   baja
+  cuota_conjunta   // entra en una cuota conjunta (o pasa a ser su titular)
+  cuota_individual // sale de una cuota conjunta
+  llaves_entregadas
+  llaves_devueltas
 }
 
 model HistorialEstadoSocio {
   id         String           @id @default(uuid())
   socio_id   String
   tipo       TipoCambioEstado
+  detalle    String?
   por_id     String?
   created_at DateTime         @default(now())
 

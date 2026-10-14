@@ -8,6 +8,7 @@ import {
   filtrosSociosSchema,
   aprobarSocioSchema,
   llavesSchema,
+  unirCuotaConjuntaSchema,
 } from '../schemas/socio.schema'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -200,6 +201,33 @@ router.post('/:id/reactivar', requireRoles(...ROLES.DIRECTIVA), async (req, res)
   }
 })
 
+// POST /api/socios/:id/cuota-conjunta — une al socio a la cuota conjunta de otro
+router.post('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const parsed = unirCuotaConjuntaSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  try {
+    const socio = await sociosService.unirCuotaConjunta(req.params.id, parsed.data.socio_id, parsed.data.tipo_relacion, req.user.id)
+    res.json({ data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
+
+// DELETE /api/socios/:id/cuota-conjunta — saca al socio de su cuota conjunta (pasa a individual)
+router.delete('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  try {
+    const socio = await sociosService.salirCuotaConjunta(req.params.id, req.user.id)
+    res.json({ data: socio })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error'
+    res.status(400).json({ error: message })
+  }
+})
+
 // PUT /api/socios/:id/llaves — directiva registra si el socio tiene llaves
 router.put('/:id/llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
@@ -209,7 +237,7 @@ router.put('/:id/llaves', requireRoles(...ROLES.DIRECTIVA), async (req, res) => 
     return
   }
   try {
-    const socio = await sociosService.setLlaves(id, parsed.data.tiene_llaves)
+    const socio = await sociosService.setLlaves(id, parsed.data.tiene_llaves, req.user.id)
     res.json({ data: socio })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'

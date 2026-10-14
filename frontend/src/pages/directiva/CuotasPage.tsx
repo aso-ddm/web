@@ -32,16 +32,17 @@ export function CuotasPage() {
   const socios = data?.data ?? []
 
   const { mutate: marcar } = useMutation({
-    mutationFn: (v: { socioId: string; mes: number; estado: EstadoPago | null }) =>
-      cuotasApi.marcar(v.socioId, anio, v.mes, v.estado),
+    // cuotaId: el titular en cuota conjunta, así el cambio se refleja en todos los miembros
+    mutationFn: (v: { cuotaId: string; mes: number; estado: EstadoPago | null }) =>
+      cuotasApi.marcar(v.cuotaId, anio, v.mes, v.estado),
     // En serie: con clics rápidos los PUT podrían llegar desordenados y dejar otro estado en el servidor
     scope: { id: 'cuotas' },
-    onMutate: async ({ socioId, mes, estado }) => {
+    onMutate: async ({ cuotaId, mes, estado }) => {
       await qc.cancelQueries({ queryKey: QK.CUOTAS })
-      setFijados((s) => new Set(s).add(socioId))
+      setFijados((s) => new Set(s).add(cuotaId))
       qc.setQueryData<{ data: SocioCuotas[] }>(QK.CUOTAS, (old) => old && {
         data: old.data.map((s) => {
-          if (s.id !== socioId) return s
+          if (s.cuota_id !== cuotaId) return s
           const resto = s.pagos_cuota.filter((p) => !(p.anio === anio && p.mes === mes))
           return { ...s, pagos_cuota: estado ? [...resto, { anio, mes, estado }] : resto }
         }),
@@ -54,7 +55,7 @@ export function CuotasPage() {
   })
 
   const morosos = socios.filter((s) => esMoroso(s.fecha_alta, s.pagos_cuota, hoy))
-  const visibles = tab === 'todos' ? socios : socios.filter((s) => fijados.has(s.id) || morosos.includes(s))
+  const visibles = tab === 'todos' ? socios : socios.filter((s) => fijados.has(s.cuota_id) || morosos.includes(s))
 
   const primerAnio = Math.min(hoy.getFullYear(), ...socios.map((s) => new Date(s.fecha_alta).getFullYear()))
   const anios = Array.from({ length: hoy.getFullYear() - primerAnio + 1 }, (_, i) => hoy.getFullYear() - i)
@@ -119,13 +120,12 @@ export function CuotasPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {visibles.map((s) => {
-                      const miembros = s.grupo_como_titular?._count.miembros ?? 0
                       return (
                         <tr key={s.id} className="hover:bg-accent/30 transition-colors">
                           <td className="sticky left-0 bg-card px-4 py-2 whitespace-nowrap">
                             <p className="font-display font-bold">
                               {s.nombre} {s.apellidos}
-                              {miembros > 1 && <span className="text-xs text-muted-foreground font-normal"> (+{miembros - 1})</span>}
+                              {s.conjunta && <span className="text-xs text-muted-foreground font-normal"> (conjunta)</span>}
                             </p>
                           </td>
                           {MESES.map((nombreMes, i) => {
@@ -139,7 +139,7 @@ export function CuotasPage() {
                               <td key={mes} className="px-1 py-1 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => marcar({ socioId: s.id, mes, estado: SIGUIENTE(estado) })}
+                                  onClick={() => marcar({ cuotaId: s.cuota_id, mes, estado: SIGUIENTE(estado) })}
                                   title={`${nombreMes} ${anio}: ${etiqueta}`}
                                   aria-label={`${s.nombre} ${s.apellidos}, ${nombreMes} ${anio}: ${etiqueta}`}
                                   className={cn(
