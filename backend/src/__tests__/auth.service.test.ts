@@ -214,16 +214,23 @@ describe('AuthService.requestPasswordReset', () => {
     ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(socio)
   })
 
-  it('Telegram rechaza el envío (bot bloqueado) → error y el código se anula', async () => {
+  it('Telegram rechaza el envío (bot bloqueado) → misma respuesta y el código se anula', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: false, description: 'Forbidden: bot was blocked by the user' }, { status: 403 }))
 
-    await expect(service.requestPasswordReset('ana@x.com')).rejects.toThrow('No hemos podido enviarte el código')
+    await expect(service.requestPasswordReset('ana@x.com')).resolves.toBeUndefined()
     expect(prisma.usuario.update).toHaveBeenLastCalledWith({ where: { id: 'u1' }, data: { reset_token: null, reset_token_expiry: null } })
   })
 
-  it('Telegram acepta → hasTelegram', async () => {
+  it('Telegram acepta → guarda el código', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }))
-    await expect(service.requestPasswordReset('ana@x.com')).resolves.toEqual({ hasTelegram: true })
+    await expect(service.requestPasswordReset('ana@x.com')).resolves.toBeUndefined()
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ reset_token: expect.any(String) }) }))
+  })
+
+  it('email que no es de ningún socio → misma respuesta, sin tocar nada', async () => {
+    ;(prisma.usuario.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    await expect(service.requestPasswordReset('nadie@x.com')).resolves.toBeUndefined()
+    expect(prisma.usuario.update).not.toHaveBeenCalled()
   })
 })
 

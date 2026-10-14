@@ -350,11 +350,11 @@ export class AuthService {
   }
 
 
-  async requestPasswordReset(email: string) {
+  // Siempre responde igual (sin error ni "tiene Telegram"): así no se puede averiguar qué emails son de socios.
+  // Si el envío falla (bot bloqueado, Telegram caído) queda en el log del bot y el código se anula.
+  async requestPasswordReset(email: string): Promise<void> {
     const usuario = await this.prisma.usuario.findFirst({ where: porEmail(email) })
-    if (!usuario || !usuario.telegram_chat_id || usuario.estado !== 'activo') {
-      return { hasTelegram: false }
-    }
+    if (!usuario || !usuario.telegram_chat_id || usuario.estado !== 'activo') return
 
     if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN no configurado')
 
@@ -375,13 +375,9 @@ export class AuthService {
       parse_mode: 'HTML',
     }, 'reset_password', { sensible: true })
 
-    // Bot bloqueado por el socio o Telegram caído: no decir "código enviado" si no ha llegado
     if (!enviado) {
       await this.prisma.usuario.update({ where: { id: usuario.id }, data: { reset_token: null, reset_token_expiry: null } })
-      throw new HttpError(502, 'No hemos podido enviarte el código por Telegram. Comprueba que no has bloqueado el bot o contacta con la directiva.')
     }
-
-    return { hasTelegram: true }
   }
 
   async confirmPasswordReset(email: string, token: string, newPassword: string) {

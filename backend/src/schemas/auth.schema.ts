@@ -120,5 +120,13 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'La contraseña es obligatoria'),
 })
 
+export const resetRequestSchema = z.object({ email: emailSchema })
+
+export const resetConfirmSchema = z.object({
+  email: emailSchema,
+  token: z.string().trim().regex(/^\d{6}$/, 'El código son 6 dígitos'),
+  password: passwordSchema,
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>

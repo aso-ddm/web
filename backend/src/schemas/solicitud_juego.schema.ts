@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { EstadoSolicitudJuego } from '@prisma/client'
 
 export const crearSolicitudJuegoSchema = z.object({
   nombre: z.string().min(1).max(200),
@@ -10,7 +11,7 @@ export const rechazarSolicitudJuegoSchema = z.object({
 })
 
 export const filtrosSolicitudesJuegoSchema = z.object({
-  estado: z.enum(['pendiente', 'aprobada', 'rechazada']).optional(),
+  estado: z.nativeEnum(EstadoSolicitudJuego).optional(),
   page:   z.coerce.number().int().positive().default(1),
   limit:  z.coerce.number().int().positive().max(100).default(20),
 })

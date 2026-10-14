@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { AuthService } from '../services/auth.service'
-import { registerSchema, loginSchema, passwordSchema, solicitudSchema } from '../schemas/auth.schema'
+import { registerSchema, loginSchema, solicitudSchema, resetRequestSchema, resetConfirmSchema } from '../schemas/auth.schema'
 import { telegramAuthSchema } from '../schemas/telegram.schema'
 import { authenticate, authenticatePendiente, signToken } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -160,32 +160,15 @@ router.delete('/link-telegram', authenticate, async (req, res) => {
 
 // POST /api/auth/reset-password/request — público
 router.post('/reset-password/request', resetRequestLimit, async (req, res) => {
-  const { email } = req.body
-  if (!email || typeof email !== 'string') {
-    res.status(400).json({ error: 'Email requerido' })
-    return
-  }
-  const result = await authService.requestPasswordReset(email.toLowerCase().trim())
-  res.json({ data: result })
+  const { email } = resetRequestSchema.parse(req.body)
+  await authService.requestPasswordReset(email)
+  res.json({ data: { ok: true } })
 })
 
 // POST /api/auth/reset-password/confirm — público
 router.post('/reset-password/confirm', resetConfirmLimit, async (req, res) => {
-  const { email, token, password } = req.body
-  if (!email || !token || !password) {
-    res.status(400).json({ error: 'Email, código y contraseña son obligatorios' })
-    return
-  }
-  const passwordCheck = passwordSchema.safeParse(password)
-  if (!passwordCheck.success) {
-    res.status(400).json({ error: passwordCheck.error.issues[0].message })
-    return
-  }
-  await authService.confirmPasswordReset(
-    email.toLowerCase().trim(),
-    String(token).trim(),
-    password,
-  )
+  const { email, token, password } = resetConfirmSchema.parse(req.body)
+  await authService.confirmPasswordReset(email, token, password)
   res.json({ data: { ok: true } })
 })
 

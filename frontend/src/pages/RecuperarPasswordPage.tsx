@@ -20,16 +20,10 @@ export function RecuperarPasswordPage() {
 
   const { mutate: requestReset, isPending: requestando } = useMutation({
     mutationFn: () => authApi.requestPasswordReset(email.trim().toLowerCase()),
-    onSuccess: (data) => {
-      if (data?.data?.hasTelegram) {
-        toast.success('Código enviado por Telegram')
-        setStep('code')
-      } else {
-        toast.error(
-          'No tenemos un Telegram vinculado para ese email. Contacta con la directiva.',
-          { duration: 6000 },
-        )
-      }
+    // El backend responde igual exista o no la cuenta: no se puede usar para saber quién es socio
+    onSuccess: () => {
+      toast.success('Si ese email es de un socio con Telegram vinculado, te hemos enviado un código. Si no te llega, contacta con la directiva.', { duration: 8000 })
+      setStep('code')
     },
     onError: (err: Error) => toast.error(err.message),
   })
