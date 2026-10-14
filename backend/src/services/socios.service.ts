@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, TipoCuota } from '@prisma/client'
+import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
@@ -8,6 +8,8 @@ import fs from 'fs'
 import path from 'path'
 import { HttpError } from '../lib/httpError'
 import { paginado } from '../lib/paginacion'
+import { comprobarCambioAdmin, normalizarRoles } from '../lib/roles'
+import { salirDeCuotaConjunta, unirACuotaConjunta } from './cuotaConjunta'
 
 function borrarComprobantes(nombres: (string | null)[]) {
   for (const nombre of new Set(nombres)) {
@@ -60,97 +62,21 @@ const SOCIO_DETAIL_SELECT = {
   },
 } as const
 
-// El rol administrador no se asigna ni se retira desde la app (solo BD/seed).
-export function comprobarCambioAdmin(actuales: Rol[], nuevos: Rol[]) {
-  if (actuales.includes(Rol.administrador) !== nuevos.includes(Rol.administrador)) {
-    throw new HttpError(403, 'El rol de administrador no se puede asignar ni retirar desde la aplicación')
-  }
-}
 
 const PENDIENTE_EN_SOLICITUDES = 'Este socio está pendiente: apruébalo o recházalo desde Solicitudes'
 
-// Un único rol base por persona; ludotecario es el único que se acumula sobre cualquiera.
-// Socio o vocal + ludotecario → gana los permisos de ludoteca. Presidente, secretario o
-// tesorero + ludotecario → solo queda marcado (la directiva ya tiene esos permisos).
-// Sin rol base → socio_basico. Orden: rol base primero, ludotecario al final.
-const ROLES_BASE: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal, Rol.socio_basico]
-export function normalizarRoles(roles: Rol[]): Rol[] {
-  const unicos = [...new Set(roles)]
-  const base = unicos.filter((r) => ROLES_BASE.includes(r))
-  if (base.length > 1) {
-    throw new HttpError(400, 'Solo se puede tener un rol, además de ludotecario')
-  }
-  const esAdmin = unicos.includes(Rol.administrador)
-  if (base.length === 0 && !esAdmin) base.push(Rol.socio_basico)
-  return [
-    ...(esAdmin ? [Rol.administrador] : []),
-    ...base,
-    ...(unicos.includes(Rol.ludotecario) ? [Rol.ludotecario] : []),
-  ]
-}
 
 function mesPagadoAlAlta(fecha: Date) {
   return { ...anioMesMadrid(fecha), estado: EstadoPago.pagado }
 }
 
-type Tx = Prisma.TransactionClient
 
 // La escritura lleva la condición (estado pendiente) en el where: si otra petición se adelantó, Prisma da P2025
 const yaNoPendiente = (mensaje: string) => (err: unknown): never => {
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') throw new HttpError(409, mensaje)
   throw err
 }
-const nombreCompleto = (u: { nombre: string; apellidos: string }) => `${u.nombre} ${u.apellidos}`
 
-// Copia los pagos de la cuota conjunta al socio; en los meses que coincidan prevalecen los copiados
-async function copiarPagos(tx: Tx, grupoId: string, aId: string) {
-  const pagos = await tx.pagoCuota.findMany({ where: { grupo_id: grupoId } })
-  if (!pagos.length) return
-  await tx.pagoCuota.deleteMany({ where: { socio_id: aId, OR: pagos.map(({ anio, mes }) => ({ anio, mes })) } })
-  await tx.pagoCuota.createMany({
-    data: pagos.map(({ anio, mes, estado, revisado_por_id }) => ({ socio_id: aId, anio, mes, estado, revisado_por_id })),
-  })
-}
-
-async function pasarAIndividual(tx: Tx, socioId: string) {
-  await tx.usuario.update({ where: { id: socioId }, data: { solicitud_grupal_id: null, tipo_cuota: TipoCuota.individual } })
-}
-
-/**
- * Saca a un socio de su cuota conjunta: se lleva una copia de los pagos del grupo.
- * Si queda un solo miembro, el grupo se disuelve y ese miembro también se lleva la copia.
- */
-export async function salirDeCuotaConjunta(tx: Tx, socioId: string, porId: string, motivo: string) {
-  // Bloquea el grupo: si dos miembros salen a la vez, el segundo ve ya al primero fuera (y no queda un grupo de uno)
-  await tx.$queryRaw`SELECT 1 FROM "SolicitudGrupal" WHERE id = (SELECT solicitud_grupal_id FROM "Usuario" WHERE id = ${socioId}) FOR UPDATE`
-  const socio = await tx.usuario.findUnique({
-    where: { id: socioId },
-    select: {
-      nombre: true,
-      apellidos: true,
-      solicitud_grupal: { include: { miembros: { select: { id: true } } } },
-    },
-  })
-  const grupo = socio?.solicitud_grupal
-  if (!socio || !grupo) throw new HttpError(409, 'El socio no pertenece a una cuota conjunta')
-  const restantes = grupo.miembros.filter((m) => m.id !== socioId)
-  const historial = (socio_id: string, tipo: TipoCambioEstado, detalle: string) =>
-    tx.historialEstadoSocio.create({ data: { socio_id, tipo, detalle, por_id: porId } })
-
-  await copiarPagos(tx, grupo.id, socioId)
-  await pasarAIndividual(tx, socioId)
-  await historial(socioId, TipoCambioEstado.cuota_individual, motivo)
-
-  // Una cuota conjunta de una persona no tiene sentido: el que queda (ya con el historial) pasa a individual
-  if (restantes.length <= 1) {
-    if (restantes.length) {
-      await copiarPagos(tx, grupo.id, restantes[0].id)
-      await pasarAIndividual(tx, restantes[0].id)
-      await historial(restantes[0].id, TipoCambioEstado.cuota_individual, `Cuota conjunta disuelta al salir ${nombreCompleto(socio)}`)
-    }
-    await tx.solicitudGrupal.delete({ where: { id: grupo.id } })
-  }
-}
 
 export class SociosService {
   constructor(private prisma: PrismaClient) {}
@@ -433,39 +359,7 @@ export class SociosService {
   async unirCuotaConjunta(id: string, otroId: string, porId: string) {
     if (id === otroId) throw new HttpError(400, 'Elige a otro socio')
     return this.prisma.$transaction(async (tx) => {
-      // Bloquea a los dos socios y el grupo del otro: dos uniones o una unión y una salida a la vez no se pisan
-      await tx.$queryRaw`SELECT 1 FROM "Usuario" WHERE id IN (${id}, ${otroId}) FOR UPDATE`
-      await tx.$queryRaw`SELECT 1 FROM "SolicitudGrupal" WHERE id = (SELECT solicitud_grupal_id FROM "Usuario" WHERE id = ${otroId}) FOR UPDATE`
-      const select = {
-        id: true,
-        nombre: true,
-        apellidos: true,
-        estado: true,
-        solicitud_grupal: { select: { id: true } },
-      } as const
-      const [socio, otro] = await Promise.all([
-        tx.usuario.findUnique({ where: { id }, select }),
-        tx.usuario.findUnique({ where: { id: otroId }, select }),
-      ])
-      if (!socio || !otro) throw new HttpError(404, 'Socio no encontrado')
-      if (socio.estado !== EstadoSocio.activo || otro.estado !== EstadoSocio.activo) {
-        throw new HttpError(409, 'Solo los socios activos pueden compartir cuota')
-      }
-      if (socio.solicitud_grupal) throw new HttpError(409, 'El socio ya pertenece a una cuota conjunta')
-      const historial = (socio_id: string, detalle: string) =>
-        tx.historialEstadoSocio.create({ data: { socio_id, tipo: TipoCambioEstado.cuota_conjunta, detalle, por_id: porId } })
-
-      let grupo = otro.solicitud_grupal
-      if (!grupo) {
-        grupo = await tx.solicitudGrupal.create({ data: { estado: EstadoSolicitud.aprobada }, select: { id: true } })
-        await tx.usuario.update({ where: { id: otro.id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
-        // Sus pagos pasan a ser los de la cuota conjunta: sigue al corriente de lo que ya tenía
-        await tx.pagoCuota.updateMany({ where: { socio_id: otro.id }, data: { socio_id: null, grupo_id: grupo.id } })
-        await historial(otro.id, `Crea una cuota conjunta con ${nombreCompleto(socio)}`)
-      }
-      // Desde ahora cuentan los pagos del grupo; los suyos de antes se conservan pero no se muestran
-      await tx.usuario.update({ where: { id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
-      await historial(id, `Se une a la cuota conjunta de ${nombreCompleto(otro)}`)
+      await unirACuotaConjunta(tx, id, otroId, porId)
       return tx.usuario.findUnique({ where: { id }, select: SOCIO_LIST_SELECT })
     })
   }

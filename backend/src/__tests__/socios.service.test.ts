@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Prisma, Rol } from '@prisma/client'
-import { SociosService, normalizarRoles, salirDeCuotaConjunta } from '../services/socios.service'
+import { SociosService } from '../services/socios.service'
+import { normalizarRoles } from '../lib/roles'
+import { salirDeCuotaConjunta } from '../services/cuotaConjunta'
 import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
 
