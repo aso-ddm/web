@@ -17,11 +17,11 @@ import { SEOHead } from '@/components/atoms/SEOHead'
 import { QueryError } from '@/components/molecules/QueryError'
 import { prestamosApi } from '@/services/api/prestamos'
 import { juegosApi } from '@/services/api/juegos'
-import { configuracionApi } from '@/services/api/configuracion'
-import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
+import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { Juego, Prestamo } from '@/types/api'
-import { formatDate, diasRestantes } from '@/lib/format'
+import { formatJugadores, formatDate, diasRestantes } from '@/lib/format'
+import { useConfig, useConfigNumero } from '@/hooks/useConfigValor'
 
 function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
   const dias = diasRestantes(fechaLimite)
@@ -55,10 +55,7 @@ function JuegoCard({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => 
           <p className="font-display font-bold text-sm truncate">{juego.nombre}</p>
           {(juego.num_jugadores_min || juego.num_jugadores_max) && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              {juego.num_jugadores_min}
-              {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
-                ? `–${juego.num_jugadores_max}`
-                : ''}{' '}jugadores
+              {formatJugadores(juego)}
             </p>
           )}
         </div>
@@ -80,15 +77,10 @@ function SolicitarDialog({ open, onClose }: { open: boolean; onClose: () => void
   const [notas, setNotas] = useState('')
   const queryClient = useQueryClient()
 
-  const { data: configData } = useQuery({
-    queryKey: ['config', 'dias_prestamo'],
-    queryFn: () => configuracionApi.getOne('dias_prestamo'),
-    enabled: open,
-  })
-  const diasPrestamo = configData?.data?.valor ?? '14'
+  const diasPrestamo = useConfig('dias_prestamo', open).data ?? '14'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['juegos-catalogo', debouncedSearch],
+    queryKey: QK.JUEGOS_CATALOGO(debouncedSearch),
     queryFn: () => juegosApi.getAll({ search: debouncedSearch || undefined, limit: 50 }),
     enabled: open,
   })
@@ -270,21 +262,13 @@ export function PrestamosPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['mis-prestamos', 1],
+    queryKey: QK.MIS_PRESTAMOS_PAGINA(1),
     queryFn: () => prestamosApi.misPrestamos(1),
   })
 
-  const { data: configData } = useQuery({
-    queryKey: ['config', 'max_renovaciones'],
-    queryFn: () => configuracionApi.getOne('max_renovaciones'),
-  })
-  const maxRenovaciones = parseInt(configData?.data?.valor ?? '2', 10)
+  const maxRenovaciones = useConfigNumero('max_renovaciones', 2)
 
-  const { data: configMaxPrestamos } = useQuery({
-    queryKey: ['config', 'max_prestamos_activos'],
-    queryFn: () => configuracionApi.getOne('max_prestamos_activos'),
-  })
-  const maxPrestamosActivos = parseInt(configMaxPrestamos?.data?.valor ?? '3', 10)
+  const maxPrestamosActivos = useConfigNumero('max_prestamos_activos', 3)
 
   const prestamos = data?.data ?? []
   const activos = prestamos.filter((p) => p.estado === 'activo')

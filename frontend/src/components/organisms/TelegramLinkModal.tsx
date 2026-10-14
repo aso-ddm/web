@@ -1,27 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { DragonIcon } from '@/components/atoms/icons'
 import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
 import { authApi, type TelegramUser } from '@/services/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
+import { QK } from '@/lib/queryKeys'
+import { useMe } from '@/hooks/useMe'
 
 export function TelegramLinkModal() {
-  const { usuario, logout } = useAuthStore()
+  const logout = useAuthStore((s) => s.logout)
   const queryClient = useQueryClient()
 
-  const { data: meData } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => authApi.me(),
-    enabled: !!usuario,
-    staleTime: 5 * 60 * 1000,
-  })
+  const { data: meData } = useMe()
 
   const { mutate: linkTelegram } = useMutation({
     mutationFn: (user: TelegramUser) => authApi.linkTelegram(user),
     onSuccess: () => {
       toast.success('Telegram vinculado correctamente')
-      queryClient.invalidateQueries({ queryKey: ['me'] })
+      queryClient.invalidateQueries({ queryKey: QK.ME })
     },
     onError: (err: Error) => toast.error(err.message),
   })

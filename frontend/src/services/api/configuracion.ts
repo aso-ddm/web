@@ -21,7 +21,5 @@ export interface EnlaceInteres {
 }
 
 export const enlacesInteresApi = {
-  getAll: () =>
-    configuracionApi.getOne('enlaces_interes').then((r) => JSON.parse(r.data.valor || '[]') as EnlaceInteres[]),
   save: (enlaces: EnlaceInteres[]) => configuracionApi.update('enlaces_interes', JSON.stringify(enlaces)),
 }

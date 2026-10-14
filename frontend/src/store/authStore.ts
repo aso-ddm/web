@@ -1,10 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Usuario, Rol } from '@/types/api'
+import { DIRECTIVA, DIRECTIVA_Y_VOCALES, DIRECTIVA_Y_LUDOTECARIO } from '@/lib/roles'
 
-const DIRECTIVA: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero']
-const DIRECTIVA_Y_VOCALES: Rol[] = [...DIRECTIVA, 'vocal']
-const DIRECTIVA_Y_LUDOTECARIO: Rol[] = [...DIRECTIVA, 'ludotecario']
 const STORAGE_KEY = 'dragon-auth'
 
 /** Lee exp del payload del JWT. No valida la firma (eso es cosa del backend): solo evita mostrar como

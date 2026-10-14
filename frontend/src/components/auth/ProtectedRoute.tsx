@@ -1,8 +1,9 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { useShallow } from 'zustand/react/shallow'
 
 export function ProtectedRoute() {
-  const { isAuthenticated, usuario } = useAuthStore()
+  const { isAuthenticated, usuario } = useAuthStore(useShallow((s) => ({ isAuthenticated: s.isAuthenticated, usuario: s.usuario })))
   const location = useLocation()
 
   if (!isAuthenticated) {

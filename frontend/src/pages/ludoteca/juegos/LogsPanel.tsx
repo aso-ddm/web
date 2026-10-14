@@ -9,6 +9,7 @@ import { logsJuegoApi } from '@/services/api/logs_juego'
 import type { Juego, LogJuego } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { tipoLogLabel } from './constants'
+import { QK } from '@/lib/queryKeys'
 
 // ── Logs panel ────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ export function LogsPanel({ juego }: { juego: Juego }) {
   const [nota, setNota] = useState('')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['juego-logs', juego.id],
+    queryKey: QK.LOGS_JUEGO(juego.id),
     queryFn: () => logsJuegoApi.getByJuego(juego.id),
   })
 
@@ -25,8 +26,8 @@ export function LogsPanel({ juego }: { juego: Juego }) {
     mutationFn: () => logsJuegoApi.crearManual(juego.id, nota),
     onSuccess: () => {
       toast.success('Nota añadida')
-      queryClient.invalidateQueries({ queryKey: ['juego-logs', juego.id] })
-      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
+      queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO(juego.id) })
+      queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
       setNota('')
     },
     onError: (err: Error) => toast.error(err.message),

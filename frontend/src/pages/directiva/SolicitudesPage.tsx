@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi, type SocioListado } from '@/services/api/socios'
-import { configuracionApi } from '@/services/api/configuracion'
 import { escucharEventos } from '@/services/api/eventos'
 import { useAuthStore } from '@/store/authStore'
 import { ROL_LABELS, ROLES_ASIGNABLES } from '@/lib/roles'
-import { invalidarSocios } from '@/lib/queryKeys'
+import { QK, invalidarSocios } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import type { SolicitudGrupal, Rol } from '@/types/api'
 import { formatDate } from '@/lib/format'
+import { useConfigNumero } from '@/hooks/useConfigValor'
 
 function abrirComprobante(socioId: string) {
   sociosApi.getComprobante(socioId).catch((err: Error) => toast.error(err.message))
@@ -222,7 +222,7 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
 export function SolicitudesPage() {
   const queryClient = useQueryClient()
   const { data: pendientesData, isLoading: loadingAltas } = useQuery({
-    queryKey: ['pendientes'],
+    queryKey: QK.PENDIENTES,
     queryFn: () => sociosApi.getPendientes(),
     staleTime: 0,
   })
@@ -235,27 +235,15 @@ export function SolicitudesPage() {
         await escucharEventos((key) => queryClient.invalidateQueries({ queryKey: [key] }), ctrl.signal).catch(() => {})
         if (ctrl.signal.aborted) return
         await new Promise((r) => setTimeout(r, 5000))
-        queryClient.invalidateQueries({ queryKey: ['pendientes'] })
+        queryClient.invalidateQueries({ queryKey: QK.PENDIENTES })
       }
     })()
     return () => ctrl.abort()
   }, [queryClient])
 
-  const { data: configPrecioIndividual } = useQuery({
-    queryKey: ['config', 'precio_cuota_individual'],
-    queryFn: () => configuracionApi.getOne('precio_cuota_individual'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
-  const { data: configPrecioAdicional } = useQuery({
-    queryKey: ['config', 'precio_cuota_adicional'],
-    queryFn: () => configuracionApi.getOne('precio_cuota_adicional'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
+  const precioIndividual = useConfigNumero('precio_cuota_individual', 15)
+  const precioAdicional = useConfigNumero('precio_cuota_adicional', 5)
 
-  const precioIndividual = Number(configPrecioIndividual?.data?.valor ?? 15)
-  const precioAdicional = Number(configPrecioAdicional?.data?.valor ?? 5)
 
   const { individuales = [], grupos = [] } = pendientesData?.data ?? {}
   const totalPendiente = individuales.length + grupos.length

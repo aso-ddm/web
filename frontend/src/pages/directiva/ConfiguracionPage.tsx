@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { RichTextEditor } from '@/components/molecules/RichTextEditor'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { configuracionApi, enlacesInteresApi, type ConfigItem, type EnlaceInteres } from '@/services/api/configuracion'
+import { invalidarConfig, QK } from '@/lib/queryKeys'
 
 const configLabels: Record<string, { label: string; description: string; suffix?: string }> = {
   precio_cuota_individual: {
@@ -80,9 +81,7 @@ function ConfigField({ config }: { config: ConfigItem }) {
     mutationFn: () => configuracionApi.update(config.clave, valor),
     onSuccess: () => {
       toast.success(`"${meta?.label ?? config.clave}" actualizado`)
-      queryClient.invalidateQueries({ queryKey: ['configuracion'] })
-      queryClient.invalidateQueries({ queryKey: ['config', config.clave] })
-      queryClient.invalidateQueries({ queryKey: ['config-club-links'] })
+      invalidarConfig(queryClient, config.clave)
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -159,9 +158,7 @@ function RichTextConfigField({
     mutationFn: () => configuracionApi.update(clave, valor),
     onSuccess: () => {
       toast.success(`"${label}" actualizado`)
-      queryClient.invalidateQueries({ queryKey: ['configuracion'] })
-      queryClient.invalidateQueries({ queryKey: ['config', clave] })
-      queryClient.invalidateQueries({ queryKey: ['config-club-links'] })
+      invalidarConfig(queryClient, clave)
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -199,7 +196,7 @@ function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
     mutationFn: () => enlacesInteresApi.save(enlaces),
     onSuccess: () => {
       toast.success('Enlaces de interés actualizados')
-      queryClient.invalidateQueries({ queryKey: ['config', 'enlaces_interes'] })
+      invalidarConfig(queryClient, 'enlaces_interes')
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -275,33 +272,17 @@ function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
 
 export function ConfiguracionPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ['configuracion'],
+    queryKey: QK.CONFIGURACION,
     queryFn: () => configuracionApi.getAll(),
   })
 
-  const { data: bienvenidaData, isLoading: isBienvenidaLoading } = useQuery({
-    queryKey: ['config', 'texto_bienvenida_alta'],
-    queryFn: () => configuracionApi.getOne('texto_bienvenida_alta'),
-    retry: false,
-  })
 
-  const { data: consentimientoData, isLoading: isConsentimientoLoading } = useQuery({
-    queryKey: ['config', 'texto_consentimiento_tiendas'],
-    queryFn: () => configuracionApi.getOne('texto_consentimiento_tiendas'),
-    retry: false,
-  })
 
-  const { data: bajaData, isLoading: isBajaLoading } = useQuery({
-    queryKey: ['config', 'texto_baja_socio'],
-    queryFn: () => configuracionApi.getOne('texto_baja_socio'),
-    retry: false,
-  })
 
-  const { data: enlacesData, isLoading: isEnlacesLoading } = useQuery({
-    queryKey: ['config', 'enlaces_interes'],
-    queryFn: () => enlacesInteresApi.getAll(),
-    retry: false,
-  })
+
+  // Textos largos y enlaces también vienen en el listado: no hacen falta peticiones por clave
+  const valorDe = (clave: string) => data?.data.find((c) => c.clave === clave)?.valor ?? ''
+  const enlacesData = JSON.parse(valorDe('enlaces_interes') || '[]') as EnlaceInteres[]
 
   const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
   const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
@@ -404,13 +385,13 @@ export function ConfiguracionPage() {
             ) : (
               comunicacionConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
             )}
-            {isBajaLoading ? (
+            {isLoading ? (
               <Skeleton className="h-48 w-full" />
             ) : (
               <RichTextConfigField
-                key={bajaData?.data?.valor ?? 'empty-baja'}
+                key={valorDe('texto_baja_socio') ?? 'empty-baja'}
                 clave="texto_baja_socio"
-                initialValor={bajaData?.data?.valor ?? ''}
+                initialValor={valorDe('texto_baja_socio') ?? ''}
                 label="Aviso de baja"
                 description="Se muestra en el popup de confirmación del botón «Darme de baja»"
               />
@@ -447,7 +428,7 @@ export function ConfiguracionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isEnlacesLoading ? (
+            {isLoading ? (
               <Skeleton className="h-20 w-full" />
             ) : (
               <EnlacesInteresEditor key={JSON.stringify(enlacesData)} initial={enlacesData ?? []} />
@@ -467,13 +448,13 @@ export function ConfiguracionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isBienvenidaLoading ? (
+            {isLoading ? (
               <Skeleton className="h-96 w-full" />
             ) : (
               <RichTextConfigField
-                key={bienvenidaData?.data?.valor ?? 'empty'}
+                key={valorDe('texto_bienvenida_alta') ?? 'empty'}
                 clave="texto_bienvenida_alta"
-                initialValor={bienvenidaData?.data?.valor ?? ''}
+                initialValor={valorDe('texto_bienvenida_alta') ?? ''}
                 label="Texto de bienvenida"
                 description="Mostrado al inicio del formulario de alta de nuevos socios"
               />
@@ -493,13 +474,13 @@ export function ConfiguracionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isConsentimientoLoading ? (
+            {isLoading ? (
               <Skeleton className="h-32 w-full" />
             ) : (
               <RichTextConfigField
-                key={consentimientoData?.data?.valor ?? 'empty-consentimiento'}
+                key={valorDe('texto_consentimiento_tiendas') ?? 'empty-consentimiento'}
                 clave="texto_consentimiento_tiendas"
-                initialValor={consentimientoData?.data?.valor ?? ''}
+                initialValor={valorDe('texto_consentimiento_tiendas') ?? ''}
                 label="Texto de consentimiento"
                 description="Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta"
               />

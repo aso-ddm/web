@@ -43,7 +43,7 @@ export function CuotasPage() {
   // Morosos tocados en la pestaña: siguen visibles aunque se pongan al día, para poder seguir marcando
   const [fijados, setFijados] = useState<Set<string>>(new Set())
 
-  const queryKey = [...QK.CUOTAS, anio]
+  const queryKey = QK.CUOTAS_ANIO(anio)
   const { data, isLoading } = useQuery({ queryKey, queryFn: () => cuotasApi.getAll(anio), placeholderData: keepPreviousData })
   const cuotas = agruparCuotas(data?.data ?? [])
 

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle, LogOut } from 'lucide-react'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { RichTextContent } from '@/components/molecules/RichTextContent'
-import { useConfigValor } from '@/hooks/useConfigValor'
+import { useConfigValor, useEnlacesInteres } from '@/hooks/useConfigValor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,11 +13,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { authApi } from '@/services/api/auth'
 import { prestamosApi } from '@/services/api/prestamos'
-import { configuracionApi, enlacesInteresApi } from '@/services/api/configuracion'
 import { useAuthStore } from '@/store/authStore'
 import type { EstadoSocio, EstadoPrestamo } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
+import { QK } from '@/lib/queryKeys'
+import { useMe } from '@/hooks/useMe'
 
 const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
@@ -54,35 +55,21 @@ const prestamoEstadoLabel: Record<EstadoPrestamo, string> = {
 }
 
 export function DashboardPage() {
-  const { usuario: authUsuario } = useAuthStore()
+  const authUsuario = useAuthStore((s) => s.usuario)
 
-  const { data: meData, isLoading: loadingMe } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => authApi.me(),
-  })
+  const { data: meData, isLoading: loadingMe } = useMe()
 
   const { data: prestamosData, isLoading: loadingPrestamos } = useQuery({
-    queryKey: ['mis-prestamos', 1],
+    queryKey: QK.MIS_PRESTAMOS_PAGINA(1),
     queryFn: () => prestamosApi.misPrestamos(1),
   })
 
-  const { data: clubLinks } = useQuery({
-    queryKey: ['config-club-links'],
-    queryFn: () => Promise.allSettled([
-      configuracionApi.getOne('url_estatutos'),
-      configuracionApi.getOne('url_reglamento_interno'),
-    ]).then(([estatutos, reglamento]) => ({
-      urlEstatutos: estatutos.status === 'fulfilled' ? estatutos.value?.data?.valor : '',
-      urlReglamento: reglamento.status === 'fulfilled' ? reglamento.value?.data?.valor : '',
-    })),
-    staleTime: 5 * 60 * 1000,
-  })
+  const clubLinks = {
+    urlEstatutos: useConfigValor('url_estatutos', ''),
+    urlReglamento: useConfigValor('url_reglamento_interno', ''),
+  }
 
-  const { data: enlacesInteres = [] } = useQuery({
-    queryKey: ['config', 'enlaces_interes'],
-    queryFn: () => enlacesInteresApi.getAll(),
-    staleTime: 5 * 60 * 1000,
-  })
+  const { data: enlacesInteres = [] } = useEnlacesInteres()
 
   const queryClient = useQueryClient()
   const { mutate: pedirLlaves, isPending: pidiendoLlaves } = useMutation({
@@ -90,7 +77,7 @@ export function DashboardPage() {
     onSuccess: () => {
       toast.success('Ya hemos avisado al secretario. Espera a que se ponga en contacto contigo por Telegram.')
       // Devolver la promesa mantiene el botón en "Enviando…" hasta que llega el /me actualizado
-      return queryClient.invalidateQueries({ queryKey: ['me'] })
+      return queryClient.invalidateQueries({ queryKey: QK.ME })
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'No se pudo enviar la solicitud'),
   })

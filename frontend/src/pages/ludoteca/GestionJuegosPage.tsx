@@ -1,26 +1,22 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  Plus, Pencil, Trash2, Loader2, Library, Search, MapPin, User, Users, StickyNote, Archive, ChevronDown, ChevronUp, Download, RefreshCw,
-} from 'lucide-react'
+import { Plus, Loader2, Library, Search, Archive, Download, RefreshCw } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { juegosApi } from '@/services/api/juegos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
-import { invalidarJuegos } from '@/lib/queryKeys'
+import { QK, invalidarJuegos } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Juego, EstadoJuego } from '@/types/api'
-import { estadoConfig } from './juegos/constants'
-import { LogsPanel } from './juegos/LogsPanel'
+import { JuegoRow } from './juegos/JuegoRow'
 import { JuegoFormDialog } from './juegos/JuegoFormDialog'
 import { SolicitudesTab } from './juegos/SolicitudesTab'
 import { HistorialLogsTab } from './juegos/HistorialLogsTab'
@@ -42,7 +38,7 @@ export function GestionJuegosPage() {
 
   const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['juegos', debouncedSearch, estadoFiltro],
+    queryKey: QK.JUEGOS_GESTION(debouncedSearch, estadoFiltro),
     queryFn: ({ pageParam }) =>
       juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, page: pageParam, limit: 50 }),
     initialPageParam: 1,
@@ -51,7 +47,7 @@ export function GestionJuegosPage() {
   const total = data?.pages[0]?.total ?? 0
 
   const { data: solicitudesData } = useQuery({
-    queryKey: ['solicitudes-juego-pendientes'],
+    queryKey: QK.SOLICITUDES_JUEGO_PENDIENTES,
     queryFn: () => solicitudesJuegoApi.getPendientes(),
   })
   const pendientesCount = solicitudesData?.total ?? 0 // total, no data.length: la página trae como mucho 50
@@ -100,6 +96,9 @@ export function GestionJuegosPage() {
   }
 
   const juegos = data?.pages.flatMap((p) => p.data) ?? []
+  // Estables para que JuegoRow (memo) no se repinte entero en cada render de la página
+  const toggleLogs = useCallback((id: string) => setExpandedLogs((actual) => (actual === id ? null : id)), [])
+  const editar = useCallback((juego: Juego) => { setEditando(juego); setDialogOpen(true) }, [])
 
   return (
     <>
@@ -182,109 +181,19 @@ export function GestionJuegosPage() {
                   </div>
                 ) : (
                   <div>
-                    {juegos.map((juego) => {
-                      const cfg = estadoConfig[juego.estado]
-                      const logsExpanded = expandedLogs === juego.id
-                      return (
-                        <div key={juego.id} className="border-b border-border last:border-0">
-                          <div className="flex items-center gap-4 px-4 py-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-display font-bold text-sm">{juego.nombre}</p>
-                              {/* Celdas fijas con "—" si falta el dato: así las columnas se alinean entre juegos */}
-                              <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1.5 min-w-0" title="Ubicación">
-                                  <MapPin className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{juego.localizacion || '—'}</span>
-                                </span>
-                                <span className="flex items-center gap-1.5 min-w-0" title="Propietario">
-                                  <User className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">
-                                    {juego.propietario ? `${juego.propietario.nombre} ${juego.propietario.apellidos}` : 'Club'}
-                                  </span>
-                                </span>
-                                <span className="flex items-center gap-1.5 min-w-0" title="Nº de jugadores">
-                                  <Users className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">
-                                    {juego.num_jugadores_min || juego.num_jugadores_max
-                                      ? `${juego.num_jugadores_min ?? '?'}${juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
-                                        ? `–${juego.num_jugadores_max}` : ''} jugadores`
-                                      : '—'}
-                                  </span>
-                                </span>
-                                <span className="flex items-center gap-1.5 min-w-0" title={juego.notas || 'Notas'}>
-                                  <StickyNote className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{juego.notas || '—'}</span>
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <Badge variant={cfg.variant} className="font-display text-xs">
-                                {cfg.label}
-                              </Badge>
-
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                title="Ver historial"
-                                onClick={() => setExpandedLogs(logsExpanded ? null : juego.id)}
-                              >
-                                {logsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              </Button>
-
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                title="Editar"
-                                onClick={() => { setEditando(juego); setDialogOpen(true) }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-
-                              {juego.estado === 'retirado' ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-emerald-700"
-                                  title="Reactivar juego"
-                                  onClick={() => setReactivando(juego)}
-                                >
-                                  <RefreshCw className="h-4 w-4" />
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-amber-700"
-                                  title="Retirar juego"
-                                  disabled={juego.estado === 'prestado'}
-                                  onClick={() => setRetirando(juego)}
-                                >
-                                  <Archive className="h-4 w-4" />
-                                </Button>
-                              )}
-
-                              {puedeEliminar && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                  title="Eliminar"
-                                  onClick={() => setEliminando(juego)}
-                                  disabled={juego.estado === 'prestado'}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {logsExpanded && <LogsPanel juego={juego} />}
-                        </div>
-                      )
-                    })}
+                    {juegos.map((juego) => (
+                      <JuegoRow
+                        key={juego.id}
+                        juego={juego}
+                        logsExpanded={expandedLogs === juego.id}
+                        puedeEliminar={puedeEliminar}
+                        onToggleLogs={toggleLogs}
+                        onEditar={editar}
+                        onRetirar={setRetirando}
+                        onReactivar={setReactivando}
+                        onEliminar={setEliminando}
+                      />
+                    ))}
                   </div>
                 )}
               </CardContent>

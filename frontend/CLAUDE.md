@@ -22,7 +22,7 @@ No hay ESLint configurado: `tsc` con `strict`, `noUnusedLocals` y `noUnusedParam
   (`ludoteca/juegos/`, `directiva/socios/`, `registro/`)
 - `services/api/` — un cliente por entidad sobre `client.ts`; las páginas nunca llaman a `api.*` directamente
 - `lib/` — `format.ts` (fechas), `estados.ts`, `roles.ts`, `queryKeys.ts`, `cuotas.ts`
-- `hooks/` — `useDebouncedValue`, `useConfigValor`, `useScrollNavigation`
+- `hooks/` — `useDebouncedValue`, `useConfigValor` (`useConfig`, `useConfigNumero`, `useEnlacesInteres`), `useMe`, `useScrollNavigation`
 - `data/texts.json` — textos de la web pública (Fase 1)
 
 ## Convenciones
@@ -34,9 +34,12 @@ No hay ESLint configurado: `tsc` con `strict`, `noUnusedLocals` y `noUnusedParam
 - `client.ts` añade `/api`: `api.get('/socios')`, no `api.get('/api/socios')`. Un 401 cierra sesión;
   los errores llegan como `ApiRequestError` con `status`.
 - Los fallos de carga ya se muestran con un toast global (`lib/queryClient.ts`); en mutaciones, `onError` → `toast.error`.
-- Tras mutar, invalidar con los helpers de `lib/queryKeys.ts` (`invalidarSocios`, `invalidarJuegos`, `invalidarPrestamos`).
+- Query keys siempre de `QK` (`lib/queryKeys.ts`), nunca arrays a mano. Tras mutar, invalidar con sus helpers
+  (`invalidarSocios`, `invalidarJuegos`, `invalidarPrestamos`, `invalidarConfig`).
+- Perfil propio: `useMe()`. Zustand con selector (`useAuthStore((s) => s.x)` o `useShallow`), nunca `useAuthStore()` entero.
+- Grupos de roles (`DIRECTIVA`, `DIRECTIVA_Y_VOCALES`, `DIRECTIVA_Y_LUDOTECARIO`) en `lib/roles.ts`; un único `AreaLayout` en `config/routes.tsx`.
 - Acciones destructivas o irreversibles: `ConfirmDialog`. No se cierra al confirmar: ciérralo en `onSuccess`
   (en `onError` déjalo abierto para reintentar).
 - Búsquedas: `useDebouncedValue` + `placeholderData: keepPreviousData` (o `useInfiniteQuery` con "Cargar más").
-- Configuración pública por clave: `useConfigValor(clave, fallback)`; `GET /config` (listado) es solo para directiva.
+- Configuración pública por clave: `useConfigValor(clave, fallback)` / `useConfigNumero` / `useConfig`; `GET /config` (listado) es solo para directiva.
 - Alias `@/*` → `./src/*`. Fuentes (Gemunu Libre, Quicksand, Frank Ruhl Libre) en `index.html`.

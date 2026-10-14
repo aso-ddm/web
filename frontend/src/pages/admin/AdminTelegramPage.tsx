@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { telegramAdminApi, type FiltrosLog, type TelegramLog } from '@/services/api/telegram'
+import { QK } from '@/lib/queryKeys'
 
 const CONTEXTO_LABELS: Record<string, string> = {
   anuncio: 'Anuncio',
@@ -30,7 +31,7 @@ const formatFechaHora = (d: string) =>
   new Date(d).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
 function EstadoBot() {
-  const { data, isLoading } = useQuery({ queryKey: ['telegram', 'estado'], queryFn: telegramAdminApi.getEstado })
+  const { data, isLoading } = useQuery({ queryKey: QK.TELEGRAM_ESTADO, queryFn: telegramAdminApi.getEstado })
   if (isLoading) return <Skeleton className="h-28 w-full" />
   if (!data) return null
   const { me, webhook } = data.data
@@ -62,7 +63,7 @@ function LogDetalle({ log, onClose }: { log: TelegramLog; onClose: () => void })
     mutationFn: () => telegramAdminApi.reintentar(log.id),
     onSuccess: () => { toast.success('Mensaje reenviado'); onClose() },
     onError: (err: Error) => toast.error(err.message),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['telegram', 'logs'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: QK.TELEGRAM_LOGS }),
   })
 
   return (
@@ -104,7 +105,7 @@ export function AdminTelegramPage() {
   const filtrar = (cambio: Partial<FiltrosLog>) => setFiltros((f) => ({ ...f, ...cambio, page: 1 }))
 
   const { data, isLoading } = useQuery({
-    queryKey: ['telegram', 'logs', filtros],
+    queryKey: QK.TELEGRAM_LOGS_FILTRO(filtros),
     queryFn: () => telegramAdminApi.getLogs(filtros),
     placeholderData: keepPreviousData,
   })

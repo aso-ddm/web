@@ -19,7 +19,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { adminApi } from '@/services/api/admin'
 import { ROL_LABELS, toggleRol as toggleRolLista, ROLES_ASIGNABLES } from '@/lib/roles'
-import { invalidarSocios } from '@/lib/queryKeys'
+import { QK, invalidarSocios } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
 import type { Rol, EstadoSocio } from '@/types/api'
 import type { SocioAdmin } from '@/services/api/socios'
@@ -289,7 +289,7 @@ export function AdminUsuariosPage() {
 
   const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-usuarios', debouncedSearch, estadoFiltro, page],
+    queryKey: QK.ADMIN_USUARIOS_LISTA(debouncedSearch, estadoFiltro, page),
     placeholderData: keepPreviousData,
     queryFn: () => adminApi.getUsuarios({
       search: debouncedSearch || undefined,

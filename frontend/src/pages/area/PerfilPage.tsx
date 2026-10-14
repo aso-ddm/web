@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,11 +11,13 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
-import { authApi } from '@/services/api/auth'
 import { sociosApi } from '@/services/api/socios'
 import { useAuthStore } from '@/store/authStore'
 import { getRolLabel } from '@/lib/roles'
 import { formatDate } from '@/lib/format'
+import { QK } from '@/lib/queryKeys'
+import { useMe } from '@/hooks/useMe'
+import { useShallow } from 'zustand/react/shallow'
 
 const perfilSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -27,13 +29,10 @@ const perfilSchema = z.object({
 type PerfilForm = z.infer<typeof perfilSchema>
 
 export function PerfilPage() {
-  const { usuario: authUsuario, updateUsuario } = useAuthStore()
+  const { usuario: authUsuario, updateUsuario } = useAuthStore(useShallow((s) => ({ usuario: s.usuario, updateUsuario: s.updateUsuario })))
   const queryClient = useQueryClient()
 
-  const { data: meData, isLoading } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => authApi.me(),
-  })
+  const { data: meData, isLoading } = useMe()
   const usuario = meData?.data
 
   const {
@@ -59,7 +58,7 @@ export function PerfilPage() {
     onSuccess: ({ data }, enviado) => {
       reset(enviado) // lo guardado pasa a ser el estado limpio del formulario
       updateUsuario(data)
-      queryClient.invalidateQueries({ queryKey: ['me'] })
+      queryClient.invalidateQueries({ queryKey: QK.ME })
       toast.success('Perfil actualizado correctamente')
     },
     onError: (err: Error) => toast.error(err.message),

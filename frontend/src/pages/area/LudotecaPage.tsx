@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, BookOpen, MapPin, Users, Loader2, Handshake } from 'lucide-react'
@@ -18,8 +18,9 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
 import { prestamosApi } from '@/services/api/prestamos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
-import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
+import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import type { Juego, SolicitudJuego, EstadoSolicitudJuego } from '@/types/api'
+import { formatJugadores } from '@/lib/format'
 
 const estadoJuegoLabel: Record<string, string> = {
   en_estanteria: 'Disponible',
@@ -39,7 +40,8 @@ const estadoSolicitudVariant: Record<EstadoSolicitudJuego, 'default' | 'secondar
   rechazada: 'destructive',
 }
 
-function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Juego) => void }) {
+// memo: onSolicitar es un setter estable; escribir en el buscador no repinta todas las tarjetas
+const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Juego) => void }) {
   const disponible = juego.estado === 'en_estanteria'
   return (
     <Card className={`transition-shadow ${disponible ? 'hover:shadow-md cursor-pointer' : 'opacity-70'}`}>
@@ -62,10 +64,7 @@ function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Jueg
           {(juego.num_jugadores_min || juego.num_jugadores_max) && (
             <span className="flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {juego.num_jugadores_min ?? '?'}
-              {juego.num_jugadores_max && juego.num_jugadores_max !== juego.num_jugadores_min
-                ? `–${juego.num_jugadores_max}`
-                : ''} jugadores
+              {formatJugadores(juego)}
             </span>
           )}
         </div>
@@ -87,7 +86,7 @@ function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Jueg
       </CardContent>
     </Card>
   )
-}
+})
 
 function SolicitarDialog({
   juego,
@@ -148,7 +147,7 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
     mutationFn: () => solicitudesJuegoApi.crear({ nombre: nombre.trim(), notas: notas.trim() || undefined }),
     onSuccess: () => {
       toast.success('Solicitud de cesión enviada al ludotecario')
-      queryClient.invalidateQueries({ queryKey: ['mis-solicitudes-juego'] })
+      queryClient.invalidateQueries({ queryKey: QK.MIS_SOLICITUDES_JUEGO })
       onClose()
       setNombre('')
       setNotas('')
@@ -208,7 +207,7 @@ function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
 function MisSolicitudes() {
   const { data, isLoading } = useQuery({
-    queryKey: ['mis-solicitudes-juego'],
+    queryKey: QK.MIS_SOLICITUDES_JUEGO,
     queryFn: () => solicitudesJuegoApi.getMias(),
   })
 
@@ -249,7 +248,7 @@ export function LudotecaPage() {
   const [cederOpen, setCederOpen] = useState(false)
 
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['ludoteca', debouncedSearch, estadoFiltro],
+    queryKey: QK.LUDOTECA(debouncedSearch, estadoFiltro),
     queryFn: ({ pageParam }) =>
       juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro || undefined, page: pageParam, limit: 48 }),
     initialPageParam: 1,

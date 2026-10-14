@@ -4,10 +4,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi } from '@/services/api/socios'
+import { QK } from '@/lib/queryKeys'
 
 export function LlavesPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ['socios-llaves'],
+    queryKey: QK.SOCIOS_LLAVES,
     queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 500 }),
   })
 

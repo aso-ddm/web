@@ -17,10 +17,11 @@ import { navigationItems, memberAreaItem } from '@/config/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { SPACING } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { useShallow } from 'zustand/react/shallow'
 
 export function Header() {
   const { handleNavigation } = useScrollNavigation()
-  const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore()
+  const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore(useShallow((s) => ({ isAuthenticated: s.isAuthenticated, usuario: s.usuario, logout: s.logout, getRedirectPath: s.getRedirectPath })))
   const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   // Controlado: los enlaces de la misma página (scroll a una sección) no cambian de ruta y el menú no se cerraría solo

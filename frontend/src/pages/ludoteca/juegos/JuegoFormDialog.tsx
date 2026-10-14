@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 import { juegosApi } from '@/services/api/juegos'
-import { invalidarJuegos } from '@/lib/queryKeys'
+import { QK, invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
 import type { Juego } from '@/types/api'
 
@@ -46,7 +46,7 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
   const isEdit = !!juego
 
   const { data: sociosData } = useQuery({
-    queryKey: ['socios-opciones'],
+    queryKey: QK.SOCIOS_OPCIONES,
     queryFn: () => sociosApi.getOpciones(),
     enabled: open,
   })
@@ -100,7 +100,7 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
       invalidarJuegos(queryClient)
-      if (!isEdit) queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
+      if (!isEdit) queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
       handleClose()
     },
     onError: (err: Error) => toast.error(err.message),

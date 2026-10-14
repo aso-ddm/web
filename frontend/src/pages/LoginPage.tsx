@@ -15,6 +15,7 @@ import { TelegramLoginWidget } from '@/components/molecules/TelegramLoginWidget'
 import { authApi } from '@/services/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import type { LoginResponse } from '@/types/api'
+import { useShallow } from 'zustand/react/shallow'
 
 const loginSchema = z.object({
   email: z.string().email('Introduce un email válido'),
@@ -28,7 +29,7 @@ const HEX_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, isAuthenticated, getRedirectPath } = useAuthStore()
+  const { login, isAuthenticated, getRedirectPath } = useAuthStore(useShallow((s) => ({ login: s.login, isAuthenticated: s.isAuthenticated, getRedirectPath: s.getRedirectPath })))
 
   useEffect(() => {
     if (isAuthenticated) {

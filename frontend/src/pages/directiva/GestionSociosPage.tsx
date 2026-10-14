@@ -27,7 +27,7 @@ export function GestionSociosPage() {
 
   const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading } = useQuery({
-    queryKey: ['socios-gestion', debouncedSearch, estadoFiltro, page],
+    queryKey: QK.SOCIOS_GESTION_LISTA(debouncedSearch, estadoFiltro, page),
     placeholderData: keepPreviousData,
     queryFn: () =>
       sociosApi.getAll({

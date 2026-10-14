@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import type { TelegramUser } from '@/services/api/auth'
-import { configuracionApi } from '@/services/api/configuracion'
+import { useConfig } from '@/hooks/useConfigValor'
 
 const BOT_POR_DEFECTO = 'Dragon_de_maderaBot'
 
@@ -29,13 +28,8 @@ export function TelegramLoginWidget({
 
   // Bot de Configuración; vacío o sin configurar → el de por defecto (si no, Telegram dice "Bot username required").
   // Hasta saberlo no se monta: con otro bot la firma no cuadraría ("Firma de Telegram inválida")
-  const { data, isPending } = useQuery({
-    queryKey: ['config', 'telegram_bot_username'],
-    queryFn: () => configuracionApi.getOne('telegram_bot_username'),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-  const botUsername = isPending ? null : data?.data?.valor?.trim() || BOT_POR_DEFECTO
+  const { data: botConfig, isPending } = useConfig('telegram_bot_username')
+  const botUsername = isPending ? null : botConfig?.trim() || BOT_POR_DEFECTO
 
   useEffect(() => {
     if (!botUsername) return

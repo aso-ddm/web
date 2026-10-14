@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { telegramApi } from '@/services/api/telegram'
 import { sociosApi } from '@/services/api/socios'
+import { QK } from '@/lib/queryKeys'
 
 export function AnunciosPage() {
   const [mensaje, setMensaje] = useState('')
@@ -22,7 +23,7 @@ export function AnunciosPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const { data: sociosData } = useQuery({
-    queryKey: ['socios-destinatarios'],
+    queryKey: QK.SOCIOS_DESTINATARIOS,
     queryFn: () => sociosApi.getAll({ estado: 'activo', limit: 500 }),
     staleTime: 1000 * 60 * 5,
   })

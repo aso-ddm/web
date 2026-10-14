@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from 'vitest'
-import { diasRestantes } from './format'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { diasRestantes, formatJugadores } from './format'
 
 afterEach(() => vi.useRealTimers())
 
@@ -14,4 +14,13 @@ it('diasRestantes: 0 el día límite, -1 desde el día siguiente (nunca -0)', ()
   expect(diasRestantes(limite)).toBe(-1)
   vi.setSystemTime(new Date('2026-10-19T08:00:00Z'))
   expect(diasRestantes(limite)).toBe(-3)
+})
+
+describe('formatJugadores', () => {
+  it('rango, número fijo, solo máximo y sin datos', () => {
+    expect(formatJugadores({ num_jugadores_min: 2, num_jugadores_max: 4 })).toBe('2–4 jugadores')
+    expect(formatJugadores({ num_jugadores_min: 3, num_jugadores_max: 3 })).toBe('3 jugadores')
+    expect(formatJugadores({ num_jugadores_min: null, num_jugadores_max: 6 })).toBe('?–6 jugadores')
+    expect(formatJugadores({ num_jugadores_min: null, num_jugadores_max: null })).toBeNull()
+  })
 })

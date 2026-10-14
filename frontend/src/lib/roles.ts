@@ -10,6 +10,11 @@ export const ROL_LABELS: Record<Rol, string> = {
   socio_basico: 'Socio/a',
 }
 
+// Grupos de roles: deben coincidir con ROLES de backend/src/middleware/auth.ts (requireRoles)
+export const DIRECTIVA: Rol[] = ['administrador', 'presidente', 'secretario', 'tesorero']
+export const DIRECTIVA_Y_VOCALES: Rol[] = [...DIRECTIVA, 'vocal']
+export const DIRECTIVA_Y_LUDOTECARIO: Rol[] = [...DIRECTIVA, 'ludotecario']
+
 /** Roles que la directiva puede asignar (administrador solo por BD/seed) */
 export const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
 

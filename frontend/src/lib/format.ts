@@ -11,3 +11,10 @@ export function formatDate(date?: string | null, month: 'short' | 'long' = 'shor
 export function diasRestantes(fechaLimite: string) {
   return Math.floor((new Date(fechaLimite).getTime() - Date.now()) / DIA_MS)
 }
+
+/** "2–4 jugadores", "3 jugadores" o "?–6 jugadores"; null si no hay datos */
+export function formatJugadores(j: { num_jugadores_min?: number | null; num_jugadores_max?: number | null }) {
+  const { num_jugadores_min: min, num_jugadores_max: max } = j
+  if (!min && !max) return null
+  return `${min ?? '?'}${max && max !== min ? `–${max}` : ''} jugadores`
+}

@@ -14,6 +14,7 @@ import { ClubPage } from '@/pages/ClubPage'
 import { SocioPage } from '@/pages/SocioPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { DIRECTIVA, DIRECTIVA_Y_VOCALES, DIRECTIVA_Y_LUDOTECARIO } from '@/lib/roles'
 
 // El resto se descarga al entrar en la página. Tras un deploy los chunks antiguos ya no existen:
 // se recarga una vez para traer el index.html nuevo; si vuelve a fallar, lo muestra el ErrorBoundary.
@@ -81,71 +82,44 @@ export function AppRoutes() {
       <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
       <Route path="/mi-solicitud" element={<MiSolicitudPage />} />
 
-      {/* ── Área de socio (cualquier autenticado) ───────────────────── */}
+      {/* ── Área privada: un único AreaLayout para todas las secciones (no se remonta al cambiar de área).
+           Los roles deben coincidir con los requireRoles del backend o se verá la página y llegará un 403 ── */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AreaLayout />}>
+          {/* Área de socio (cualquier autenticado) */}
           <Route path="/area" element={<DashboardPage />} />
           <Route path="/area/perfil" element={<PerfilPage />} />
           <Route path="/area/prestamos" element={<PrestamosPage />} />
           <Route path="/area/ludoteca" element={<LudotecaPage />} />
           <Route path="/area/visita" element={<RegistroVisitaPage />} />
-        </Route>
-      </Route>
 
-      {/* ── Panel directiva ─────────────────────────────────────────── */}
-      <Route
-        element={
-          <RoleBasedRoute
-            allowedRoles={['administrador', 'presidente', 'secretario', 'tesorero', 'vocal']}
-          />
-        }
-      >
-        <Route element={<AreaLayout />}>
-          <Route path="/directiva" element={<Navigate to="/directiva/solicitudes" replace />} />
-          <Route path="/directiva/socios" element={<GestionSociosPage />} />
-          <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
-          <Route path="/directiva/llaves" element={<LlavesPage />} />
-          <Route path="/directiva/anuncios" element={<AnunciosPage />} />
-          {/* Cuotas y configuración: solo directiva (el backend da 403 a vocales) */}
-          <Route
-            element={
-              <RoleBasedRoute
-                allowedRoles={['administrador', 'presidente', 'secretario', 'tesorero']}
-                redirectTo="/directiva"
-              />
-            }
-          >
-            <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
-            <Route path="/directiva/cuotas" element={<CuotasPage />} />
+          {/* Panel directiva */}
+          <Route element={<RoleBasedRoute allowedRoles={DIRECTIVA_Y_VOCALES} />}>
+            <Route path="/directiva" element={<Navigate to="/directiva/solicitudes" replace />} />
+            <Route path="/directiva/socios" element={<GestionSociosPage />} />
+            <Route path="/directiva/solicitudes" element={<SolicitudesPage />} />
+            <Route path="/directiva/llaves" element={<LlavesPage />} />
+            <Route path="/directiva/anuncios" element={<AnunciosPage />} />
+            {/* Cuotas y configuración: solo directiva (el backend da 403 a vocales) */}
+            <Route element={<RoleBasedRoute allowedRoles={DIRECTIVA} redirectTo="/directiva" />}>
+              <Route path="/directiva/configuracion" element={<ConfiguracionPage />} />
+              <Route path="/directiva/cuotas" element={<CuotasPage />} />
+            </Route>
           </Route>
-        </Route>
-      </Route>
 
-      {/* ── Panel ludotecario ────────────────────────────────────────── */}
-      <Route
-        element={
-          <RoleBasedRoute
-            allowedRoles={['administrador', 'presidente', 'secretario', 'tesorero', 'ludotecario']}
-          />
-        }
-      >
-        <Route element={<AreaLayout />}>
-          <Route path="/ludoteca" element={<Navigate to="/ludoteca/prestamos" replace />} />
-          <Route path="/ludoteca/juegos" element={<GestionJuegosPage />} />
-          <Route path="/ludoteca/prestamos" element={<GestionPrestamosPage />} />
-        </Route>
-      </Route>
+          {/* Panel ludotecario */}
+          <Route element={<RoleBasedRoute allowedRoles={DIRECTIVA_Y_LUDOTECARIO} />}>
+            <Route path="/ludoteca" element={<Navigate to="/ludoteca/prestamos" replace />} />
+            <Route path="/ludoteca/juegos" element={<GestionJuegosPage />} />
+            <Route path="/ludoteca/prestamos" element={<GestionPrestamosPage />} />
+          </Route>
 
-      {/* ── Panel administrador ─────────────────────────────────────── */}
-      <Route
-        element={
-          <RoleBasedRoute allowedRoles={['administrador']} />
-        }
-      >
-        <Route element={<AreaLayout />}>
-          <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
-          <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
-          <Route path="/admin/telegram" element={<AdminTelegramPage />} />
+          {/* Panel administrador */}
+          <Route element={<RoleBasedRoute allowedRoles={['administrador']} />}>
+            <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
+            <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
+            <Route path="/admin/telegram" element={<AdminTelegramPage />} />
+          </Route>
         </Route>
       </Route>
 

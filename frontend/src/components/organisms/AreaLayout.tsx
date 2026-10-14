@@ -1,7 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Suspense, useEffect, useState } from 'react'
-import { authApi } from '@/services/api/auth'
 import {
   User,
   LogOut,
@@ -28,6 +26,8 @@ import { cn } from '@/lib/utils'
 import { getRolLabel } from '@/lib/roles'
 import { TelegramLinkModal } from './TelegramLinkModal'
 import { PageLoader } from '@/components/atoms/PageLoader'
+import { useMe } from '@/hooks/useMe'
+import { useShallow } from 'zustand/react/shallow'
 
 /* ── Tipos ───────────────────────────────────────────────────────── */
 type NavItem    = { type: 'item';    label: string; to: string; icon: React.ReactNode }
@@ -36,7 +36,12 @@ type NavEntry   = NavItem | NavSection
 
 /* ── Hook de items ───────────────────────────────────────────────── */
 function useSidebarItems(): NavEntry[] {
-  const { isDirectiva, isLudotecario, isDirectivaOVocal, hasRole } = useAuthStore()
+  const { directiva, ludotecario, directivaOVocal, admin } = useAuthStore(useShallow((s) => ({
+    directiva: s.isDirectiva(),
+    ludotecario: s.isLudotecario(),
+    directivaOVocal: s.isDirectivaOVocal(),
+    admin: s.hasRole('administrador'),
+  })))
 
   const items: NavEntry[] = [
     { type: 'section', label: 'Mi área' },
@@ -47,7 +52,7 @@ function useSidebarItems(): NavEntry[] {
     { type: 'item', label: 'Registrar visita', to: '/area/visita',    icon: <UserCheck       className="h-4 w-4" /> },
   ]
 
-  if (isDirectivaOVocal()) {
+  if (directivaOVocal) {
     items.push(
       { type: 'section', label: 'Directiva' },
       { type: 'item', label: 'Gestión socios', to: '/directiva/socios',       icon: <Users        className="h-4 w-4" /> },
@@ -57,14 +62,14 @@ function useSidebarItems(): NavEntry[] {
     )
   }
 
-  if (isDirectiva()) {
+  if (directiva) {
     items.push(
       { type: 'item', label: 'Cuotas',        to: '/directiva/cuotas',        icon: <Wallet   className="h-4 w-4" /> },
       { type: 'item', label: 'Configuración', to: '/directiva/configuracion', icon: <Settings className="h-4 w-4" /> },
     )
   }
 
-  if (isLudotecario()) {
+  if (ludotecario) {
     items.push(
       { type: 'section', label: 'Ludoteca' },
       { type: 'item', label: 'Gestión de juegos', to: '/ludoteca/juegos',    icon: <Library  className="h-4 w-4" /> },
@@ -72,7 +77,7 @@ function useSidebarItems(): NavEntry[] {
     )
   }
 
-  if (hasRole('administrador')) {
+  if (admin) {
     items.push(
       { type: 'section', label: 'Administración' },
       { type: 'item', label: 'Usuarios', to: '/admin/usuarios', icon: <ShieldAlert className="h-4 w-4" /> },
@@ -85,13 +90,11 @@ function useSidebarItems(): NavEntry[] {
 
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 function SidebarContent({ onClose }: { onClose?: () => void }) {
-  const { usuario, logout } = useAuthStore()
+  const { usuario, logout } = useAuthStore(useShallow((s) => ({ usuario: s.usuario, logout: s.logout })))
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const items = useSidebarItems()
 
   const handleLogout = () => {
-    queryClient.clear()
     logout()
     navigate('/')
   }
@@ -185,7 +188,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 export function AreaLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Refresca roles/estado desde el backend; un 401 cierra la sesión (ver api/client)
-  const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => authApi.me() })
+  const { data: me } = useMe()
   const updateUsuario = useAuthStore((s) => s.updateUsuario)
   useEffect(() => {
     if (me?.data) updateUsuario({ roles: me.data.roles, estado: me.data.estado })

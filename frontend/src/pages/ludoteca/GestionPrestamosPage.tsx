@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
+import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { RotateCcw, Loader2, Clock, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -91,7 +91,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
 
 function PrestamosActivos() {
   const { data, isLoading } = useQuery({
-    queryKey: ['prestamos-gestion', 'activo'],
+    queryKey: QK.PRESTAMOS_GESTION_ESTADO('activo'),
     // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
     queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
   })
@@ -145,7 +145,7 @@ function PrestamosActivos() {
 
 function HistorialPrestamos() {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['prestamos-gestion', 'devuelto'],
+    queryKey: QK.PRESTAMOS_GESTION_ESTADO('devuelto'),
     queryFn: ({ pageParam }) => prestamosApi.getAll({ estado: 'devuelto', page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
@@ -194,7 +194,7 @@ function HistorialPrestamos() {
 
 export function GestionPrestamosPage() {
   const { data: activoData } = useQuery({
-    queryKey: ['prestamos-gestion', 'activo'],
+    queryKey: QK.PRESTAMOS_GESTION_ESTADO('activo'),
     // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
     queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
   })

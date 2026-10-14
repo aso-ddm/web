@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, CheckCircle2, FileText, ArrowRight, PlusCircle, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,10 +16,10 @@ import { DragonIcon, DragonTextLogo } from '@/components/atoms/icons'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { RichTextContent } from '@/components/molecules/RichTextContent'
 import { authApi } from '@/services/api/auth'
-import { configuracionApi } from '@/services/api/configuracion'
 import { registroSchema, RegistroForm, errMsg } from './registro/schema'
 import { FieldError, FormSection, DocumentosCard } from './registro/FormParts'
 import { MiembroForm } from './registro/MiembroForm'
+import { useConfig, useConfigNumero, useConfigValor } from '@/hooks/useConfigValor'
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
@@ -42,45 +42,13 @@ export function RegistroPage() {
   const tipoCuota = watch('tipo_cuota') as 'individual' | 'conjunta'
   const consentimientoTiendas = watch('consentimiento_tiendas')
 
-  const { data: configBienvenida, isPending: isBienvenidaLoading } = useQuery({
-    queryKey: ['config', 'texto_bienvenida_alta'],
-    queryFn: () => configuracionApi.getOne('texto_bienvenida_alta'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
-  const { data: configEstatutos } = useQuery({
-    queryKey: ['config', 'url_estatutos'],
-    queryFn: () => configuracionApi.getOne('url_estatutos'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
-  const { data: configReglamento } = useQuery({
-    queryKey: ['config', 'url_reglamento_interno'],
-    queryFn: () => configuracionApi.getOne('url_reglamento_interno'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
-  const { data: configConsentimiento } = useQuery({
-    queryKey: ['config', 'texto_consentimiento_tiendas'],
-    queryFn: () => configuracionApi.getOne('texto_consentimiento_tiendas'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
-  const { data: configPrecioIndividual } = useQuery({
-    queryKey: ['config', 'precio_cuota_individual'],
-    queryFn: () => configuracionApi.getOne('precio_cuota_individual'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
-  const { data: configPrecioAdicional } = useQuery({
-    queryKey: ['config', 'precio_cuota_adicional'],
-    queryFn: () => configuracionApi.getOne('precio_cuota_adicional'),
-    retry: false,
-    staleTime: 1000 * 60 * 10,
-  })
+  const { data: textoBienvenida, isPending: isBienvenidaLoading } = useConfig('texto_bienvenida_alta')
+  const urlEstatutos = useConfigValor('url_estatutos', '')
+  const urlReglamento = useConfigValor('url_reglamento_interno', '')
+  const textoConsentimiento = useConfig('texto_consentimiento_tiendas').data
+  const precioIndividual = useConfigNumero('precio_cuota_individual', 15)
+  const precioAdicional = useConfigNumero('precio_cuota_adicional', 5)
 
-  const precioIndividual = Number(configPrecioIndividual?.data?.valor ?? 15)
-  const precioAdicional = Number(configPrecioAdicional?.data?.valor ?? 5)
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: RegistroForm) => {
@@ -192,18 +160,18 @@ export function RegistroPage() {
                 ))}
               </CardContent>
             </Card>
-          ) : configBienvenida?.data?.valor ? (
+          ) : textoBienvenida ? (
             <Card className="border-primary/30 bg-primary/5 shadow-none">
               <CardContent className="px-6 py-5">
-                <RichTextContent html={configBienvenida.data.valor} />
+                <RichTextContent html={textoBienvenida} />
               </CardContent>
             </Card>
           ) : null}
 
           {/* Documentos */}
           <DocumentosCard
-            urlEstatutos={configEstatutos?.data?.valor || undefined}
-            urlReglamento={configReglamento?.data?.valor || undefined}
+            urlEstatutos={urlEstatutos || undefined}
+            urlReglamento={urlReglamento || undefined}
           />
 
           {/* Separador */}
@@ -333,7 +301,7 @@ export function RegistroPage() {
                       setValue={setValue}
                       watch={watch}
                       onRemove={() => remove(index)}
-                      textoConsentimiento={configConsentimiento?.data?.valor}
+                      textoConsentimiento={textoConsentimiento}
                     />
                   ))}
 
@@ -427,7 +395,7 @@ export function RegistroPage() {
                     onCheckedChange={(v) => setValue('consentimiento_tiendas', Boolean(v))}
                     className="mt-0.5 flex-shrink-0"
                   />
-                  <RichTextContent html={configConsentimiento?.data?.valor || 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
+                  <RichTextContent html={textoConsentimiento || 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
                 </label>
                 <Separator />
                 <p className="text-xs text-muted-foreground leading-relaxed">

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { logsJuegoApi } from '@/services/api/logs_juego'
 import type { LogJuego } from '@/types/api'
 import { formatDate } from '@/lib/format'
+import { QK } from '@/lib/queryKeys'
 
 // ── Historial global ─────────────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ export function HistorialLogsTab() {
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['logs-juego-all', page],
+    queryKey: QK.LOGS_JUEGO_ALL_PAGINA(page),
     queryFn: () => logsJuegoApi.getAll(page),
   })
 

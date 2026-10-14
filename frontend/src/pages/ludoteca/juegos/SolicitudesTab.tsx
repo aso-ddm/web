@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
-import { invalidarJuegos } from '@/lib/queryKeys'
+import { QK, invalidarJuegos } from '@/lib/queryKeys'
 import type { SolicitudJuego } from '@/types/api'
 import { formatDate } from '@/lib/format'
 
@@ -23,7 +23,7 @@ export function SolicitudesTab() {
   const [motivo, setMotivo] = useState('')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['solicitudes-juego-pendientes'],
+    queryKey: QK.SOLICITUDES_JUEGO_PENDIENTES,
     queryFn: () => solicitudesJuegoApi.getPendientes(),
   })
 
@@ -31,9 +31,9 @@ export function SolicitudesTab() {
     mutationFn: (id: string) => solicitudesJuegoApi.aprobar(id),
     onSuccess: () => {
       toast.success('Cesión aprobada — juego añadido al catálogo con el socio como propietario')
-      queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
+      queryClient.invalidateQueries({ queryKey: QK.SOLICITUDES_JUEGO_PENDIENTES })
       invalidarJuegos(queryClient)
-      queryClient.invalidateQueries({ queryKey: ['logs-juego-all'] })
+      queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -43,7 +43,7 @@ export function SolicitudesTab() {
       solicitudesJuegoApi.rechazar(id, motivo),
     onSuccess: () => {
       toast.success('Cesión rechazada')
-      queryClient.invalidateQueries({ queryKey: ['solicitudes-juego-pendientes'] })
+      queryClient.invalidateQueries({ queryKey: QK.SOLICITUDES_JUEGO_PENDIENTES })
       setRechazando(null)
       setMotivo('')
     },

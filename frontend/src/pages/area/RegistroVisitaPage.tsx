@@ -14,6 +14,7 @@ import { useConfigValor } from '@/hooks/useConfigValor'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Visita } from '@/types/api'
 import { formatDate } from '@/lib/format'
+import { QK } from '@/lib/queryKeys'
 
 function VisitaConfirmada({ visita, onNueva }: { visita: Visita; onNueva: () => void }) {
   return (
@@ -72,7 +73,7 @@ function ListadoVisitas() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['visitas-listado', debouncedSearch],
+    queryKey: QK.VISITAS_LISTA(debouncedSearch),
     queryFn: ({ pageParam }) =>
       visitasApi.getAll({ search: debouncedSearch || undefined, page: pageParam as number, limit: PAGE_SIZE }),
     initialPageParam: 1,
@@ -186,7 +187,7 @@ export function RegistroVisitaPage() {
   // useQuery descarta las respuestas viejas: una búsqueda lenta no pisa a la siguiente
   const nombreBuscado = useDebouncedValue(nombre.trim(), 350)
   const { data: sugerencias = [], isFetching: buscando } = useQuery({
-    queryKey: ['visitas-buscar', nombreBuscado],
+    queryKey: QK.VISITAS_BUSCAR_NOMBRE(nombreBuscado),
     queryFn: () => visitasApi.buscar(nombreBuscado).then((r) => r.data),
     enabled: nombreBuscado.length >= 2,
     placeholderData: keepPreviousData,
@@ -206,8 +207,8 @@ export function RegistroVisitaPage() {
     mutationFn: () => visitasApi.registrar(nombreFinal),
     onSuccess: ({ data }) => {
       setVisitaRegistrada(data)
-      queryClient.invalidateQueries({ queryKey: ['visitas-listado'] })
-      queryClient.invalidateQueries({ queryKey: ['visitas-buscar'] })
+      queryClient.invalidateQueries({ queryKey: QK.VISITAS })
+      queryClient.invalidateQueries({ queryKey: QK.VISITAS_BUSCAR })
     },
     onError: (err: Error) => toast.error(err.message),
   })

@@ -19,6 +19,8 @@ import { useAuthStore } from '@/store/authStore'
 import { authApi } from '@/services/api/auth'
 import { dniSchema, fechaNacimientoSchema, errMsg } from './registro/schema'
 import { FieldError, FormSection } from './registro/FormParts'
+import { QK } from '@/lib/queryKeys'
+import { useShallow } from 'zustand/react/shallow'
 
 const solicitudSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -44,7 +46,7 @@ const CAMPOS: { name: keyof SolicitudForm; label: string; type?: string }[] = [
 
 /** Única página para una solicitud de alta pendiente: corregir sus datos hasta que la directiva la apruebe */
 export function MiSolicitudPage() {
-  const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore()
+  const { isAuthenticated, usuario, logout, getRedirectPath } = useAuthStore(useShallow((s) => ({ isAuthenticated: s.isAuthenticated, usuario: s.usuario, logout: s.logout, getRedirectPath: s.getRedirectPath })))
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [comprobante, setComprobante] = useState<File>()
@@ -52,7 +54,7 @@ export function MiSolicitudPage() {
   const textoConsentimiento = useConfigValor('texto_consentimiento_tiendas', 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.')
 
   const { data } = useQuery({
-    queryKey: ['mi-solicitud'],
+    queryKey: QK.MI_SOLICITUD,
     queryFn: authApi.getSolicitud,
     enabled: isAuthenticated && pendiente,
   })

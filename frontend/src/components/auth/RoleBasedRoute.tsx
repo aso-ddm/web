@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import type { Rol } from '@/types/api'
+import { useShallow } from 'zustand/react/shallow'
 
 interface RoleBasedRouteProps {
   allowedRoles: Rol[]
@@ -11,7 +12,7 @@ export function RoleBasedRoute({
   allowedRoles,
   redirectTo = '/area',
 }: RoleBasedRouteProps) {
-  const { isAuthenticated, usuario } = useAuthStore()
+  const { isAuthenticated, usuario } = useAuthStore(useShallow((s) => ({ isAuthenticated: s.isAuthenticated, usuario: s.usuario })))
   const location = useLocation()
 
   if (!isAuthenticated) {
