@@ -76,7 +76,7 @@ function useSidebarItems(): NavEntry[] {
     items.push(
       { type: 'section', label: 'Administración' },
       { type: 'item', label: 'Usuarios', to: '/admin/usuarios', icon: <ShieldAlert className="h-4 w-4" /> },
-      { type: 'item', label: 'Bot de Telegram', to: '/admin/telegram', icon: <Bot className="h-4 w-4" /> },
+      { type: 'item', label: 'Logs bot de Telegram', to: '/admin/telegram', icon: <Bot className="h-4 w-4" /> },
     )
   }
 
