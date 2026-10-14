@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { CheckCircle2, XCircle, User, Users, Loader2, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
@@ -23,12 +22,6 @@ function abrirComprobante(socioId: string) {
 
 function tipoCuotaLabel(tipo: string, precioIndividual: number) {
   return { individual: `Individual (${precioIndividual}€/mes)`, conjunta: 'Conjunta' }[tipo] ?? tipo
-}
-
-function tipoRelacionLabel(tipo: string | null) {
-  if (tipo === 'pareja') return 'Pareja'
-  if (tipo === 'familiar_directo') return 'Familiar directo'
-  return tipo ?? '—'
 }
 
 // ── Tarjeta solicitud individual ──────────────────────────────────────────────
@@ -179,7 +172,6 @@ function GrupoSolicitudCard({ grupo, precioIndividual, precioAdicional }: { grup
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-display font-bold">{miembro.nombre} {miembro.apellidos}</p>
                   {miembro.apodo && <span className="text-xs text-muted-foreground">({miembro.apodo})</span>}
-                  {miembro.tipo_relacion && <Badge variant="secondary" className="text-xs font-display">{tipoRelacionLabel(miembro.tipo_relacion)}</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">{miembro.email} · DNI: {miembro.dni}</p>
                 {miembro.alias_telegram && <p className="text-xs text-muted-foreground">Telegram: {miembro.alias_telegram}</p>}

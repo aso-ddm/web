@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, TipoCuota, TipoRelacion } from '@prisma/client'
+import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, TipoCuota } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
@@ -208,7 +208,6 @@ export class SociosService {
               email: true,
               apodo: true,
               alias_telegram: true,
-              relaciones_como_relacionado: { select: { tipo_relacion: true }, take: 1 },
             },
             orderBy: { created_at: 'asc' },
           },
@@ -216,16 +215,7 @@ export class SociosService {
       }),
     ])
 
-    // tipo_relacion: parentesco declarado en el formulario (null en quien lo rellenó)
-    const gruposConTipoRelacion = grupos.map((grupo) => ({
-      ...grupo,
-      miembros: grupo.miembros.map(({ relaciones_como_relacionado: relaciones, ...miembro }) => ({
-        ...miembro,
-        tipo_relacion: relaciones[0]?.tipo_relacion ?? null,
-      })),
-    }))
-
-    return { individuales, grupos: gruposConTipoRelacion }
+    return { individuales, grupos }
   }
 
   async aprobarGrupo(grupoId: string, aprobadoPorId: string) {
@@ -436,7 +426,7 @@ export class SociosService {
   }
 
   /** Une al socio a la cuota conjunta de otro; si el otro es individual, se crea una con los dos. */
-  async unirCuotaConjunta(id: string, otroId: string, tipoRelacion: TipoRelacion, porId: string) {
+  async unirCuotaConjunta(id: string, otroId: string, porId: string) {
     if (id === otroId) throw new Error('Elige a otro socio')
     return this.prisma.$transaction(async (tx) => {
       const select = {
@@ -468,9 +458,7 @@ export class SociosService {
       }
       // Desde ahora cuentan los pagos del grupo; los suyos de antes se conservan pero no se muestran
       await tx.usuario.update({ where: { id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
-      await tx.relacionSocio.create({
-        data: { socio_principal_id: otro.id, socio_relacionado_id: id, tipo_relacion: tipoRelacion },
-      })
+      await tx.relacionSocio.create({ data: { socio_principal_id: otro.id, socio_relacionado_id: id } })
       await historial(id, `Se une a la cuota conjunta de ${nombreCompleto(otro)}`)
       return tx.usuario.findUnique({ where: { id }, select: SOCIO_PUBLIC_SELECT })
     })

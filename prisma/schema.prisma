@@ -33,11 +33,6 @@ enum TipoCuota {
   conjunta
 }
 
-enum TipoRelacion {
-  pareja
-  familiar_directo
-}
-
 enum EstadoSolicitud {
   pendiente
   aprobada
@@ -157,7 +152,6 @@ model RelacionSocio {
   id                   String       @id @default(uuid())
   socio_principal_id   String
   socio_relacionado_id String
-  tipo_relacion        TipoRelacion
   activa               Boolean      @default(true)
   fecha_inicio         DateTime     @default(now())
   fecha_fin            DateTime?

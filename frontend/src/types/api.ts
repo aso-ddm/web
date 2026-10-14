@@ -10,7 +10,6 @@ export type Rol =
 
 export type EstadoSocio = 'pendiente' | 'activo' | 'baja'
 export type TipoCuota = 'individual' | 'conjunta'
-export type TipoRelacion = 'pareja' | 'familiar_directo'
 export type EstadoSolicitud = 'pendiente' | 'aprobada' | 'rechazada'
 
 // ── Usuario ───────────────────────────────────────────────────────────────────
@@ -52,7 +51,6 @@ export interface MiembroAdicionalPayload {
   apodo: string
   consentimiento_tiendas: boolean
   password: string
-  tipo_relacion: TipoRelacion
 }
 
 export type RegisterPayload =
@@ -89,12 +87,7 @@ export interface SolicitudGrupal {
   estado: EstadoSolicitud
   created_at: string
   comprobante_transferencia?: string | null
-  // tipo_relacion: parentesco declarado en el formulario (null en quien lo rellenó)
-  miembros: Array<
-    Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email' | 'apodo' | 'alias_telegram'> & {
-      tipo_relacion: TipoRelacion | null
-    }
-  >
+  miembros: Array<Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'dni' | 'email' | 'apodo' | 'alias_telegram'>>
 }
 
 export interface LoginResponse {

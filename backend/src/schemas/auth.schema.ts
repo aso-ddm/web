@@ -69,7 +69,6 @@ export const miembroAdicionalSchema = z.object({
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
-  tipo_relacion: z.enum(['pareja', 'familiar_directo']),
 })
 
 export type MiembroAdicionalInput = z.infer<typeof miembroAdicionalSchema>

@@ -6,13 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { sociosApi, type SocioAdmin } from '@/services/api/socios'
 import { invalidarSocios, QK } from '@/lib/queryKeys'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { cn } from '@/lib/utils'
-import type { TipoRelacion } from '@/types/api'
 
 /** Miembros de la cuota conjunta y paso entre cuota conjunta e individual (solo directiva). */
 export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
@@ -27,7 +25,6 @@ export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
   const [uniendo, setUniendo] = useState(false)
   const [elegirAbierto, setElegirAbierto] = useState(false)
   const [otroId, setOtroId] = useState('')
-  const [relacion, setRelacion] = useState<TipoRelacion>('pareja')
 
   const { data: opciones } = useQuery({
     queryKey: QK.SOCIOS_OPCIONES,
@@ -50,7 +47,7 @@ export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
   })
 
   const { mutate: unir, isPending: guardando } = useMutation({
-    mutationFn: () => sociosApi.unirCuotaConjunta(socio.id, otroId, relacion),
+    mutationFn: () => sociosApi.unirCuotaConjunta(socio.id, otroId),
     onSuccess: () => { toast.success(`${socio.nombre} pasa a cuota conjunta`); recargar() },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -122,13 +119,6 @@ export function CuotaConjunta({ socio, puedeGestionar, onAbrirSocio }: {
               </Command>
             </PopoverContent>
           </Popover>
-          <Select value={relacion} onValueChange={(v) => setRelacion(v as TipoRelacion)}>
-            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pareja">Pareja</SelectItem>
-              <SelectItem value="familiar_directo">Familiar directo</SelectItem>
-            </SelectContent>
-          </Select>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => unir()} disabled={!otroId || guardando} className="font-display font-bold">
               {guardando && <Loader2 className="h-3 w-3 animate-spin mr-1" />}

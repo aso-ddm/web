@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Usuario, Rol, EstadoSocio, SolicitudGrupal, TipoRelacion } from '@/types/api'
+import type { Usuario, Rol, EstadoSocio, SolicitudGrupal } from '@/types/api'
 
 export interface UpdateSocioPayload {
   nombre?: string
@@ -93,8 +93,8 @@ export const sociosApi = {
     api.put<{ data: SocioAdmin }>(`/socios/${id}/roles`, { roles }),
 
   // Une a la cuota conjunta de otro socio (si es individual, se crea una con los dos)
-  unirCuotaConjunta: (id: string, socio_id: string, tipo_relacion: TipoRelacion) =>
-    api.post<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`, { socio_id, tipo_relacion }),
+  unirCuotaConjunta: (id: string, socio_id: string) =>
+    api.post<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`, { socio_id }),
   salirCuotaConjunta: (id: string) => api.delete<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`),
 
   setLlaves: (id: string, tiene_llaves: boolean) =>

@@ -215,9 +215,9 @@ export class AuthService {
         })
 
       const { id: primeroId } = await crear(primero)
-      for (const { tipo_relacion, ...m } of miembros_adicionales) {
+      for (const m of miembros_adicionales) {
         const { id } = await crear(m)
-        await tx.relacionSocio.create({ data: { socio_principal_id: primeroId, socio_relacionado_id: id, tipo_relacion } })
+        await tx.relacionSocio.create({ data: { socio_principal_id: primeroId, socio_relacionado_id: id } })
       }
       return { grupo_id: grupo.id, miembros: miembros_adicionales.length + 1 }
     })

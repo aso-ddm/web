@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextContent } from '@/components/molecules/RichTextContent'
 import type { RegistroForm } from './schema'
 import { FieldError } from './FormParts'
@@ -32,7 +31,6 @@ export function MiembroForm({
 }) {
   const miembrosErrors = (errors as { miembros_adicionales?: AnyErrors[] }).miembros_adicionales
   const err = miembrosErrors?.[index] as AnyErrors | undefined
-  const tipoRelacion = (watch as (name: string) => string)(`miembros_adicionales.${index}.tipo_relacion`)
   const consentimiento = (watch as (name: string) => boolean)(`miembros_adicionales.${index}.consentimiento_tiendas`)
 
   return (
@@ -42,18 +40,6 @@ export function MiembroForm({
         <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={onRemove} aria-label="Eliminar miembro">
           <Trash2 className="h-4 w-4" />
         </Button>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="font-display font-bold text-sm">Tipo de relación <span className="text-destructive">*</span></Label>
-        <Select value={tipoRelacion} onValueChange={(v: string) => (setValue as (name: string, value: string) => void)(`miembros_adicionales.${index}.tipo_relacion`, v)}>
-          <SelectTrigger><SelectValue placeholder="Selecciona el tipo de relación" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pareja">Pareja</SelectItem>
-            <SelectItem value="familiar_directo">Familiar directo</SelectItem>
-          </SelectContent>
-        </Select>
-        <FieldError message={(err?.tipo_relacion as { message?: string } | undefined)?.message} />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">

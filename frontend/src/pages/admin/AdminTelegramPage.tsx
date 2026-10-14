@@ -119,7 +119,7 @@ export function AdminTelegramPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Bot className="h-5 w-5 text-primary" />
-            <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Bot de Telegram</h1>
+            <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Logs bot de Telegram</h1>
           </div>
           <p className="text-muted-foreground">
             Errores al enviar o recibir mensajes de los últimos 90 días{pag ? ` · ${pag.total} en total` : ''}

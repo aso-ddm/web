@@ -211,7 +211,7 @@ router.post('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req,
     return
   }
   try {
-    const socio = await sociosService.unirCuotaConjunta(req.params.id, parsed.data.socio_id, parsed.data.tipo_relacion, req.user.id)
+    const socio = await sociosService.unirCuotaConjunta(req.params.id, parsed.data.socio_id, req.user.id)
     res.json({ data: socio })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Error'

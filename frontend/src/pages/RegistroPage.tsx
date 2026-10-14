@@ -342,7 +342,7 @@ export function RegistroPage() {
                     variant="outline"
                     className="w-full font-display font-bold gap-2 border-dashed"
                     disabled={fields.length >= 5}
-                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', direccion: '', apodo: '', consentimiento_tiendas: false, password: '', confirmPassword: '', tipo_relacion: 'pareja' })}
+                    onClick={() => append({ nombre: '', apellidos: '', dni: '', email: '', telefono: '', fecha_nacimiento: '', direccion: '', apodo: '', consentimiento_tiendas: false, password: '', confirmPassword: '' })}
                   >
                     <PlusCircle className="h-4 w-4" />
                     {fields.length >= 5 ? 'Máximo 5 miembros adicionales' : 'Añadir miembro'}

@@ -283,8 +283,8 @@ async function main() {
   const famPareja = await crear({ email: 'familia.pareja@test.com', nombre: 'Tomás', apellidos: 'Reyes Pastor', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), aprobado_por_id: presi.id })
   const famHijo = await crear({ email: 'familia.hijo@test.com', nombre: 'Mario', apellidos: 'Reyes Domínguez', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), fecha_nacimiento: new Date(2006, 4, 12), aprobado_por_id: presi.id })
   await prisma.relacionSocio.createMany({ data: [
-    { socio_principal_id: famMadre.id, socio_relacionado_id: famPareja.id, tipo_relacion: 'pareja', fecha_inicio: haceDias(400) },
-    { socio_principal_id: famMadre.id, socio_relacionado_id: famHijo.id, tipo_relacion: 'familiar_directo', fecha_inicio: haceDias(400) },
+    { socio_principal_id: famMadre.id, socio_relacionado_id: famPareja.id, fecha_inicio: haceDias(400) },
+    { socio_principal_id: famMadre.id, socio_relacionado_id: famHijo.id, fecha_inicio: haceDias(400) },
   ] })
 
   // ── Solicitudes pendientes (individuales + una conjunta) ────────────────
@@ -293,7 +293,7 @@ async function main() {
   const grupoPend = await prisma.solicitudGrupal.create({ data: { comprobante_transferencia: COMPROBANTE } })
   const pendBeatriz = await crear({ email: 'pendiente.conjunta@test.com', nombre: 'Beatriz', apellidos: 'Crespo Lara', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, solicitud_grupal_id: grupoPend.id })
   const pendPareja = await crear({ email: 'pendiente.pareja@test.com', nombre: 'Rubén', apellidos: 'Ortiz Gallego', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, solicitud_grupal_id: grupoPend.id })
-  await prisma.relacionSocio.create({ data: { socio_principal_id: pendBeatriz.id, socio_relacionado_id: pendPareja.id, tipo_relacion: 'pareja' } })
+  await prisma.relacionSocio.create({ data: { socio_principal_id: pendBeatriz.id, socio_relacionado_id: pendPareja.id } })
 
   // ── Bajas ───────────────────────────────────────────────────────────────
   const bajas = [

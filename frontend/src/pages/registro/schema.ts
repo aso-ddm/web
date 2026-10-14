@@ -47,9 +47,6 @@ const miembroAdicionalSchema = z
     consentimiento_tiendas: z.boolean().default(false),
     password: passwordSchema,
     confirmPassword: z.string(),
-    tipo_relacion: z.enum(['pareja', 'familiar_directo'], {
-      required_error: 'Selecciona el tipo de relación',
-    }),
   })
   .superRefine((d: { password: string; confirmPassword: string }, ctx: z.RefinementCtx) => {
     if (d.password !== d.confirmPassword) {

@@ -269,28 +269,6 @@ describe('SociosService.darDeBaja — protecciones', () => {
   })
 })
 
-describe('SociosService.getPendientes', () => {
-  it('grupo → todos los miembros, con el parentesco declarado', async () => {
-    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
-    ;(prisma.solicitudGrupal.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-      {
-        id: 'g1',
-        miembros: [
-          { id: 'a1', nombre: 'Ana', relaciones_como_relacionado: [] },
-          { id: 'm1', nombre: 'Pareja', relaciones_como_relacionado: [{ tipo_relacion: 'pareja' }] },
-        ],
-      },
-    ])
-
-    const { grupos } = await service.getPendientes()
-
-    expect(grupos[0].miembros).toEqual([
-      { id: 'a1', nombre: 'Ana', tipo_relacion: null },
-      { id: 'm1', nombre: 'Pareja', tipo_relacion: 'pareja' },
-    ])
-  })
-})
-
 describe('SociosService — socios pendientes', () => {
   beforeEach(() => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, estado: 'pendiente' })
