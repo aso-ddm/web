@@ -85,7 +85,7 @@ function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; pre
                   className={`px-2.5 py-1 rounded text-xs font-display capitalize transition-colors border ${
                     rolSeleccionado === rol
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:border-primary/50'
+                      : 'border-input bg-card text-foreground hover:border-primary/50'
                   }`}
                 >
                   {ROL_LABELS[rol]}

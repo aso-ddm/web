@@ -95,7 +95,7 @@ export function LudotecaTable() {
               placeholder={texts.ludoteca.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-1.5 pr-8 rounded text-sm text-foreground bg-background border border-primary-foreground/20 focus:border-primary-foreground/40 focus:outline-none transition-colors"
+              className="w-full px-3 py-1.5 pr-8 rounded text-sm text-foreground bg-card border border-primary-foreground/20 focus:border-primary-foreground/40 focus:outline-none transition-colors"
             />
             {searchTerm && (
               <button

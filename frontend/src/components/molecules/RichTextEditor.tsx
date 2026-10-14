@@ -47,7 +47,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   if (!editor) return null
 
   return (
-    <div className={cn('rounded-md border border-input bg-background focus-within:ring-1 focus-within:ring-ring', className)}>
+    <div className={cn('rounded-md border border-input bg-card focus-within:ring-1 focus-within:ring-ring', className)}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-input px-2 py-1.5">
         <Toggle
