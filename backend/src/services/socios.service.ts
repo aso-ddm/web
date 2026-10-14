@@ -3,6 +3,7 @@ import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
 import { eventos } from '../lib/eventos'
+import { anioMesMadrid } from '../lib/fechas'
 import fs from 'fs'
 import path from 'path'
 import { HttpError } from '../lib/httpError'
@@ -88,7 +89,7 @@ export function normalizarRoles(roles: Rol[]): Rol[] {
 }
 
 function mesPagadoAlAlta(fecha: Date) {
-  return { anio: fecha.getFullYear(), mes: fecha.getMonth() + 1, estado: EstadoPago.pagado }
+  return { ...anioMesMadrid(fecha), estado: EstadoPago.pagado }
 }
 
 type Tx = Prisma.TransactionClient

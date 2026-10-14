@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { finDelDiaMadrid } from '../lib/fechas'
+import { finDelDiaMadrid, anioMesMadrid } from '../lib/fechas'
 
 describe('finDelDiaMadrid', () => {
   it('verano (UTC+2): 2 oct 18:30 + 14 días → 16 oct 23:59:59.999 Madrid', () => {
@@ -12,5 +12,13 @@ describe('finDelDiaMadrid', () => {
 
   it('pasada la medianoche de Madrid (23:30Z = 00:30 del día siguiente) cuenta como el día siguiente', () => {
     expect(finDelDiaMadrid(new Date('2026-01-14T23:30:00Z')).toISOString()).toBe('2026-01-15T22:59:59.999Z')
+  })
+})
+
+describe('anioMesMadrid', () => {
+  it('el día 1 a las 00:30 de Madrid ya es el mes nuevo (en UTC aún es el anterior)', () => {
+    // 2026-03-01 00:30 en Madrid (UTC+1) = 2026-02-28 23:30 UTC
+    expect(anioMesMadrid(new Date('2026-02-28T23:30:00Z'))).toEqual({ anio: 2026, mes: 3 })
+    expect(anioMesMadrid(new Date('2026-12-31T23:30:00Z'))).toEqual({ anio: 2027, mes: 1 })
   })
 })

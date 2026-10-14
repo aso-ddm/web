@@ -10,6 +10,12 @@ function partes(date: Date) {
   return p as Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', number>
 }
 
+/** Año y mes (1-12) de `date` en hora de Madrid: el día 1 a las 00:30 ya es el mes nuevo aunque el servidor esté en UTC */
+export function anioMesMadrid(date: Date) {
+  const { year, month } = partes(date)
+  return { anio: year, mes: month }
+}
+
 /** 23:59:59.999 (hora de Madrid) del día de `date` más `sumarDias` días de calendario, sin depender del TZ del servidor */
 export function finDelDiaMadrid(date: Date, sumarDias = 0): Date {
   const p = partes(date)

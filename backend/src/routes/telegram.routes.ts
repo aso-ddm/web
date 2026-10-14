@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma'
 import { requireRoles, ROLES } from '../middleware/auth'
 import { HttpError } from '../lib/httpError'
 import { registrarErrorTelegram, telegram } from '../lib/telegram'
+import { igualesSeguro } from '../lib/seguridad'
 
 const router = Router()
 // Telegram admite ~30 mensajes/s a chats distintos: lotes de 25 con 1 s entre lotes
@@ -86,7 +87,8 @@ router.post('/bienvenida/:socioId', requireRoles(...ROLES.DIRECTIVA), async (req
 router.post('/webhook', async (req, res) => {
   // Sin secreto configurado cualquiera podría enviar updates falsos: se rechaza todo
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (!secret || req.headers['x-telegram-bot-api-secret-token'] !== secret) {
+  const recibido = req.headers['x-telegram-bot-api-secret-token']
+  if (!secret || typeof recibido !== 'string' || !igualesSeguro(recibido, secret)) {
     res.status(403).json({ error: 'Forbidden' })
     return
   }

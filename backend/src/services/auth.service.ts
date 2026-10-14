@@ -6,6 +6,7 @@ import path from 'node:path'
 import { RegisterInput, LoginInput, SolicitudInput } from '../schemas/auth.schema'
 import { TelegramAuthInput } from '../schemas/telegram.schema'
 import { HttpError } from '../lib/httpError'
+import { igualesSeguro } from '../lib/seguridad'
 import { eventos } from '../lib/eventos'
 import { telegram } from '../lib/telegram'
 
@@ -17,7 +18,7 @@ function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean 
     .join('\n')
   const secretKey = crypto.createHash('sha256').update(botToken).digest()
   const hmac = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex')
-  return hmac === hash
+  return igualesSeguro(hmac, hash)
 }
 
 // Firma + caducidad (24h) de los datos del widget. Devuelve el id de Telegram como BigInt
