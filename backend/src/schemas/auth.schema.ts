@@ -43,14 +43,19 @@ export const fechaNacimientoSchema = z
 
 // ─── Campos de quien rellena el formulario ───────────────────────────────────
 
+// Mismas reglas que el formulario (frontend/src/pages/registro/schema.ts): lo vigila contrato_frontend.test.ts
+const apellidosSchema = z.string().min(2, 'Los apellidos son obligatorios')
+const telefonoSchema = z.string().min(1, 'El teléfono es obligatorio')
+const direccionSchema = z.string().min(1, 'La dirección es obligatoria')
+
 const camposPersona = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
-  apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
+  apellidos: apellidosSchema,
   dni: dniRegistroSchema,
   email: emailSchema,
-  telefono: z.string().optional(),
+  telefono: telefonoSchema,
   fecha_nacimiento: fechaNacimientoSchema,
-  direccion: z.string().optional(),
+  direccion: direccionSchema,
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
@@ -60,12 +65,12 @@ const camposPersona = {
 
 export const miembroAdicionalSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
-  apellidos: z.string().min(1, 'Los apellidos son obligatorios'),
+  apellidos: apellidosSchema,
   dni: dniRegistroSchema,
   email: emailSchema,
-  telefono: z.string().min(1, 'El teléfono es obligatorio'),
+  telefono: telefonoSchema,
   fecha_nacimiento: fechaNacimientoSchema,
-  direccion: z.string().optional(),
+  direccion: direccionSchema,
   apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
@@ -95,7 +100,7 @@ export const solicitudSchema = z.object({
   nombre: camposPersona.nombre,
   apellidos: camposPersona.apellidos,
   dni: dniRegistroSchema,
-  telefono: z.string().optional(),
+  telefono: telefonoSchema,
   fecha_nacimiento: fechaNacimientoSchema,
   direccion: z.string().optional(),
   apodo: camposPersona.apodo,

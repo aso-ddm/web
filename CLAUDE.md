@@ -243,6 +243,8 @@ IPs en proxy_network: `.110` (db) · `.111` (backend) · `.112` (frontend)
 - **CommonJS output** (no ESM): coherencia con el ecosistema Express + ts-node + nodemon
 - **Prisma en raíz** (`/prisma/`): convenio del boilerplate, necesario para los Dockerfiles multi-stage
 - **Tailwind CSS 4 + shadcn/ui**: dragondemadera lidera; el boilerplate se actualizará
+- **Sin paquete compartido front/back**: roles, enums y reglas del registro se escriben en los dos lados y
+  `backend/src/__tests__/contrato_frontend.test.ts` falla en CI si divergen (corre también en el job de frontend)
 - **Sin Docker en producción actual**: bare metal + PM2; Docker disponible para futuros despliegues o proyectos derivados
 - `.env` en servidor, nunca en repo
 

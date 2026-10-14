@@ -59,8 +59,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Todo el workspace: el test de contrato usa también las dependencias del backend
       - name: Instalar dependencias
-        working-directory: frontend
         run: pnpm install --frozen-lockfile
 
       - name: Verificar tipos TypeScript
@@ -70,6 +70,14 @@ jobs:
       - name: Tests
         working-directory: frontend
         run: pnpm test
+
+      # El contrato front ↔ back (roles, enums, reglas del registro) vive en los tests del backend:
+      # se ejecuta también cuando solo cambia el frontend
+      - name: Test de contrato frontend ↔ backend
+        working-directory: backend
+        run: |
+          pnpm exec prisma generate --schema=../prisma/schema.prisma
+          pnpm exec vitest run src/__tests__/contrato_frontend.test.ts
 
       - name: Build
         working-directory: frontend
