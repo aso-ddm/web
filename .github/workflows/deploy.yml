@@ -9,6 +9,11 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   DEPLOY_PATH: /var/www/dragon-de-madera/dragondemadera
 
+# Un deploy cada vez: dos pushes seguidos no se pisan los backups
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 jobs:
   # ── Detectar qué cambió ────────────────────────────────────────────────────
   changes:
@@ -43,9 +48,13 @@ jobs:
           fi
 
   # ── Deploy Frontend ────────────────────────────────────────────────────────
+  # Va después del backend: si el backend falla y hace rollback, no se publica un front contra un API antiguo
   deploy-frontend:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    needs: [changes, deploy-backend]
+    if: >-
+      !cancelled() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +66,10 @@ jobs:
       - name: Verificar tipos TypeScript
         working-directory: frontend
         run: pnpm exec tsc --noEmit
+
+      - name: Tests
+        working-directory: frontend
+        run: pnpm test
 
       - name: Build
         working-directory: frontend
@@ -110,17 +123,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Un solo lockfile (pnpm-lock.yaml) para desarrollo, tests y producción
       - name: Instalar dependencias
-        working-directory: backend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generar cliente Prisma (CI)
         working-directory: backend
-        run: npx prisma generate --schema=../prisma/schema.prisma
+        run: pnpm exec prisma generate --schema=../prisma/schema.prisma
+
+      - name: Tests
+        working-directory: backend
+        run: pnpm test:run
 
       - name: Compilar TypeScript
         working-directory: backend
-        run: npm run build
+        run: pnpm run build
 
       - name: Verificar que el build generó dist/server.js
         run: |
@@ -129,26 +146,32 @@ jobs:
             exit 1
           fi
 
+      # node_modules de producción aislado, resuelto desde pnpm-lock.yaml
+      - name: Preparar dependencias de producción
+        run: |
+          rm -rf backend-prod
+          pnpm --filter dragondemadera-backend deploy --prod --legacy backend-prod
+
+      # Se mueve el directorio en vez de copiarlo: el rollback recupera node_modules sin reinstalar.
+      # .env y uploads/ viven en $DEPLOY_PATH/backend y no se tocan.
       - name: Backup del backend anterior
         run: |
-          if [ -d "$DEPLOY_PATH/backend/dist" ]; then
-            cp -r "$DEPLOY_PATH/backend/dist" "$DEPLOY_PATH/backend/dist.backup"
-          fi
-          cp "$DEPLOY_PATH/backend/package.json" "$DEPLOY_PATH/backend/package.json.backup" 2>/dev/null || true
-          cp "$DEPLOY_PATH/backend/package-lock.json" "$DEPLOY_PATH/backend/package-lock.json.backup" 2>/dev/null || true
+          B="$DEPLOY_PATH/backend"
+          rm -rf "$B/dist.backup" "$B/node_modules.backup" "$DEPLOY_PATH/prisma.backup"
+          if [ -d "$B/dist" ]; then cp -r "$B/dist" "$B/dist.backup"; fi
+          if [ -d "$B/node_modules" ]; then mv "$B/node_modules" "$B/node_modules.backup"; fi
+          if [ -d "$DEPLOY_PATH/prisma" ]; then cp -r "$DEPLOY_PATH/prisma" "$DEPLOY_PATH/prisma.backup"; fi
+          cp "$B/package.json" "$B/package.json.backup" 2>/dev/null || true
 
       - name: Desplegar código compilado
         run: |
-          rm -rf "$DEPLOY_PATH/backend/dist"
-          cp -r backend/dist "$DEPLOY_PATH/backend/dist"
-          cp backend/package.json "$DEPLOY_PATH/backend/package.json"
-          cp backend/package-lock.json "$DEPLOY_PATH/backend/package-lock.json"
+          B="$DEPLOY_PATH/backend"
+          rm -rf "$B/dist" "$B/package-lock.json"
+          cp -r backend/dist "$B/dist"
+          cp backend/package.json "$B/package.json"
+          cp -a backend-prod/node_modules "$B/node_modules"
           rm -rf "$DEPLOY_PATH/prisma"
           cp -r prisma "$DEPLOY_PATH/prisma"
-
-      - name: Instalar dependencias de producción en servidor
-        working-directory: ${{ env.DEPLOY_PATH }}/backend
-        run: npm ci --omit=dev
 
       # prisma es dependencia de producción del backend: se usa la versión fijada en el lockfile.
       # Las migraciones son solo hacia delante; si una falla, se resuelve a mano (prisma migrate resolve).
@@ -181,11 +204,12 @@ jobs:
               echo "No hay backup previo: rollback imposible"
               exit 1
             fi
-            rm -rf "$DEPLOY_PATH/backend/dist"
-            cp -r "$DEPLOY_PATH/backend/dist.backup" "$DEPLOY_PATH/backend/dist"
-            cp "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package.json" 2>/dev/null || true
-            cp "$DEPLOY_PATH/backend/package-lock.json.backup" "$DEPLOY_PATH/backend/package-lock.json" 2>/dev/null || true
-            (cd "$DEPLOY_PATH/backend" && npm ci --omit=dev && npx prisma generate --schema=../prisma/schema.prisma) || true
+            B="$DEPLOY_PATH/backend"
+            rm -rf "$B/dist" "$B/node_modules"
+            cp -r "$B/dist.backup" "$B/dist"
+            if [ -d "$B/node_modules.backup" ]; then mv "$B/node_modules.backup" "$B/node_modules"; fi
+            if [ -d "$DEPLOY_PATH/prisma.backup" ]; then rm -rf "$DEPLOY_PATH/prisma" && cp -r "$DEPLOY_PATH/prisma.backup" "$DEPLOY_PATH/prisma"; fi
+            cp "$B/package.json.backup" "$B/package.json" 2>/dev/null || true
             pm2 restart dragon-backend --update-env
             sleep 3
             echo "Health tras rollback: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health)"
@@ -196,5 +220,5 @@ jobs:
       - name: Limpiar backups
         if: success()
         run: |
-          rm -rf "$DEPLOY_PATH/backend/dist.backup"
-          rm -f "$DEPLOY_PATH/backend/package.json.backup" "$DEPLOY_PATH/backend/package-lock.json.backup"
+          rm -rf "$DEPLOY_PATH/backend/dist.backup" "$DEPLOY_PATH/backend/node_modules.backup" "$DEPLOY_PATH/prisma.backup"
+          rm -f "$DEPLOY_PATH/backend/package.json.backup"

@@ -231,7 +231,8 @@ IPs en proxy_network: `.110` (db) · `.111` (backend) · `.112` (frontend)
 
 - Detecta cambios en `frontend/`, `backend/`, `prisma/`
 - **Frontend:** pnpm build → copy dist → nginx reload → health check → rollback si falla
-- **Backend:** npm ci → prisma generate → tsc → copy dist + prisma → npm ci --omit=dev → prisma migrate deploy → PM2 restart → health check `GET /api/health` → rollback si falla
+- **Frontend** espera al backend (si este falla no se publica) y un solo deploy a la vez (`concurrency: deploy-prod`); ambos ejecutan los tests antes del build
+- **Backend:** pnpm install --frozen-lockfile → prisma generate → tests → tsc → `pnpm deploy --prod` (node_modules desde `pnpm-lock.yaml`; no hay package-lock) → copy dist + node_modules + prisma → prisma migrate deploy → PM2 restart → health check `GET /api/health` → rollback si falla
 - Prisma vive en raíz (`prisma/`), se despliega a `$DEPLOY_PATH/prisma/`
 
 ---
