@@ -47,13 +47,19 @@ describe('PrestamosService.solicitar', () => {
     )
   })
 
-  it('préstamo activo existente → throws', async () => {
+  it('límite de préstamos alcanzado → throws dentro de la transacción, sin reservar el juego', async () => {
     ;(prisma.juego.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(juegoDisponible)
-    ;(prisma.prestamo.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null) // límite por defecto: 3
+    const txMock = {
+      $queryRaw: vi.fn(),
+      prestamo: { count: vi.fn().mockResolvedValue(3), create: vi.fn() },
+      juego: { updateMany: vi.fn() },
+    }
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
 
-    await expect(service.solicitar('u1', { juego_id: 'g1' })).rejects.toThrow(
-      'Ya tienes un préstamo activo para este juego',
-    )
+    await expect(service.solicitar('u1', { juego_id: 'g1' })).rejects.toThrow('límite de 3')
+    expect(txMock.$queryRaw).toHaveBeenCalled() // bloqueo del socio antes de contar
+    expect(txMock.juego.updateMany).not.toHaveBeenCalled()
   })
 
   it('éxito → transacción: préstamo activo + juego=prestado', async () => {
@@ -64,7 +70,8 @@ describe('PrestamosService.solicitar', () => {
       valor: '14',
     })
     const txMock = {
-      prestamo: { create: vi.fn().mockResolvedValue(prestamoActivo) },
+      $queryRaw: vi.fn(),
+      prestamo: { count: vi.fn().mockResolvedValue(0), create: vi.fn().mockResolvedValue(prestamoActivo) },
       juego: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
     }
     ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))
@@ -93,7 +100,8 @@ describe('PrestamosService.solicitar', () => {
     ;(prisma.prestamo.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null)
     ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
     const txMock = {
-      prestamo: { create: vi.fn() },
+      $queryRaw: vi.fn(),
+      prestamo: { count: vi.fn().mockResolvedValue(0), create: vi.fn() },
       juego: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
     }
     ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: typeof txMock) => Promise<unknown>) => fn(txMock))

@@ -36,7 +36,11 @@ export type SocioAdmin = Usuario & {
   } | null
 }
 
-// Socio del listado (paginado)
+// Socio de los listados: sin historial ni trazabilidad (están en la ficha, getById)
+export type SocioListado = Omit<SocioAdmin, 'aprobado_por' | 'baja_por' | 'historial_estado' | 'solicitud_grupal'> & {
+  solicitud_grupal: { id: string } | null
+}
+
 export interface GetSociosParams {
   estado?: EstadoSocio
   search?: string
@@ -55,7 +59,7 @@ export const sociosApi = {
     if (params.search) q.set('search', params.search)
     if (params.page) q.set('page', String(params.page))
     if (params.limit) q.set('limit', String(params.limit))
-    return api.get<{ data: SocioAdmin[]; pagination: { total: number; page: number; limit: number; totalPages: number } }>(
+    return api.get<{ data: SocioListado[]; pagination: { total: number; page: number; limit: number; totalPages: number } }>(
       `/socios?${q.toString()}`,
     )
   },
@@ -64,7 +68,7 @@ export const sociosApi = {
 
   getOpciones: () => api.get<{ data: { id: string; nombre: string; apellidos: string; apodo: string | null }[] }>('/socios/opciones'),
 
-  getPendientes: () => api.get<{ data: { individuales: SocioAdmin[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
+  getPendientes: () => api.get<{ data: { individuales: SocioListado[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
 
   aprobar: (id: string, rol: Rol) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, { rol }),
   rechazar: (id: string) => api.action(`/socios/${id}/rechazar`),

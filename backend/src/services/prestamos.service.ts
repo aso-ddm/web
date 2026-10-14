@@ -45,31 +45,27 @@ export class PrestamosService {
     if (!juego) throw new HttpError(404, 'Juego no encontrado')
     if (juego.estado !== 'en_estanteria') throw new HttpError(409, 'El juego no está disponible para préstamo')
 
-    const prestamoExistente = await this.prisma.prestamo.findFirst({
-      where: { socio_id: socioId, juego_id: input.juego_id, estado: EstadoPrestamo.activo },
-    })
-    if (prestamoExistente) throw new HttpError(409, 'Ya tienes un préstamo activo para este juego')
-
-    const [prestamosActivos, maxPrestamos] = await Promise.all([
-      this.prisma.prestamo.count({ where: { socio_id: socioId, estado: EstadoPrestamo.activo } }),
+    const [maxPrestamos, diasPrestamo] = await Promise.all([
       this.getConfigNum('max_prestamos_activos', 3),
+      this.getConfigNum('dias_prestamo', 14),
     ])
-    if (prestamosActivos >= maxPrestamos) {
-      throw new HttpError(409, `Has alcanzado el límite de ${maxPrestamos} préstamos simultáneos`)
-    }
-
-    const diasPrestamo = await this.getConfigNum('dias_prestamo', 14)
     const ahora = new Date()
     const fechaLimite = finDelDiaMadrid(ahora, diasPrestamo) // vence al acabar el día
 
-    const prestamo = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
+      // Bloquea la fila del socio: dos peticiones suyas a la vez no pueden pasar las dos del límite
+      await tx.$queryRaw`SELECT 1 FROM "Usuario" WHERE id = ${socioId} FOR UPDATE`
+      const prestamosActivos = await tx.prestamo.count({ where: { socio_id: socioId, estado: EstadoPrestamo.activo } })
+      if (prestamosActivos >= maxPrestamos) {
+        throw new HttpError(409, `Has alcanzado el límite de ${maxPrestamos} préstamos simultáneos`)
+      }
       // Reserva atómica: si dos socios piden el mismo juego a la vez, solo uno lo consigue
       const { count } = await tx.juego.updateMany({
         where: { id: input.juego_id, estado: 'en_estanteria' },
         data: { estado: 'prestado' },
       })
       if (count !== 1) throw new HttpError(409, 'El juego no está disponible para préstamo')
-      return tx.prestamo.create({
+      const prestamo = await tx.prestamo.create({
         data: {
           juego_id: input.juego_id,
           socio_id: socioId,
@@ -80,16 +76,9 @@ export class PrestamosService {
         },
         include: { juego: { select: { id: true, nombre: true } } },
       })
+      await this.logsService.crearSistema(input.juego_id, TipoLogJuego.prestamo_activo, `${juego.nombre} prestado`, socioId, tx)
+      return prestamo
     })
-
-    await this.logsService.crearSistema(
-      input.juego_id,
-      TipoLogJuego.prestamo_activo,
-      `${prestamo.juego?.nombre ?? 'Juego'} prestado`,
-      socioId,
-    )
-
-    return prestamo
   }
 
   async renovar(prestamoId: string, socioId: string) {
@@ -132,7 +121,7 @@ export class PrestamosService {
       select: { nombre: true },
     })
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       // Solo una devolución gana si se confirma dos veces a la vez
       const { count } = await tx.prestamo.updateMany({
         where: { id: prestamoId, estado: EstadoPrestamo.activo },
@@ -147,17 +136,9 @@ export class PrestamosService {
         where: { id: prestamo.juego_id },
         data: { estado: 'en_estanteria' as const },
       })
+      await this.logsService.crearSistema(prestamo.juego_id, TipoLogJuego.prestamo_devuelto, `${juego?.nombre ?? 'Juego'} devuelto`, usuarioId, tx)
       return tx.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })
     })
-
-    await this.logsService.crearSistema(
-      prestamo.juego_id,
-      TipoLogJuego.prestamo_devuelto,
-      `${juego?.nombre ?? 'Juego'} devuelto`,
-      usuarioId,
-    )
-
-    return updated
   }
 
   // ── Ludotecario / Directiva ───────────────────────────────────────────────

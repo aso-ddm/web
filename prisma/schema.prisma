@@ -143,9 +143,8 @@ model Usuario {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  @@index([email])
   @@index([estado])
-  @@index([dni])
+  @@index([solicitud_grupal_id])
 }
 
 model RelacionSocio {
@@ -182,6 +181,7 @@ model Juego {
 
   @@index([nombre])
   @@index([estado])
+  @@index([propietario_id])
 }
 
 model Prestamo {
@@ -203,7 +203,7 @@ model Prestamo {
   created_at DateTime @default(now())
 
   @@index([juego_id])
-  @@index([socio_id])
+  @@index([socio_id, estado])
   @@index([estado])
   @@index([fecha_limite])
 }
@@ -221,7 +221,6 @@ model Visita {
 
   created_at DateTime @default(now())
 
-  @@index([nombre_completo])
   @@index([fecha_visita])
 }
 

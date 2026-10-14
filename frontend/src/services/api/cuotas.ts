@@ -14,7 +14,8 @@ export interface SocioCuotas {
 }
 
 export const cuotasApi = {
-  getAll: () => api.get<{ data: SocioCuotas[] }>('/cuotas'),
+  // Pagos de `anio` y los impagos de cualquier año
+  getAll: (anio: number) => api.get<{ data: SocioCuotas[] }>(`/cuotas?anio=${anio}`),
   // estado null = volver a "sin revisar"
   marcar: (socioId: string, anio: number, mes: number, estado: EstadoPago | null) =>
     api.put<unknown>(`/cuotas/${socioId}/${anio}/${mes}`, { estado }),

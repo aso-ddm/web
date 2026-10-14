@@ -1,4 +1,4 @@
-import { PrismaClient, TipoLogJuego } from '@prisma/client'
+import { Prisma, PrismaClient, TipoLogJuego } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
 import type { FiltrosLogsInput } from '../schemas/log_juego.schema'
 
@@ -53,13 +53,15 @@ export class LogsJuegoService {
     })
   }
 
+  // Con `db` = transacción, el log se guarda (o se deshace) junto a la operación que registra
   async crearSistema(
     juego_id: string,
     tipo: TipoLogJuego,
     texto: string,
     usuario_id?: string,
+    db: Prisma.TransactionClient = this.prisma,
   ) {
-    return this.prisma.logJuego.create({
+    return db.logJuego.create({
       data: { juego_id, tipo, texto, usuario_id: usuario_id ?? null },
     })
   }

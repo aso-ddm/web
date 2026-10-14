@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
-import { sociosApi, type SocioAdmin } from '@/services/api/socios'
+import { sociosApi, type SocioListado } from '@/services/api/socios'
 import { configuracionApi } from '@/services/api/configuracion'
 import { escucharEventos } from '@/services/api/eventos'
 import { useAuthStore } from '@/store/authStore'
@@ -26,7 +26,7 @@ function tipoCuotaLabel(tipo: string, precioIndividual: number) {
 
 // ── Tarjeta solicitud individual ──────────────────────────────────────────────
 
-function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioAdmin; precioIndividual: number }) {
+function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioListado; precioIndividual: number }) {
   const queryClient = useQueryClient()
   const puedeEditar = useAuthStore((s) => s.isDirectiva())
   const [rolSeleccionado, setRolSeleccionado] = useState<Rol | null>(null)
@@ -291,7 +291,7 @@ export function SolicitudesPage() {
                 <p className="text-sm">No hay solicitudes individuales pendientes</p>
               </div>
             ) : (
-            individuales.map((s: SocioAdmin) => <AltaSolicitudCard key={s.id} socio={s} precioIndividual={precioIndividual} />)
+            individuales.map((s: SocioListado) => <AltaSolicitudCard key={s.id} socio={s} precioIndividual={precioIndividual} />)
             )}
           </CardContent>
         </Card>

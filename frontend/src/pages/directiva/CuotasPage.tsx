@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Wallet, Users } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -43,7 +43,8 @@ export function CuotasPage() {
   // Morosos tocados en la pestaña: siguen visibles aunque se pongan al día, para poder seguir marcando
   const [fijados, setFijados] = useState<Set<string>>(new Set())
 
-  const { data, isLoading } = useQuery({ queryKey: QK.CUOTAS, queryFn: cuotasApi.getAll })
+  const queryKey = [...QK.CUOTAS, anio]
+  const { data, isLoading } = useQuery({ queryKey, queryFn: () => cuotasApi.getAll(anio), placeholderData: keepPreviousData })
   const cuotas = agruparCuotas(data?.data ?? [])
 
   const { mutate: marcar } = useMutation({
@@ -53,9 +54,9 @@ export function CuotasPage() {
     // En serie: con clics rápidos los PUT podrían llegar desordenados y dejar otro estado en el servidor
     scope: { id: 'cuotas' },
     onMutate: async ({ cuotaId, mes, estado }) => {
-      await qc.cancelQueries({ queryKey: QK.CUOTAS })
+      await qc.cancelQueries({ queryKey })
       setFijados((s) => new Set(s).add(cuotaId))
-      qc.setQueryData<{ data: SocioCuotas[] }>(QK.CUOTAS, (old) => old && {
+      qc.setQueryData<{ data: SocioCuotas[] }>(queryKey, (old) => old && {
         data: old.data.map((s) => {
           if (s.cuota_id !== cuotaId) return s
           const resto = s.pagos_cuota.filter((p) => !(p.anio === anio && p.mes === mes))

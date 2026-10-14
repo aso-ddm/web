@@ -8,4 +8,8 @@ export const marcarCuotaSchema = z.object({
   estado: z.nativeEnum(EstadoPago).nullable(),
 })
 
+export const listarCuotasSchema = z.object({
+  anio: z.coerce.number().int().min(2000).max(2100).default(() => new Date().getFullYear()),
+})
+
 export type MarcarCuotaInput = z.infer<typeof marcarCuotaSchema>

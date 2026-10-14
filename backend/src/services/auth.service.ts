@@ -157,54 +157,42 @@ export class AuthService {
   }
 
   private async registerConjunta(data: Extract<RegisterInput, { tipo_cuota: 'conjunta' }>, comprobanteFilename: string) {
-    // Pre-validación de unicidad (antes de abrir transacción)
-    const todosEmails = [data.email, ...data.miembros_adicionales.map((m) => m.email)]
-    const todosDnis = [data.dni, ...data.miembros_adicionales.map((m) => m.dni)]
+    const { miembros_adicionales, tipo_cuota: _t, ...primero } = data
+    const personas = [primero, ...miembros_adicionales]
 
-    // Verificar duplicados internos en el grupo
-    const emailsSet = new Set<string>()
-    for (const email of todosEmails) {
-      if (emailsSet.has(email)) {
-        throw new HttpError(409, `Ya existe una cuenta con ese email: ${email}`)
+    // Duplicados dentro del propio formulario
+    const repetido = <T,>(xs: T[]) => xs.find((x, i) => xs.indexOf(x) !== i)
+    const emailRep = repetido(personas.map((p) => p.email))
+    if (emailRep) throw new HttpError(409, `Ya existe una cuenta con ese email: ${emailRep}`)
+    const dniRep = repetido(personas.map((p) => p.dni))
+    if (dniRep) throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${dniRep}`)
+
+    // Duplicados en la BD: una sola consulta para todo el grupo
+    const existentes = await this.prisma.usuario.findMany({
+      where: { OR: personas.flatMap((p) => [porEmail(p.email), { dni: p.dni }]) },
+      select: { email: true, dni: true },
+    })
+    for (const p of personas) {
+      if (existentes.some((e) => e.email.toLowerCase() === p.email.toLowerCase())) {
+        throw new HttpError(409, `Ya existe una cuenta con ese email: ${p.email}`)
       }
-      emailsSet.add(email)
+      if (existentes.some((e) => e.dni === p.dni)) throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${p.dni}`)
     }
 
-    const dnisSet = new Set<string>()
-    for (const dni of todosDnis) {
-      if (dnisSet.has(dni)) {
-        throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${dni}`)
-      }
-      dnisSet.add(dni)
-    }
+    // bcrypt es lento (~300 ms por hash): fuera de la transacción para no tenerla abierta segundos
+    const hashes = await Promise.all(personas.map((p) => bcrypt.hash(p.password, SALT_ROUNDS)))
 
-    // Verificar que ningún email ni DNI ya existe en la BD
-    for (const email of todosEmails) {
-      const existing = await this.prisma.usuario.findFirst({ where: porEmail(email) })
-      if (existing) {
-        throw new HttpError(409, `Ya existe una cuenta con ese email: ${email}`)
-      }
-    }
-
-    for (const dni of todosDnis) {
-      const existing = await this.prisma.usuario.findUnique({ where: { dni } })
-      if (existing) {
-        throw new HttpError(409, `Ya existe una cuenta con ese DNI: ${dni}`)
-      }
-    }
-
-    // Todos los miembros son iguales: el comprobante es del grupo y el parentesco se declara
-    // respecto a quien rellena el formulario
+    // Todos los miembros son iguales: el comprobante es del grupo
     return this.prisma.$transaction(async (tx) => {
       const grupo = await tx.solicitudGrupal.create({
         data: { estado: 'pendiente', comprobante_transferencia: comprobanteFilename },
       })
-      const { miembros_adicionales, tipo_cuota: _t, ...primero } = data
-      const crear = async ({ password, fecha_nacimiento, ...resto }: Omit<typeof primero, 'direccion'> & { direccion?: string }) =>
-        tx.usuario.create({
+      const ids: string[] = []
+      for (const [i, { password: _p, fecha_nacimiento, ...resto }] of personas.entries()) {
+        const { id } = await tx.usuario.create({
           data: {
             ...resto,
-            password_hash: await bcrypt.hash(password, SALT_ROUNDS),
+            password_hash: hashes[i],
             tipo_cuota: 'conjunta',
             roles: [Rol.socio_basico],
             estado: 'pendiente',
@@ -213,13 +201,13 @@ export class AuthService {
           },
           select: { id: true },
         })
-
-      const { id: primeroId } = await crear(primero)
-      for (const m of miembros_adicionales) {
-        const { id } = await crear(m)
-        await tx.relacionSocio.create({ data: { socio_principal_id: primeroId, socio_relacionado_id: id } })
+        ids.push(id)
       }
-      return { grupo_id: grupo.id, miembros: miembros_adicionales.length + 1 }
+      const [primeroId, ...otros] = ids
+      await tx.relacionSocio.createMany({
+        data: otros.map((id) => ({ socio_principal_id: primeroId, socio_relacionado_id: id })),
+      })
+      return { grupo_id: grupo.id, miembros: personas.length }
     })
   }
 

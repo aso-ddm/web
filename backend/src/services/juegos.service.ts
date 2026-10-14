@@ -92,21 +92,22 @@ export class JuegosService {
 
   async crear(data: CrearJuegoInput, usuario_id?: string) {
     comprobarJugadores(data.num_jugadores_min, data.num_jugadores_max)
-    const juego = await this.prisma.juego.create({
-      data,
-      include: { propietario: propietarioSelect },
+    return this.prisma.$transaction(async (tx) => {
+      const juego = await tx.juego.create({
+        data,
+        include: { propietario: propietarioSelect },
+      })
+      await this.logsService.crearSistema(
+        juego.id,
+        TipoLogJuego.donado,
+        juego.propietario
+          ? `${juego.nombre} cedido al Dragón por ${juego.propietario.nombre} ${juego.propietario.apellidos}`
+          : `${juego.nombre} añadido al catálogo del Dragón`,
+        usuario_id,
+        tx,
+      )
+      return juego
     })
-
-    await this.logsService.crearSistema(
-      juego.id,
-      TipoLogJuego.donado,
-      juego.propietario
-        ? `${juego.nombre} cedido al Dragón por ${juego.propietario.nombre} ${juego.propietario.apellidos}`
-        : `${juego.nombre} añadido al catálogo del Dragón`,
-      usuario_id,
-    )
-
-    return juego
   }
 
   async update(id: string, data: UpdateJuegoInput) {
@@ -131,24 +132,18 @@ export class JuegosService {
     if (juego.estado === 'prestado') throw new HttpError(409, 'No se puede retirar un juego prestado')
 
     // Solo desde la estantería: si alguien lo presta a la vez, no queda retirado con préstamo activo
-    const { count } = await this.prisma.juego.updateMany({
-      where: { id, estado: 'en_estanteria' },
-      data: { estado: 'retirado' },
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.juego.updateMany({
+        where: { id, estado: 'en_estanteria' },
+        data: { estado: 'retirado' },
+      })
+      if (count !== 1) throw new HttpError(409, 'No se puede retirar un juego prestado')
+      await this.logsService.crearSistema(id, TipoLogJuego.retirado, `${juego.nombre} retirado del Dragón`, usuario_id, tx)
+      return tx.juego.findUniqueOrThrow({
+        where: { id },
+        include: { propietario: propietarioSelect },
+      })
     })
-    if (count !== 1) throw new HttpError(409, 'No se puede retirar un juego prestado')
-    const updated = await this.prisma.juego.findUniqueOrThrow({
-      where: { id },
-      include: { propietario: propietarioSelect },
-    })
-
-    await this.logsService.crearSistema(
-      id,
-      TipoLogJuego.retirado,
-      `${juego.nombre} retirado del Dragón`,
-      usuario_id,
-    )
-
-    return updated
   }
 
   async reactivar(id: string, usuario_id: string) {
@@ -156,20 +151,14 @@ export class JuegosService {
     if (!juego) throw new HttpError(404, 'Juego no encontrado')
     if (juego.estado !== 'retirado') throw new HttpError(409, 'Solo se pueden reactivar juegos retirados')
 
-    const updated = await this.prisma.juego.update({
-      where: { id },
-      data: { estado: 'en_estanteria' },
-      include: { propietario: propietarioSelect },
+    return this.prisma.$transaction(async (tx) => {
+      await this.logsService.crearSistema(id, TipoLogJuego.nota_manual, `${juego.nombre} reactivado y vuelto a la estantería`, usuario_id, tx)
+      return tx.juego.update({
+        where: { id },
+        data: { estado: 'en_estanteria' },
+        include: { propietario: propietarioSelect },
+      })
     })
-
-    await this.logsService.crearSistema(
-      id,
-      TipoLogJuego.nota_manual,
-      `${juego.nombre} reactivado y vuelto a la estantería`,
-      usuario_id,
-    )
-
-    return updated
   }
 
   async delete(id: string) {

@@ -276,3 +276,48 @@ describe('AuthService.pedirBaja', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 })
+
+describe('AuthService.register (conjunta)', () => {
+  const persona = (n: number) => ({
+    email: `p${n}@example.com`, dni: `1234567${n}A`, nombre: `P${n}`, apellidos: 'X',
+    password: 'Password123!', fecha_nacimiento: '1990-01-01',
+  })
+  const input = {
+    ...persona(1), tipo_cuota: 'conjunta' as const, consentimiento_tiendas: false,
+    miembros_adicionales: [persona(2), persona(3)],
+  }
+  const findMany = () => prisma.usuario.findMany as ReturnType<typeof vi.fn>
+
+  it('email repetido dentro del formulario → 409 sin consultar la BD', async () => {
+    const dup = { ...input, miembros_adicionales: [{ ...persona(2), email: input.email }] }
+    await expect(service.register(dup as never, 'c.pdf')).rejects.toMatchObject({ status: 409 })
+    expect(findMany()).not.toHaveBeenCalled()
+  })
+
+  it('DNI ya registrado → 409 con una sola consulta para todo el grupo', async () => {
+    findMany().mockResolvedValueOnce([{ email: 'otro@example.com', dni: persona(3).dni }])
+    await expect(service.register(input as never, 'c.pdf')).rejects.toThrow(`DNI: ${persona(3).dni}`)
+    expect(findMany()).toHaveBeenCalledTimes(1)
+  })
+
+  it('éxito → contraseñas cifradas antes de la transacción, un usuario pendiente por persona', async () => {
+    findMany().mockResolvedValueOnce([])
+    ;(prisma.solicitudGrupal.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'g1' })
+    ;(prisma.usuario.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'u' })
+    const hashesAlAbrir: number[] = []
+    ;(prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fn: (tx: PrismaClient) => unknown) => {
+      hashesAlAbrir.push(mockHash.mock.calls.length)
+      return fn(prisma)
+    })
+    mockHash.mockClear()
+
+    const r = await service.register(input as never, 'c.pdf')
+
+    expect(r).toEqual({ grupo_id: 'g1', miembros: 3 })
+    expect(hashesAlAbrir).toEqual([3])
+    expect(prisma.usuario.create).toHaveBeenCalledTimes(3)
+    expect(prisma.usuario.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ estado: 'pendiente', solicitud_grupal_id: 'g1', password_hash: '$2b$12$hashed' }),
+    }))
+  })
+})

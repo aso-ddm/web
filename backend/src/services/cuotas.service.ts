@@ -1,15 +1,19 @@
-import { PrismaClient, EstadoSocio } from '@prisma/client'
+import { PrismaClient, EstadoSocio, EstadoPago } from '@prisma/client'
 import type { MarcarCuotaInput } from '../schemas/cuota.schema'
 import { HttpError } from '../lib/httpError'
 
 export class CuotasService {
   constructor(private prisma: PrismaClient) {}
 
-  // Socios activos con sus pagos.
+  // Socios activos con los pagos de `anio` y los impagos de cualquier año (para saber quién es moroso):
+  // el histórico completo crece cada año y no hace falta.
   // Cuota conjunta: los pagos son del grupo y todos los miembros los comparten (cuota_id = id del grupo).
   // ponytail: solo activos; los de baja con deuda no aparecen. Añadir filtro si hace falta perseguirla.
-  async listar() {
-    const pagos = { select: { anio: true, mes: true, estado: true } }
+  async listar(anio: number) {
+    const pagos = {
+      where: { OR: [{ anio }, { estado: EstadoPago.sin_pagar }] },
+      select: { anio: true, mes: true, estado: true },
+    }
     const socios = await this.prisma.usuario.findMany({
       where: { estado: EstadoSocio.activo, fecha_alta: { not: null } },
       select: {

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Search, Users, ChevronRight } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -11,7 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { SEOHead } from '@/components/atoms/SEOHead'
-import { sociosApi, type SocioAdmin } from '@/services/api/socios'
+import { sociosApi } from '@/services/api/socios'
+import { QK } from '@/lib/queryKeys'
+import { PageLoader } from '@/components/atoms/PageLoader'
 import type { EstadoSocio } from '@/types/api'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { RolBadge } from '@/components/atoms/RolBadge'
@@ -21,7 +22,8 @@ export function GestionSociosPage() {
   const [search, setSearch] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoSocio | 'todos'>('activo')
   const [page, setPage] = useState(1)
-  const [socioSeleccionado, setSocioSeleccionado] = useState<SocioAdmin | null>(null)
+  // Solo el id: la ficha se carga (y se refresca tras cada cambio) con su propia query
+  const [socioId, setSocioId] = useState<string | null>(null)
 
   const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading } = useQuery({
@@ -34,6 +36,13 @@ export function GestionSociosPage() {
         page,
         limit: 20,
       }),
+  })
+
+  const { data: socioSeleccionado } = useQuery({
+    queryKey: QK.SOCIO(socioId ?? ''),
+    queryFn: () => sociosApi.getById(socioId!),
+    enabled: !!socioId,
+    select: (r) => r.data,
   })
 
   const socios = data?.data ?? []
@@ -100,7 +109,7 @@ export function GestionSociosPage() {
                   <li key={socio.id}>
                     <button
                       className="w-full flex items-center gap-4 px-4 py-3 hover:bg-accent/30 transition-colors text-left"
-                      onClick={() => setSocioSeleccionado(socio)}
+                      onClick={() => setSocioId(socio.id)}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -162,9 +171,14 @@ export function GestionSociosPage() {
       </div>
 
       {/* Drawer detalle */}
-      <Sheet open={!!socioSeleccionado} onOpenChange={(v) => !v && setSocioSeleccionado(null)}>
+      <Sheet open={!!socioId} onOpenChange={(v) => !v && setSocioId(null)}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          {socioSeleccionado && (
+          {!socioSeleccionado ? (
+            <>
+              <SheetTitle className="sr-only">Cargando socio</SheetTitle>
+              <PageLoader />
+            </>
+          ) : (
             <>
               <SheetHeader>
                 <SheetTitle className="font-display text-primary">
@@ -176,12 +190,8 @@ export function GestionSociosPage() {
                 <SocioDetalle
                   key={socioSeleccionado.id}
                   socio={socioSeleccionado}
-                  onClose={() => setSocioSeleccionado(null)}
-                  onAbrirSocio={(id) =>
-                    sociosApi.getById(id)
-                      .then((r) => setSocioSeleccionado(r.data))
-                      .catch((err: Error) => toast.error(err.message))
-                  }
+                  onClose={() => setSocioId(null)}
+                  onAbrirSocio={setSocioId}
                 />
               </div>
             </>

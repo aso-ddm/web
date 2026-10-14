@@ -14,8 +14,8 @@ function borrarComprobantes(nombres: (string | null)[]) {
   }
 }
 
-// Campos públicos que se devuelven en listados (sin datos sensibles)
-const SOCIO_PUBLIC_SELECT = {
+// Listados y respuestas de mutaciones: sin historial ni trazabilidad (solo se ven en la ficha)
+const SOCIO_LIST_SELECT = {
   id: true,
   email: true,
   nombre: true,
@@ -34,7 +34,15 @@ const SOCIO_PUBLIC_SELECT = {
   tiene_llaves: true,
   comprobante_transferencia: true,
   created_at: true,
-  // Cuota conjunta: miembros del grupo (null = cuota individual)
+  solicitud_grupal: { select: { id: true } }, // null = cuota individual
+} as const
+
+// Ficha del socio (GET /socios/:id)
+const SOCIO_DETAIL_SELECT = {
+  ...SOCIO_LIST_SELECT,
+  direccion: true,
+  consentimiento_tiendas: true,
+  // Cuota conjunta: miembros del grupo
   solicitud_grupal: {
     select: {
       id: true,
@@ -150,7 +158,7 @@ export class SociosService {
       const socios = ids.length > 0
         ? await this.prisma.usuario.findMany({
             where: { id: { in: ids } },
-            select: SOCIO_PUBLIC_SELECT,
+            select: SOCIO_LIST_SELECT,
             orderBy: { created_at: 'desc' },
           })
         : []
@@ -166,7 +174,7 @@ export class SociosService {
     const [socios, total] = await Promise.all([
       this.prisma.usuario.findMany({
         where,
-        select: SOCIO_PUBLIC_SELECT,
+        select: SOCIO_LIST_SELECT,
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
@@ -193,7 +201,7 @@ export class SociosService {
     const [individuales, grupos] = await Promise.all([
       this.prisma.usuario.findMany({
         where: { estado: EstadoSocio.pendiente, solicitud_grupal_id: null },
-        select: SOCIO_PUBLIC_SELECT,
+        select: SOCIO_LIST_SELECT,
         orderBy: { created_at: 'asc' },
       }),
       this.prisma.solicitudGrupal.findMany({
@@ -258,7 +266,7 @@ export class SociosService {
 
     return this.prisma.solicitudGrupal.findUnique({
       where: { id: grupoId },
-      include: { miembros: { select: SOCIO_PUBLIC_SELECT } },
+      include: { miembros: { select: SOCIO_LIST_SELECT } },
     })
   }
 
@@ -286,27 +294,7 @@ export class SociosService {
   }
 
   async getById(id: string) {
-    const socio = await this.prisma.usuario.findUnique({
-      where: { id },
-      select: {
-        ...SOCIO_PUBLIC_SELECT,
-        direccion: true,
-        consentimiento_tiendas: true,
-        relaciones_como_principal: {
-          where: { activa: true },
-          include: {
-            socio_relacionado: { select: { id: true, nombre: true, apellidos: true, roles: true } },
-          },
-        },
-        relaciones_como_relacionado: {
-          where: { activa: true },
-          include: {
-            socio_principal: { select: { id: true, nombre: true, apellidos: true, roles: true } },
-          },
-        },
-      },
-    })
-
+    const socio = await this.prisma.usuario.findUnique({ where: { id }, select: SOCIO_DETAIL_SELECT })
     if (!socio) throw new HttpError(404, 'Socio no encontrado')
     return socio
   }
@@ -321,7 +309,7 @@ export class SociosService {
         ...data,
         fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
       },
-      select: SOCIO_PUBLIC_SELECT,
+      select: SOCIO_LIST_SELECT,
     })
   }
 
@@ -349,7 +337,7 @@ export class SociosService {
         pagos_cuota: { create: mesPagadoAlAlta(ahora) },
         historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora } },
       },
-      select: SOCIO_PUBLIC_SELECT,
+      select: SOCIO_LIST_SELECT,
     })
   }
 
@@ -399,7 +387,7 @@ export class SociosService {
             ],
           },
         },
-        select: SOCIO_PUBLIC_SELECT,
+        select: SOCIO_LIST_SELECT,
       })
     })
 
@@ -422,7 +410,7 @@ export class SociosService {
   async salirCuotaConjunta(id: string, porId: string) {
     return this.prisma.$transaction(async (tx) => {
       await salirDeCuotaConjunta(tx, id, porId, 'Sale de la cuota conjunta')
-      return tx.usuario.findUnique({ where: { id }, select: SOCIO_PUBLIC_SELECT })
+      return tx.usuario.findUnique({ where: { id }, select: SOCIO_LIST_SELECT })
     })
   }
 
@@ -461,7 +449,7 @@ export class SociosService {
       await tx.usuario.update({ where: { id }, data: { solicitud_grupal_id: grupo.id, tipo_cuota: TipoCuota.conjunta } })
       await tx.relacionSocio.create({ data: { socio_principal_id: otro.id, socio_relacionado_id: id } })
       await historial(id, `Se une a la cuota conjunta de ${nombreCompleto(otro)}`)
-      return tx.usuario.findUnique({ where: { id }, select: SOCIO_PUBLIC_SELECT })
+      return tx.usuario.findUnique({ where: { id }, select: SOCIO_LIST_SELECT })
     })
   }
 
@@ -484,7 +472,7 @@ export class SociosService {
         baja_por_id: null,
         historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: reactivadoPorId } },
       },
-      select: SOCIO_PUBLIC_SELECT,
+      select: SOCIO_LIST_SELECT,
     })
   }
 
@@ -517,7 +505,7 @@ export class SociosService {
     return this.prisma.usuario.update({
       where: { id },
       data: { roles },
-      select: SOCIO_PUBLIC_SELECT,
+      select: SOCIO_LIST_SELECT,
     })
   }
 
@@ -539,7 +527,7 @@ export class SociosService {
           },
         }),
       },
-      select: SOCIO_PUBLIC_SELECT,
+      select: SOCIO_LIST_SELECT,
     })
   }
 }

@@ -23,6 +23,7 @@ export const QK = {
 
   // Socios
   SOCIOS_GESTION: ['socios-gestion'] as const,
+  SOCIO: (id: string) => ['socio', id] as const, // ficha
   SOCIOS_ACTIVOS: ['socios-activos'] as const,
   SOCIOS_LLAVES: ['socios-llaves'] as const,
   SOCIOS_OPCIONES: ['socios-opciones'] as const,
@@ -72,7 +73,7 @@ export function invalidarPrestamos(qc: QueryClient) {
  */
 export function invalidarSocios(qc: QueryClient) {
   for (const queryKey of [
-    QK.PENDIENTES, QK.SOCIOS_GESTION, QK.SOCIOS_ACTIVOS, QK.SOCIOS_LLAVES,
+    QK.PENDIENTES, QK.SOCIOS_GESTION, ['socio'], QK.SOCIOS_ACTIVOS, QK.SOCIOS_LLAVES,
     QK.SOCIOS_OPCIONES, QK.SOCIOS_DESTINATARIOS, QK.CUOTAS, QK.ADMIN_USUARIOS, QK.ME,
   ]) {
     qc.invalidateQueries({ queryKey })
