@@ -64,8 +64,11 @@ process.on('unhandledRejection', (err) => console.error('unhandledRejection:', e
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT) || 3001
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Backend escuchando en http://0.0.0.0:${port}`)
+// Docker necesita 0.0.0.0 (le llega tráfico desde otros contenedores). En bare metal deploy.yml fija
+// HOST=127.0.0.1: el puerto 3001 no queda expuesto y nadie puede falsear X-Real-IP saltándose nginx
+const host = process.env.HOST || '0.0.0.0'
+app.listen(port, host, () => {
+  console.log(`Backend escuchando en http://${host}:${port}`)
 })
 
 export default app

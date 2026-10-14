@@ -227,6 +227,13 @@ El seed (configuración + admin + club de prueba; borra los datos) no corre al a
 
 IPs en proxy_network: `.110` (db) · `.111` (backend) · `.112` (frontend)
 
+**Despliegue actual: `docker-deploy.yml`** (push a `web2-feature` o `main` → servidor de pruebas `/opt/web`).
+El `docker-compose.yml` que manda es el del VPS; el del repo puede estar desfasado.
+Tests y tipos → build de imágenes → las que corren pasan a `:previous` → carga de imágenes por SSH → `docker compose up -d`
+→ health check público (`https://test.dragondemadera.com/api/health`, hasta 3 min) → si falla, vuelve a `:previous`.
+Las migraciones no se deshacen en el rollback: deben ser compatibles con la versión anterior.
+El backend escucha en `HOST` (por defecto `0.0.0.0`, necesario en Docker); en bare metal `deploy.yml` fija `127.0.0.1`.
+
 ---
 
 ## CI/CD — deploy.yml

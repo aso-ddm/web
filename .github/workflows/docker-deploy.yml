@@ -6,10 +6,55 @@ on:
       - main
       - web2-feature
 
+# main y web2-feature despliegan en el mismo servidor: un despliegue cada vez
+concurrency:
+  group: docker-deploy
+  cancel-in-progress: false
+
+env:
+  # Health check desde fuera (nginx → backend → BD): no depende del docker-compose del VPS
+  HEALTH_URL: https://test.dragondemadera.com/api/health
+
 jobs:
+  # ── Tests: si fallan no se construye ni se despliega nada ─────────────────
+  test:
+    name: Tests y tipos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Misma versión mayor que en local (lockfile de pnpm 11)
+      - name: Instalar pnpm
+        run: npm install -g pnpm@11
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm exec prisma generate
+
+      # Incluye el test de contrato front ↔ back
+      - name: Tests backend
+        run: pnpm -C backend test:run
+
+      # Tipos del backend y de sus tests (el build del Dockerfile excluye los tests)
+      - name: Tipos backend
+        run: pnpm exec tsc -p tsconfig.json
+
+      - name: Tipos frontend
+        run: pnpm -C frontend exec tsc --noEmit
+
+      - name: Tests frontend
+        run: pnpm -C frontend test
+
   # ── Build y push de imágenes ──────────────────────────────────────────────
   build-push:
     name: Build & Push ${{ matrix.service }}
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -65,6 +110,11 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           echo "SSH=ssh -i $HOME/.ssh/id_deploy -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" >> "$GITHUB_ENV"
 
+      # Lo que corre ahora queda como :previous para poder volver si el nuevo no arranca
+      - name: Guardar imágenes actuales como :previous
+        run: |
+          $SSH "for img in $IMAGES; do if docker image inspect \"\$img\" >/dev/null 2>&1; then docker tag \"\$img\" \"\${img%:latest}:previous\"; fi; done"
+
       # El servidor no siempre llega a Docker Hub (13/10/2026: TLS handshake timeout desde el VPS):
       # el runner descarga las imágenes y se las pasa por SSH. Si falla, lo que está corriendo sigue en pie.
       - name: Enviar imágenes al servidor
@@ -74,4 +124,29 @@ jobs:
 
       # db (postgres) ya está en el servidor; up -d no descarga imágenes que existen en local
       - name: Arrancar contenedores
-        run: $SSH 'set -e; cd /opt/web; docker compose up -d --remove-orphans; docker image prune -f'
+        id: arrancar
+        run: $SSH 'set -e; cd /opt/web; docker compose up -d --remove-orphans'
+
+      # El backend aplica las migraciones al arrancar: se le dan hasta 3 minutos
+      - name: Verificar que la app responde
+        run: |
+          for i in $(seq 1 36); do
+            if curl -fsS --max-time 10 "$HEALTH_URL"; then echo; echo "OK: $HEALTH_URL responde"; exit 0; fi
+            sleep 5
+          done
+          echo "ERROR: $HEALTH_URL no responde tras el despliegue"
+          exit 1
+
+      # Vuelve a las imágenes anteriores. Las migraciones ya aplicadas NO se deshacen: tienen que ser compatibles
+      # con la versión anterior (añadir antes de quitar), o la vuelta atrás arrancará sobre un schema que no espera
+      - name: Rollback a las imágenes anteriores
+        if: failure() && steps.arrancar.outcome == 'success'
+        run: |
+          $SSH "set -e; cd /opt/web; for img in $IMAGES; do prev=\"\${img%:latest}:previous\"; if docker image inspect \"\$prev\" >/dev/null 2>&1; then docker tag \"\$prev\" \"\$img\"; fi; done; docker compose up -d --remove-orphans"
+          sleep 20
+          echo "Health tras rollback: $(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$HEALTH_URL")"
+
+      # Solo con el despliegue sano: las imágenes sin etiqueta ya no hacen falta
+      - name: Limpiar imágenes antiguas
+        if: success()
+        run: $SSH 'docker image prune -f'

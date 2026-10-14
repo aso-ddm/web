@@ -128,6 +128,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: self-hosted
+    env:
+      # PM2 (--update-env) se lo pasa al backend: solo escucha en localhost, detrás de nginx
+      HOST: 127.0.0.1
     steps:
       - uses: actions/checkout@v4
 
