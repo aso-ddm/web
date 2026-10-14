@@ -111,32 +111,33 @@ describe('VisitasService.registrar', () => {
 })
 
 describe('VisitasService.buscar', () => {
-  it('query < 2 caracteres → devuelve []', async () => {
+  const sinVisitasPrevias = { es_pago: false, importe: null }
+
+  it('query < 2 caracteres → sin sugerencias ni consulta, pero con lo que pagaría alguien nuevo', async () => {
+    mockConfig('3', '4')
     const result = await service.buscar('A')
 
-    expect(result).toEqual([])
-    expect(prisma.visita.findMany).not.toHaveBeenCalled()
+    expect(result).toEqual({ data: [], nuevo: sinVisitasPrevias })
+    expect(prisma.$queryRaw).not.toHaveBeenCalled()
   })
 
-  it('query vacía → devuelve []', async () => {
-    const result = await service.buscar('')
-
-    expect(result).toEqual([])
+  it('con 0 visitas gratuitas, alguien nuevo ya paga', async () => {
+    mockConfig('0', '5')
+    expect((await service.buscar('')).nuevo).toEqual({ es_pago: true, importe: 5 })
   })
 
-  it('agrupa variantes de mayúsculas/espacios como un solo visitante (igual que registrar)', async () => {
-    ;(prisma.visita.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { nombre_completo: 'Ana López', fecha_visita: new Date('2025-03-01') },
-      { nombre_completo: 'ana  lópez', fecha_visita: new Date('2025-02-01') },
-      { nombre_completo: 'ANA LÓPEZ', fecha_visita: new Date('2025-01-01') },
-      { nombre_completo: 'Ana Ruiz', fecha_visita: new Date('2025-01-15') },
-    ])
-
-    const result = await service.buscar('Ana')
-
-    expect(result).toEqual([
+  it('cada sugerencia trae lo que pagaría en su siguiente visita (la regla es la del registro)', async () => {
+    mockConfig('3', '4')
+    ;(prisma.$queryRaw as ReturnType<typeof vi.fn>).mockResolvedValue([
       { nombre_completo: 'Ana López', total_visitas: 3, ultima_visita: new Date('2025-03-01') },
       { nombre_completo: 'Ana Ruiz', total_visitas: 1, ultima_visita: new Date('2025-01-15') },
+    ])
+
+    const { data } = await service.buscar('Ana')
+
+    expect(data).toEqual([
+      { nombre_completo: 'Ana López', total_visitas: 3, ultima_visita: new Date('2025-03-01'), siguiente_es_pago: true, importe_siguiente: 4 },
+      { nombre_completo: 'Ana Ruiz', total_visitas: 1, ultima_visita: new Date('2025-01-15'), siguiente_es_pago: false, importe_siguiente: null },
     ])
   })
 })

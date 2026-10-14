@@ -174,6 +174,15 @@ export interface VisitanteSugerido {
   nombre_completo: string
   total_visitas: number
   ultima_visita: string | null
+  // Lo que pagaría en su siguiente visita (la regla la aplica el backend)
+  siguiente_es_pago: boolean
+  importe_siguiente: number | null
+}
+
+/** Cobro de la siguiente visita */
+export interface CobroVisita {
+  es_pago: boolean
+  importe: number | null
 }
 
 // ── Respuesta paginada ────────────────────────────────────────────────────────

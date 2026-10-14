@@ -22,8 +22,7 @@ router.get('/buscar', authenticate, async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten().fieldErrors.nombre?.[0] ?? 'Nombre inválido' })
     return
   }
-  const resultados = await visitasService.buscar(parsed.data.nombre)
-  res.json({ data: resultados })
+  res.json(await visitasService.buscar(parsed.data.nombre))
 })
 
 // GET /api/visitas — listado paginado (cualquier socio autenticado)

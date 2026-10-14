@@ -1,66 +1,83 @@
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
+import { configNumero } from '../lib/config'
+import { likePattern } from '../lib/search'
 
 const normalizarNombre = (s: string) => s.trim().replace(/\s+/g, ' ')
+
+const MAX_SUGERENCIAS = 20
 
 export class VisitasService {
   constructor(private prisma: PrismaClient) {}
 
-  /** Busca visitantes cuyo nombre coincida (para autocompletar) y muestra cuántas visitas tienen.
-   *  Agrupa como cuenta `registrar`: "juan pérez" y "Juan Pérez" son el mismo visitante. */
-  async buscar(nombre: string) {
-    if (nombre.trim().length < 2) return []
-
-    // ponytail: trae todas las visitas que coinciden y agrupa en memoria; groupBy en SQL si crecen mucho
-    const visitas = await this.prisma.visita.findMany({
-      where: { nombre_completo: { contains: normalizarNombre(nombre), mode: 'insensitive' } },
-      orderBy: { fecha_visita: 'desc' },
-      select: { nombre_completo: true, fecha_visita: true },
-    })
-
-    const grupos = new Map<string, { nombre_completo: string; total_visitas: number; ultima_visita: Date }>()
-    for (const v of visitas) {
-      const clave = normalizarNombre(v.nombre_completo).toLowerCase()
-      const g = grupos.get(clave)
-      // Ordenadas por fecha desc: la primera de cada grupo da el nombre y la última visita
-      if (g) g.total_visitas++
-      else grupos.set(clave, { nombre_completo: v.nombre_completo, total_visitas: 1, ultima_visita: v.fecha_visita })
+  /** La regla de cobro vive solo aquí: la usan el registro y la vista previa del formulario. */
+  private async reglas(db: Prisma.TransactionClient = this.prisma) {
+    const [gratuitas, precio] = await Promise.all([
+      configNumero(db, 'visitas_gratuitas', 3),
+      configNumero(db, 'precio_visita_pago', 4),
+    ])
+    return {
+      gratuitas,
+      precio,
+      cobro: (visitasPrevias: number) => {
+        const esPago = visitasPrevias >= gratuitas
+        return { es_pago: esPago, importe: esPago ? precio : null }
+      },
     }
-    return [...grupos.values()]
+  }
+
+  /**
+   * Visitantes cuyo nombre coincide (autocompletar), con su recuento y lo que pagarían en la siguiente visita.
+   * Agrupa como cuenta `registrar`: "juan  pérez" y "Juan Pérez" son el mismo visitante.
+   * `nuevo`: lo que pagaría alguien que aún no ha venido nunca.
+   */
+  async buscar(nombre: string) {
+    const { cobro } = await this.reglas()
+    const nuevo = cobro(0)
+    if (nombre.trim().length < 2) return { data: [], nuevo }
+
+    const filas = await this.prisma.$queryRaw<{ nombre_completo: string; total_visitas: number; ultima_visita: Date }[]>`
+      SELECT (array_agg(nombre_completo ORDER BY fecha_visita DESC))[1] AS nombre_completo,
+             COUNT(*)::int AS total_visitas,
+             MAX(fecha_visita) AS ultima_visita
+      FROM "Visita"
+      WHERE nombre_completo ILIKE ${likePattern(normalizarNombre(nombre))}
+      GROUP BY lower(regexp_replace(trim(nombre_completo), '\\s+', ' ', 'g'))
+      ORDER BY MAX(fecha_visita) DESC
+      LIMIT ${MAX_SUGERENCIAS}`
+
+    const data = filas.map((f) => {
+      const siguiente = cobro(f.total_visitas)
+      return { ...f, siguiente_es_pago: siguiente.es_pago, importe_siguiente: siguiente.importe }
+    })
+    return { data, nuevo }
   }
 
   /** Registra una visita aplicando la lógica de gratis vs. pago */
   async registrar(data: { nombre_completo: string; socio_registro_id: string }) {
-    const [visitas_gratuitas_cfg, precio_cfg] = await Promise.all([
-      this.prisma.configuracion.findUnique({ where: { clave: 'visitas_gratuitas' } }),
-      this.prisma.configuracion.findUnique({ where: { clave: 'precio_visita_pago' } }),
-    ])
-
-    const visitasGratuitas = parseInt(visitas_gratuitas_cfg?.valor ?? '3', 10)
-    const precio = parseFloat(precio_cfg?.valor ?? '4')
-
     // "juan  pérez " y "Juan Pérez" son la misma persona: si no, las visitas gratis se multiplican
     const nombre = normalizarNombre(data.nombre_completo)
-    // ponytail: dos registros simultáneos del mismo visitante pueden salir ambos gratis; transacción Serializable si llega a pasar
-    const visitasPrevias = await this.prisma.visita.count({
-      where: { nombre_completo: { equals: nombre, mode: 'insensitive' } },
-    })
 
-    const numeroVisita = visitasPrevias + 1
-    const esGratis = visitasPrevias < visitasGratuitas
-    const esPago = !esGratis
+    return this.prisma.$transaction(async (tx) => {
+      // Dos registros simultáneos del mismo visitante esperan su turno: si no, ambos podrían salir gratis
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${nombre.toLowerCase()}))`
+      const [{ cobro }, visitasPrevias] = await Promise.all([
+        this.reglas(tx),
+        tx.visita.count({ where: { nombre_completo: { equals: nombre, mode: 'insensitive' } } }),
+      ])
+      const { es_pago, importe } = cobro(visitasPrevias)
 
-    return this.prisma.visita.create({
-      data: {
-        nombre_completo: nombre,
-        fecha_visita: new Date(),
-        numero_visita: numeroVisita,
-        es_pago: esPago,
-        importe: esPago ? precio : null,
-        socio_registro_id: data.socio_registro_id,
-      },
+      return tx.visita.create({
+        data: {
+          nombre_completo: nombre,
+          fecha_visita: new Date(),
+          numero_visita: visitasPrevias + 1,
+          es_pago,
+          importe,
+          socio_registro_id: data.socio_registro_id,
+        },
+      })
     })
   }
-
 
   async getAll(filtros: { page: number; limit: number; search?: string }) {
     const { page, limit, search } = filtros

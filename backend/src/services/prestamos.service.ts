@@ -3,20 +3,13 @@ import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrest
 import type { LogsJuegoService } from './logs_juego.service'
 import { finDelDiaMadrid } from '../lib/fechas'
 import { HttpError } from '../lib/httpError'
+import { configNumero } from '../lib/config'
 
 export class PrestamosService {
   constructor(
     private prisma: PrismaClient,
     private logsService: LogsJuegoService,
   ) {}
-
-  // ── Helpers de configuración ──────────────────────────────────────────────
-
-  private async getConfigNum(clave: string, fallback: number): Promise<number> {
-    const config = await this.prisma.configuracion.findUnique({ where: { clave } })
-    const n = config ? parseInt(config.valor, 10) : NaN
-    return Number.isNaN(n) ? fallback : n
-  }
 
   // ── Socio ─────────────────────────────────────────────────────────────────
 
@@ -46,8 +39,8 @@ export class PrestamosService {
     if (juego.estado !== 'en_estanteria') throw new HttpError(409, 'El juego no está disponible para préstamo')
 
     const [maxPrestamos, diasPrestamo] = await Promise.all([
-      this.getConfigNum('max_prestamos_activos', 3),
-      this.getConfigNum('dias_prestamo', 14),
+      configNumero(this.prisma, 'max_prestamos_activos', 3),
+      configNumero(this.prisma, 'dias_prestamo', 14),
     ])
     const ahora = new Date()
     const fechaLimite = finDelDiaMadrid(ahora, diasPrestamo) // vence al acabar el día
@@ -88,8 +81,8 @@ export class PrestamosService {
     if (prestamo.estado !== EstadoPrestamo.activo) throw new HttpError(409, 'Solo se pueden renovar préstamos activos')
 
     const [maxRenovaciones, diasRenovacion] = await Promise.all([
-      this.getConfigNum('max_renovaciones', 2),
-      this.getConfigNum('dias_renovacion', 14),
+      configNumero(this.prisma, 'max_renovaciones', 2),
+      configNumero(this.prisma, 'dias_renovacion', 14),
     ])
 
     if (prestamo.renovaciones >= maxRenovaciones) {

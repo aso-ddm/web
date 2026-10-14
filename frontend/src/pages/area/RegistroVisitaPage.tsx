@@ -180,15 +180,15 @@ export function RegistroVisitaPage() {
   const [visitaRegistrada, setVisitaRegistrada] = useState<Visita | null>(null)
   const queryClient = useQueryClient()
 
-  // GET /config (listado) es solo para directiva; las claves sueltas son públicas
+  // Solo para el recuadro informativo: si se cobra o no lo decide el backend (siguiente_es_pago / nuevo)
   const visitasGratis = parseInt(useConfigValor('visitas_gratuitas', '3'), 10)
   const precioVisita = parseFloat(useConfigValor('precio_visita_pago', '4'))
 
   // useQuery descarta las respuestas viejas: una búsqueda lenta no pisa a la siguiente
   const nombreBuscado = useDebouncedValue(nombre.trim(), 350)
-  const { data: sugerencias = [], isFetching: buscando } = useQuery({
+  const { data: busqueda, isFetching: buscando } = useQuery({
     queryKey: QK.VISITAS_BUSCAR_NOMBRE(nombreBuscado),
-    queryFn: () => visitasApi.buscar(nombreBuscado).then((r) => r.data),
+    queryFn: () => visitasApi.buscar(nombreBuscado),
     enabled: nombreBuscado.length >= 2,
     placeholderData: keepPreviousData,
     staleTime: 0, // el recuento de visitas decide si se cobra: siempre fresco
@@ -199,9 +199,14 @@ export function RegistroVisitaPage() {
   const nombreFinal = seleccionado || nombre.trim()
   // Misma normalización que el backend al contar visitas: mayúsculas y espacios no cuentan
   const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+  const sugerencias = busqueda?.data ?? []
   const infoSugerido = sugerencias.find((s) => norm(s.nombre_completo) === norm(nombreFinal))
   const visitasPrevias = infoSugerido?.total_visitas ?? 0
-  const seraGratis = visitasPrevias < visitasGratis
+  const cobro = infoSugerido
+    ? { es_pago: infoSugerido.siguiente_es_pago, importe: infoSugerido.importe_siguiente }
+    : busqueda?.nuevo
+  const seraGratis = !cobro?.es_pago
+  const importe = cobro?.importe ?? precioVisita
 
   const { mutate: registrar, isPending } = useMutation({
     mutationFn: () => visitasApi.registrar(nombreFinal),
@@ -278,7 +283,7 @@ export function RegistroVisitaPage() {
                   {!seleccionado && nombre.trim().length >= 2 && sugerencias.length > 0 && (
                     <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
                       {sugerencias.map((s) => {
-                        const gratisSiViene = s.total_visitas < visitasGratis
+                        const gratisSiViene = !s.siguiente_es_pago
                         return (
                           <button
                             key={s.nombre_completo}
@@ -292,7 +297,7 @@ export function RegistroVisitaPage() {
                               </p>
                             </div>
                             <Badge variant={gratisSiViene ? 'default' : 'secondary'} className="text-xs flex-shrink-0">
-                              {gratisSiViene ? 'Gratis' : `${precioVisita}€`}
+                              {gratisSiViene ? 'Gratis' : `${s.importe_siguiente}€`}
                             </Badge>
                           </button>
                         )
@@ -314,7 +319,7 @@ export function RegistroVisitaPage() {
                             </Badge>
                           ) : (
                             <Badge variant="secondary" className="font-display gap-1">
-                              <Euro className="h-3 w-3" /> {precioVisita}€
+                              <Euro className="h-3 w-3" /> {importe}€
                             </Badge>
                           )}
                         </div>
@@ -343,7 +348,7 @@ export function RegistroVisitaPage() {
                         ) : (
                           <Euro className="h-4 w-4" />
                         )}
-                        {isPending ? 'Registrando...' : `Registrar visita${seraGratis ? ' (gratis)' : ` (${precioVisita}€)`}`}
+                        {isPending ? 'Registrando...' : `Registrar visita${seraGratis ? ' (gratis)' : ` (${importe}€)`}`}
                       </Button>
                     </>
                   )}

@@ -31,6 +31,7 @@ export function createPrismaMock() {
     historialEstadoSocio: makeModel(),
   }
 
+  mock.$queryRaw = vi.fn()
   mock.$transaction = vi.fn().mockImplementation((ops: unknown) => {
     if (typeof ops === 'function') return ops(mock)
     return Promise.all(ops as Promise<unknown>[])
