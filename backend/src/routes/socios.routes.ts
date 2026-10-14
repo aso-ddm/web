@@ -40,12 +40,6 @@ router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (_re
   res.json({ data: pendientes })
 })
 
-// GET /api/socios/me — perfil propio
-router.get('/me', authenticate, async (req, res) => {
-  const socio = await sociosService.getById(req.user.id)
-  res.json({ data: socio })
-})
-
 // GET /api/socios/:id/comprobante — directiva descarga comprobante
 router.get('/:id/comprobante', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
   const { id } = req.params

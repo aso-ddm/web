@@ -82,7 +82,6 @@ export const miembroAdicionalSchema = z.object({
   password: passwordSchema,
 })
 
-export type MiembroAdicionalInput = z.infer<typeof miembroAdicionalSchema>
 
 // ─── Register schema (discriminatedUnion) ────────────────────────────────────
 

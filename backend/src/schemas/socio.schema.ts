@@ -22,7 +22,6 @@ export const aprobarSocioSchema = z.object({
   rol: z.nativeEnum(Rol, { message: 'Rol inválido' }),
 })
 
-export type AprobarSocioInput = z.infer<typeof aprobarSocioSchema>
 
 export const llavesSchema = z.object({
   tiene_llaves: z.boolean(),
@@ -43,5 +42,4 @@ export const filtrosSociosSchema = z.object({
 })
 
 export type UpdateSocioInput = z.infer<typeof updateSocioSchema>
-export type UpdateRolesInput = z.infer<typeof updateRolesSchema>
 export type FiltrosSociosInput = z.infer<typeof filtrosSociosSchema>

@@ -9,5 +9,4 @@ export const filtrosLogsSchema = z.object({
   ...paginacion(20, 100),
 })
 
-export type CrearLogManualInput = z.infer<typeof crearLogManualSchema>
 export type FiltrosLogsInput    = z.infer<typeof filtrosLogsSchema>
