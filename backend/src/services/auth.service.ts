@@ -287,6 +287,7 @@ export class AuthService {
         alias_telegram: true,
         apodo: true,
         tipo_cuota: true,
+        consentimiento_tiendas: true,
         roles: true,
         estado: true,
         fecha_alta: true,

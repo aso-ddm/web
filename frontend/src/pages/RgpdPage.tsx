@@ -72,7 +72,9 @@ export function RgpdPage() {
             <p className="text-sm leading-relaxed">
               Los datos no se ceden a terceros salvo obligación legal, salvo que el socio haya dado su
               consentimiento expreso para compartir nombre y apellidos con las tiendas colaboradoras de la
-              Asociación a efectos de descuentos.
+              Asociación a efectos de descuentos. Las tiendas no reciben ningún listado: el socio muestra en su
+              área de socio un código QR que caduca a los pocos minutos y, al escanearlo, la tienda ve solo su
+              nombre y apellidos y que es socio activo.
             </p>
           </section>
 

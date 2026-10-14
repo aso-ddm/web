@@ -45,6 +45,7 @@ const RegistroPage = lazyPage(() => import('@/pages/RegistroPage'), 'RegistroPag
 const RgpdPage = lazyPage(() => import('@/pages/RgpdPage'), 'RgpdPage')
 const MiSolicitudPage = lazyPage(() => import('@/pages/MiSolicitudPage'), 'MiSolicitudPage')
 const RecuperarPasswordPage = lazyPage(() => import('@/pages/RecuperarPasswordPage'), 'RecuperarPasswordPage')
+const VerificarCarnetPage = lazyPage(() => import('@/pages/VerificarCarnetPage'), 'VerificarCarnetPage')
 
 // Área de socio
 const DashboardPage = lazyPage(() => import('@/pages/area/DashboardPage'), 'DashboardPage')
@@ -81,6 +82,7 @@ export function AppRoutes() {
       <Route path="/rgpd" element={<RgpdPage />} />
       <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
       <Route path="/mi-solicitud" element={<MiSolicitudPage />} />
+      <Route path="/verificar/:token" element={<VerificarCarnetPage />} />
 
       {/* ── Área privada: un único AreaLayout para todas las secciones (no se remonta al cambiar de área).
            Los roles deben coincidir con los requireRoles del backend o se verá la página y llegará un 403 ── */}

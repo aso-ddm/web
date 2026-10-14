@@ -9,6 +9,8 @@ export const QK = {
   // Auth / usuario actual
   ME: ['me'] as const,
   MI_SOLICITUD: ['mi-solicitud'] as const,
+  CARNET: ['carnet'] as const, // QR para tiendas colaboradoras
+  CARNET_VERIFICAR: (token: string) => ['carnet-verificar', token] as const, // pública, la abre la tienda
 
   // Juegos: todo cuelga de ['juegos'], así una invalidación cubre catálogo, gestión, ludoteca y logs
   JUEGOS: ['juegos'] as const,

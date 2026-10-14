@@ -20,6 +20,7 @@ import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { QK } from '@/lib/queryKeys'
 import { useMe } from '@/hooks/useMe'
 import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
+import { CarnetTiendasCard } from './dashboard/CarnetTiendasCard'
 
 const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
@@ -279,6 +280,8 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {usuario?.estado === 'activo' && usuario.consentimiento_tiendas && <CarnetTiendasCard />}
 
         {/* Acciones rápidas + últimos préstamos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
