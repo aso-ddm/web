@@ -116,12 +116,6 @@ export function UsuarioDetalle({
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const { mutate: desvincularTelegram } = useMutation({
-    mutationFn: () => adminApi.updateUsuario(usuario.id, { telegram_chat_id: null }),
-    onSuccess: () => { toast.success('Telegram desvinculado'); invalidar() },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
   const toggleRol = (rol: Rol) => setRolesEditados((prev) => toggleRolLista(prev, rol))
 
   const rolesChanged = JSON.stringify([...rolesEditados].sort()) !== JSON.stringify([...usuario.roles].sort())
@@ -166,11 +160,8 @@ export function UsuarioDetalle({
           </div>
           <p className="text-xs text-muted-foreground">
             Registrado el {formatDate(usuario.created_at)}
-            {usuario.telegram_chat_id && <> · Telegram vinculado{' '}
-              <button type="button" className="underline hover:text-destructive" onClick={() => desvincularTelegram()}>
-                (desvincular)
-              </button>
-            </>}
+            {/* Telegram no se desvincula a mano: solo se borra al dar de baja */}
+            {usuario.telegram_chat_id && ' · Telegram vinculado'}
           </p>
           {isDirty && (
             <Button type="submit" size="sm" disabled={guardando} className="font-display font-bold gap-1">

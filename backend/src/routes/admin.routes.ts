@@ -4,9 +4,9 @@ import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { SociosService } from '../services/socios.service'
 import { comprobarCambioAdmin, normalizarRoles } from '../lib/roles'
-import { Rol, TipoCambioEstado, EstadoSocio, EstadoPrestamo } from '@prisma/client'
+import { Rol, EstadoPrestamo } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
-import { filtrosAdminSchema, createUsuarioSchema, updateUsuarioSchema } from '../schemas/admin.schema'
+import { filtrosAdminSchema, updateUsuarioSchema } from '../schemas/admin.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { paginado } from '../lib/paginacion'
 
@@ -68,38 +68,6 @@ router.get('/usuarios', async (req, res) => {
   res.json(paginado(usuarios.map(conChatId), total, filtros))
 })
 
-// POST /api/admin/usuarios
-router.post('/usuarios', async (req, res) => {
-  const parsed = createUsuarioSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
-    return
-  }
-  const { password: rawPassword, ...rest } = parsed.data
-  rest.roles = normalizarRoles(rest.roles)
-  comprobarCambioAdmin([], rest.roles)
-  const existing = await prisma.usuario.findFirst({
-    where: { OR: [{ email: { equals: rest.email, mode: 'insensitive' } }, { dni: rest.dni }] },
-  })
-  if (existing) {
-    res.status(409).json({ error: 'Ya existe un usuario con ese email o DNI' })
-    return
-  }
-  const password_hash = await bcrypt.hash(rawPassword as string, 12)
-  const usuario = await prisma.usuario.create({
-    data: {
-      ...rest,
-      password_hash,
-      ...(rest.estado === EstadoSocio.activo && {
-        fecha_alta: new Date(),
-        historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: req.user.id } },
-      }),
-    },
-    select: USUARIO_SELECT,
-  })
-  res.status(201).json({ data: { ...usuario, telegram_chat_id: usuario.telegram_chat_id?.toString() ?? null } })
-})
-
 // PUT /api/admin/usuarios/:id
 // Estado, roles y llaves pasan por SociosService (cuota del mes de alta, cuota conjunta, aviso de baja, historial).
 // ponytail: cada paso es su propia transacción; si uno falla, los anteriores quedan aplicados.
@@ -133,7 +101,6 @@ router.put('/usuarios/:id', async (req, res) => {
     where: { id },
     data: {
       ...datos,
-      ...(datos.telegram_chat_id === null && { telegram_linked_at: null }),
       ...(password && { password_hash: await bcrypt.hash(password, 12) }),
     },
     select: USUARIO_SELECT,

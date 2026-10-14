@@ -196,6 +196,7 @@ docker build -t asoddm/dragondemadera-frontend:latest -f frontend/Dockerfile .
 - Reglas de negocio en un solo sitio, el backend: p. ej. si una visita es gratis lo devuelve `GET /visitas/buscar`
   (`siguiente_es_pago`, `importe_siguiente`, `nuevo`); el frontend no recalcula.
 - `tipo_cuota` no se edita a mano: lo fija la pertenencia a una cuota conjunta (`solicitud_grupal_id`).
+- **Telegram no se desvincula nunca** (ni el socio ni el admin): solo se borra la vinculación al dar de baja (`darDeBaja`).
 
 ### Valores y configuración
 - Enums de Prisma (`EstadoSocio.activo`, `EstadoJuego.prestado`…) en vez de textos sueltos.
@@ -244,6 +245,7 @@ Convenciones detalladas en `frontend/CLAUDE.md`. Lo esencial:
 - **Descartado por ahora** (ver "Reglas para migraciones"): enums de columnas de texto, fusión de enums de solicitud,
   emails a minúsculas e índice único parcial de préstamo activo (la reserva del juego ya es atómica)
 - `dias_aviso_devolucion` se conserva en configuración: está prevista para avisos de devolución
+- **Las altas entran solo por registro + aprobación** (no hay alta directa desde admin); cuentas especiales con el seed
 - `.env` en servidor, nunca en repo
 
 ---

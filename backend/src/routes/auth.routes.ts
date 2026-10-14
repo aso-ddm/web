@@ -152,12 +152,6 @@ router.post('/pedir-baja', pedirBajaLimit, authenticate, async (req, res) => {
   res.json({ data: { ok: true } })
 })
 
-// DELETE /api/auth/link-telegram
-router.delete('/link-telegram', authenticate, async (req, res) => {
-  await authService.unlinkTelegram(req.user.id)
-  res.json({ data: { ok: true } })
-})
-
 // POST /api/auth/reset-password/request — público
 router.post('/reset-password/request', resetRequestLimit, async (req, res) => {
   const { email } = resetRequestSchema.parse(req.body)

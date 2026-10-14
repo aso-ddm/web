@@ -342,14 +342,6 @@ export class AuthService {
     return { ...rest, telegram_chat_id: rest.telegram_chat_id?.toString() ?? null }
   }
 
-  async unlinkTelegram(userId: string) {
-    await this.prisma.usuario.update({
-      where: { id: userId },
-      data: { telegram_chat_id: null, telegram_linked_at: null },
-    })
-  }
-
-
   // Siempre responde igual (sin error ni "tiene Telegram"): así no se puede averiguar qué emails son de socios.
   // Si el envío falla (bot bloqueado, Telegram caído) queda en el log del bot y el código se anula.
   async requestPasswordReset(email: string): Promise<void> {

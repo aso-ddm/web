@@ -10,19 +10,6 @@ export const filtrosAdminSchema = z.object({
   ...paginacion(50, 500),
 })
 
-export const createUsuarioSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-  nombre: z.string().min(1),
-  apellidos: z.string().min(1),
-  dni: dniSchema,
-  telefono: z.string().optional(),
-  roles: z.array(z.nativeEnum(Rol)).min(1),
-  estado: z.nativeEnum(EstadoSocio).optional().default(EstadoSocio.activo),
-  alias_telegram: z.string().optional(),
-  apodo: z.string().optional(),
-})
-
 export const updateUsuarioSchema = z.object({
   email: emailSchema.optional(),
   nombre: z.string().min(1).optional(),
@@ -39,7 +26,5 @@ export const updateUsuarioSchema = z.object({
   tiene_llaves: z.boolean().optional(),
   fecha_alta: z.coerce.date().nullable().optional(),
   fecha_baja: z.coerce.date().nullable().optional(),
-  // Solo para desvincular: la vinculación la hace el propio socio con el bot
-  telegram_chat_id: z.null().optional(),
   password: passwordSchema.optional(),
 })

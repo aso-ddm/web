@@ -416,3 +416,17 @@ describe('salirDeCuotaConjunta — concurrencia', () => {
     expect(orden.slice(0, 2)).toEqual(['bloqueo', 'lectura'])
   })
 })
+
+describe('SociosService.darDeBaja — Telegram', () => {
+  it('la baja borra la vinculación de Telegram (y avisa al chat que tenía)', async () => {
+    vi.stubEnv('BOT_TOKEN', '')
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, telegram_chat_id: BigInt(42) })
+    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockResolvedValue({})
+
+    await service.darDeBaja('u1', 'admin1')
+
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ estado: 'baja', telegram_chat_id: null, telegram_linked_at: null }),
+    }))
+  })
+})

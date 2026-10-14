@@ -10,7 +10,6 @@ export const adminApi = {
   updateUsuario: (id: string, data: Partial<Pick<SocioAdmin, 'nombre' | 'apellidos' | 'email' | 'dni' | 'estado' | 'tiene_llaves' | 'consentimiento_tiendas'>> & {
     roles?: Rol[]
     password?: string
-    telegram_chat_id?: null
     [campoOpcional: string]: unknown // telefono, direccion, fechas…: texto o null
   }) => api.put(`/admin/usuarios/${id}`, data),
   deleteUsuario: (id: string) => api.delete(`/admin/usuarios/${id}`),

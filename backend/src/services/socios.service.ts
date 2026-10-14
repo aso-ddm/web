@@ -319,6 +319,9 @@ export class SociosService {
         data: {
           estado: EstadoSocio.baja,
           fecha_baja: new Date(),
+          // Telegram no se desvincula nunca salvo con la baja (el aviso de baja usa el chat leído antes)
+          telegram_chat_id: null,
+          telegram_linked_at: null,
           baja_por_id: bajaPorId,
           tiene_llaves: false,
           historial_estado: {
