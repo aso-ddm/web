@@ -3,7 +3,6 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Search, Users, ChevronRight } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +17,7 @@ import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { RolBadge } from '@/components/atoms/RolBadge'
 import { SocioDetalle } from './socios/SocioDetalle'
 import { QueryError } from '@/components/molecules/QueryError'
+import { Paginacion } from '@/components/molecules/Paginacion'
 
 export function GestionSociosPage() {
   const [search, setSearch] = useState('')
@@ -143,34 +143,7 @@ export function GestionSociosPage() {
           </CardContent>
         </Card>
 
-        {/* Paginación */}
-        {pag && pag.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Página {pag.page} de {pag.totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="font-display"
-              >
-                Anterior
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= pag.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-                className="font-display"
-              >
-                Siguiente
-              </Button>
-            </div>
-          </div>
-        )}
+        <Paginacion page={page} totalPages={pag?.totalPages ?? 1} onChange={setPage} />
       </div>
 
       {/* Drawer detalle */}

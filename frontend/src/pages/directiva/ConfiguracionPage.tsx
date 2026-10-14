@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Settings, FileText, Link, Loader2, Save, Plus, Trash2, MessageCircle } from 'lucide-react'
@@ -72,19 +72,23 @@ const configLabels: Record<string, { label: string; description: string; suffix?
   },
 }
 
-function ConfigField({ config }: { config: ConfigItem }) {
+function useGuardarConfig(clave: string, etiqueta: string) {
   const queryClient = useQueryClient()
-  const [valor, setValor] = useState(config.valor)
-  const meta = configLabels[config.clave]
-
-  const { mutate: guardar, isPending } = useMutation({
-    mutationFn: () => configuracionApi.update(config.clave, valor),
+  return useMutation({
+    mutationFn: (valor: string) => configuracionApi.update(clave, valor),
     onSuccess: () => {
-      toast.success(`"${meta?.label ?? config.clave}" actualizado`)
-      invalidarConfig(queryClient, config.clave)
+      toast.success(`"${etiqueta}" actualizado`)
+      invalidarConfig(queryClient, clave)
     },
     onError: (err: Error) => toast.error(err.message),
   })
+}
+
+function ConfigField({ config }: { config: ConfigItem }) {
+  const [valor, setValor] = useState(config.valor)
+  const meta = configLabels[config.clave]
+  const { mutate, isPending } = useGuardarConfig(config.clave, meta?.label ?? config.clave)
+  const guardar = () => mutate(valor)
 
   const changed = valor !== config.valor
 
@@ -147,21 +151,9 @@ function RichTextConfigField({
   label: string
   description: string
 }) {
-  const queryClient = useQueryClient()
   const [valor, setValor] = useState(initialValor)
-
-  useEffect(() => {
-    setValor(initialValor)
-  }, [initialValor])
-
-  const { mutate: guardar, isPending } = useMutation({
-    mutationFn: () => configuracionApi.update(clave, valor),
-    onSuccess: () => {
-      toast.success(`"${label}" actualizado`)
-      invalidarConfig(queryClient, clave)
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
+  const { mutate, isPending } = useGuardarConfig(clave, label)
+  const guardar = () => mutate(valor)
 
   const changed = valor !== initialValor
 
@@ -270,37 +262,67 @@ function EnlacesInteresEditor({ initial }: { initial: EnlaceInteres[] }) {
   )
 }
 
+function Seccion({ icono, titulo, descripcion, children }: {
+  icono: ReactNode
+  titulo: string
+  descripcion?: string
+  children: ReactNode
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+          {icono}
+          {titulo}
+        </CardTitle>
+        {descripcion && <CardDescription>{descripcion}</CardDescription>}
+      </CardHeader>
+      <CardContent className="space-y-6">{children}</CardContent>
+    </Card>
+  )
+}
+
+const SECCIONES_NUMERICAS = [
+  { titulo: 'Configuración de cuotas', descripcion: 'Precios mensuales aplicados a los socios', claves: ['precio_cuota_individual', 'precio_cuota_adicional'] },
+  { titulo: 'Configuración de visitas', descripcion: 'Parámetros para el control de visitas de no socios', claves: ['visitas_gratuitas', 'precio_visita_pago'] },
+  { titulo: 'Configuración de préstamos', descripcion: 'Límites y plazos de los préstamos de la ludoteca', claves: ['max_prestamos_activos', 'dias_prestamo', 'dias_renovacion', 'max_renovaciones'] },
+]
+
+const TEXTOS_LARGOS = [
+  {
+    clave: 'texto_bienvenida_alta',
+    titulo: 'Texto de bienvenida — Formulario de alta',
+    descripcion: 'Texto informativo que se muestra al inicio del formulario de solicitud de alta. Se actualiza en tiempo real para los nuevos socios.',
+    label: 'Texto de bienvenida',
+    ayuda: 'Mostrado al inicio del formulario de alta de nuevos socios',
+  },
+  {
+    clave: 'texto_consentimiento_tiendas',
+    titulo: 'Consentimiento de datos — Tiendas colaboradoras',
+    descripcion: 'Texto del checkbox de consentimiento visible en el formulario de alta. Actualízalo si cambian las tiendas o el porcentaje de descuento.',
+    label: 'Texto de consentimiento',
+    ayuda: 'Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta',
+  },
+]
+
 export function ConfiguracionPage() {
   const { data, isLoading } = useQuery({
     queryKey: QK.CONFIGURACION,
     queryFn: () => configuracionApi.getAll(),
   })
 
-
-
-
-
-  // Textos largos y enlaces también vienen en el listado: no hacen falta peticiones por clave
-  const valorDe = (clave: string) => data?.data.find((c) => c.clave === clave)?.valor ?? ''
+  // Todo sale del listado (una petición): textos largos y enlaces incluidos
+  const configs = data?.data ?? []
+  const porClave = (claves: string[]) => claves.map((c) => configs.find((x) => x.clave === c)).filter((x): x is ConfigItem => !!x)
+  const valorDe = (clave: string) => configs.find((c) => c.clave === clave)?.valor ?? ''
   const enlacesData = JSON.parse(valorDe('enlaces_interes') || '[]') as EnlaceInteres[]
+  const cargando = (n: number, alto = 'h-20') => [...Array(n)].map((_, i) => <Skeleton key={i} className={`${alto} w-full`} />)
 
-  const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
-  const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
-  const comunicacionConfigs = ['telegram_bot_username', 'texto_baja_confirmada']
-    .map((clave) => (data?.data ?? []).find((c) => c.clave === clave))
-    .filter(Boolean) as typeof configs
-
-  const configsCuota = ['precio_cuota_individual', 'precio_cuota_adicional']
-    .map((clave) => configs.find((c) => c.clave === clave))
-    .filter(Boolean) as typeof configs
-
-  const configsVisitas = ['visitas_gratuitas', 'precio_visita_pago']
-    .map((clave) => configs.find((c) => c.clave === clave))
-    .filter(Boolean) as typeof configs
-
-  const configsPrestamos = ['max_prestamos_activos', 'dias_prestamo', 'dias_renovacion', 'max_renovaciones']
-    .map((clave) => configs.find((c) => c.clave === clave))
-    .filter(Boolean) as typeof configs
+  const textoLargo = (clave: string, label: string, ayuda: string, alto: string) =>
+    isLoading ? <Skeleton className={`${alto} w-full`} /> : (
+      // key = valor guardado: al recargar tras guardar, el editor se reinicia con el valor nuevo
+      <RichTextConfigField key={valorDe(clave)} clave={clave} initialValor={valorDe(clave)} label={label} description={ayuda} />
+    )
 
   return (
     <>
@@ -312,181 +334,32 @@ export function ConfiguracionPage() {
           <p className="text-muted-foreground mt-1">Parámetros globales del sistema de gestión</p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Configuración de cuotas
-            </CardTitle>
-            <CardDescription>
-              Precios mensuales aplicados a los socios
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoading ? (
-              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
-            ) : (
-              configsCuota.map((c) => <ConfigField key={c.clave} config={c} />)
-            )}
-          </CardContent>
-        </Card>
+        {SECCIONES_NUMERICAS.map(({ titulo, descripcion, claves }) => (
+          <Seccion key={titulo} icono={<Settings className="h-4 w-4" />} titulo={titulo} descripcion={descripcion}>
+            {isLoading ? cargando(claves.length) : porClave(claves).map((c) => <ConfigField key={c.clave} config={c} />)}
+          </Seccion>
+        ))}
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Configuración de visitas
-            </CardTitle>
-            <CardDescription>
-              Parámetros para el control de visitas de no socios
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoading ? (
-              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
-            ) : (
-              configsVisitas.map((c) => <ConfigField key={c.clave} config={c} />)
-            )}
-          </CardContent>
-        </Card>
+        <Seccion icono={<Settings className="h-4 w-4" />} titulo="Comunicaciones y bot" descripcion="Bot de Telegram y avisos a los socios">
+          {isLoading ? cargando(2) : porClave(['telegram_bot_username', 'texto_baja_confirmada']).map((c) => <ConfigField key={c.clave} config={c} />)}
+          {textoLargo('texto_baja_socio', 'Aviso de baja', 'Se muestra en el popup de confirmación del botón «Darme de baja»', 'h-48')}
+        </Seccion>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Configuración de préstamos
-            </CardTitle>
-            <CardDescription>
-              Límites y plazos de los préstamos de la ludoteca
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoading ? (
-              [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-full" />)
-            ) : (
-              configsPrestamos.map((c) => <ConfigField key={c.clave} config={c} />)
-            )}
-          </CardContent>
-        </Card>
+        <Seccion icono={<Link className="h-4 w-4" />} titulo="Documentos públicos">
+          {isLoading ? cargando(2) : configs.some((c) => c.tipo === 'url')
+            ? configs.filter((c) => c.tipo === 'url').map((c) => <ConfigField key={c.clave} config={c} />)
+            : <p className="text-sm text-muted-foreground">No hay documentos configurados en la base de datos.</p>}
+        </Seccion>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Comunicaciones y bot
-            </CardTitle>
-            <CardDescription>
-              Configuración del bot de Telegram y datos bancarios del club
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoading ? (
-              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
-            ) : (
-              comunicacionConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
-            )}
-            {isLoading ? (
-              <Skeleton className="h-48 w-full" />
-            ) : (
-              <RichTextConfigField
-                key={valorDe('texto_baja_socio') ?? 'empty-baja'}
-                clave="texto_baja_socio"
-                initialValor={valorDe('texto_baja_socio') ?? ''}
-                label="Aviso de baja"
-                description="Se muestra en el popup de confirmación del botón «Darme de baja»"
-              />
-            )}
-          </CardContent>
-        </Card>
+        <Seccion icono={<MessageCircle className="h-4 w-4" />} titulo="Enlaces de interés" descripcion="Grupos de Telegram y otros enlaces que los socios ven en Mi panel">
+          {isLoading ? cargando(1) : <EnlacesInteresEditor key={JSON.stringify(enlacesData)} initial={enlacesData} />}
+        </Seccion>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <Link className="h-4 w-4" />
-              Documentos públicos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {isLoading ? (
-              [1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)
-            ) : urlConfigs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay documentos configurados en la base de datos.</p>
-            ) : (
-              urlConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Enlaces de interés
-            </CardTitle>
-            <CardDescription>
-              Grupos de Telegram y otros enlaces que los socios ven en Mi panel
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-20 w-full" />
-            ) : (
-              <EnlacesInteresEditor key={JSON.stringify(enlacesData)} initial={enlacesData ?? []} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Texto de bienvenida — Formulario de alta
-            </CardTitle>
-            <CardDescription>
-              Texto informativo que se muestra al inicio del formulario de solicitud de alta.
-              Se actualiza en tiempo real para los nuevos socios.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-96 w-full" />
-            ) : (
-              <RichTextConfigField
-                key={valorDe('texto_bienvenida_alta') ?? 'empty'}
-                clave="texto_bienvenida_alta"
-                initialValor={valorDe('texto_bienvenida_alta') ?? ''}
-                label="Texto de bienvenida"
-                description="Mostrado al inicio del formulario de alta de nuevos socios"
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Consentimiento de datos — Tiendas colaboradoras
-            </CardTitle>
-            <CardDescription>
-              Texto del checkbox de consentimiento visible en el formulario de alta.
-              Actualízalo si cambian las tiendas o el porcentaje de descuento.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-32 w-full" />
-            ) : (
-              <RichTextConfigField
-                key={valorDe('texto_consentimiento_tiendas') ?? 'empty-consentimiento'}
-                clave="texto_consentimiento_tiendas"
-                initialValor={valorDe('texto_consentimiento_tiendas') ?? ''}
-                label="Texto de consentimiento"
-                description="Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta"
-              />
-            )}
-          </CardContent>
-        </Card>
+        {TEXTOS_LARGOS.map(({ clave, titulo, descripcion, label, ayuda }) => (
+          <Seccion key={clave} icono={<FileText className="h-4 w-4" />} titulo={titulo} descripcion={descripcion}>
+            {textoLargo(clave, label, ayuda, 'h-32')}
+          </Seccion>
+        ))}
       </div>
     </>
   )

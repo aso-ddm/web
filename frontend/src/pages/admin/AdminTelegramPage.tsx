@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { telegramAdminApi, type FiltrosLog, type TelegramLog } from '@/services/api/telegram'
 import { QK } from '@/lib/queryKeys'
+import { Paginacion } from '@/components/molecules/Paginacion'
 
 const CONTEXTO_LABELS: Record<string, string> = {
   anuncio: 'Anuncio',
@@ -185,14 +186,7 @@ export function AdminTelegramPage() {
           </div>
         )}
 
-        {/* Paginación */}
-        {pag && pag.totalPages > 1 && (
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" disabled={filtros.page <= 1} onClick={() => setFiltros((f) => ({ ...f, page: f.page - 1 }))}>Anterior</Button>
-            <span className="px-3 py-1.5 text-sm text-muted-foreground font-display">{filtros.page} / {pag.totalPages}</span>
-            <Button variant="outline" size="sm" disabled={filtros.page >= pag.totalPages} onClick={() => setFiltros((f) => ({ ...f, page: f.page + 1 }))}>Siguiente</Button>
-          </div>
-        )}
+        <Paginacion page={filtros.page} totalPages={pag?.totalPages ?? 1} onChange={(page) => setFiltros((f) => ({ ...f, page }))} />
       </div>
 
       <Sheet open={!!seleccionado} onOpenChange={(v) => !v && setSeleccionado(null)}>
