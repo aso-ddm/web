@@ -8,12 +8,22 @@ export interface FiltrosJuegos {
   limit?: number
 }
 
+/** Alta o edición: al editar, null borra el campo */
+export type JuegoPayload = {
+  nombre?: string
+  localizacion?: string | null
+  num_jugadores_min?: number | null
+  num_jugadores_max?: number | null
+  notas?: string | null
+  propietario_id?: string | null
+}
+
 export const juegosApi = {
   getAll: (filtros: FiltrosJuegos = {}) =>
     api.get<PaginatedResponse<Juego>>(`/juegos${buildQuery({ ...filtros })}`),
 
-  create: (data: Record<string, unknown>) => api.post<{ data: Juego }>('/juegos', data),
-  update: (id: string, data: Record<string, unknown>) => api.put<{ data: Juego }>(`/juegos/${id}`, data),
+  create: (data: JuegoPayload) => api.post<{ data: Juego }>('/juegos', data),
+  update: (id: string, data: JuegoPayload) => api.put<{ data: Juego }>(`/juegos/${id}`, data),
   delete: (id: string) => api.delete<void>(`/juegos/${id}`),
   exportCsv: () => api.getBlob('/juegos/export/csv'),
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
-import { juegosApi } from '@/services/api/juegos'
+import { juegosApi, type JuegoPayload } from '@/services/api/juegos'
 import { QK, invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
 import type { Juego } from '@/types/api'
@@ -39,7 +39,17 @@ const juegoSchema = z.object({
 })
 type JuegoForm = z.infer<typeof juegoSchema>
 
+const aFormulario = (juego?: Juego): JuegoForm => ({
+  nombre: juego?.nombre ?? '',
+  localizacion: juego?.localizacion ?? '',
+  num_jugadores_min: juego?.num_jugadores_min ?? '',
+  num_jugadores_max: juego?.num_jugadores_max ?? '',
+  notas: juego?.notas ?? '',
+  propietario_id: juego?.propietario_id ?? '',
+})
+
 // ── Juego form dialog ─────────────────────────────────────────────────────────
+// Montarlo con key (id del juego o 'nuevo'): cada apertura empieza con los valores de ese juego
 
 export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () => void; juego?: Juego }) {
   const queryClient = useQueryClient()
@@ -54,16 +64,7 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<JuegoForm>({
     resolver: zodResolver(juegoSchema),
-    defaultValues: juego
-      ? {
-          nombre: juego.nombre,
-          localizacion: juego.localizacion ?? '',
-          num_jugadores_min: juego.num_jugadores_min ?? '',
-          num_jugadores_max: juego.num_jugadores_max ?? '',
-          notas: juego.notas ?? '',
-          propietario_id: juego.propietario_id ?? '',
-        }
-      : {},
+    defaultValues: aFormulario(juego),
   })
 
   const propietarioId = watch('propietario_id')
@@ -75,32 +76,18 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
     setPropietarioAbierto(false)
   }
 
-  useEffect(() => {
-    if (open) {
-      reset(juego ? {
-        nombre: juego.nombre,
-        localizacion: juego.localizacion ?? '',
-        num_jugadores_min: juego.num_jugadores_min ?? '',
-        num_jugadores_max: juego.num_jugadores_max ?? '',
-        notas: juego.notas ?? '',
-        propietario_id: juego.propietario_id ?? '',
-      } : { nombre: '', localizacion: '', num_jugadores_min: '', num_jugadores_max: '', notas: '', propietario_id: '' })
-    }
-  }, [open, juego?.id])
-
   const { mutate, isPending } = useMutation({
     mutationFn: (data: JuegoForm) => {
       // Al editar, un campo vacío se envía como null para que el backend lo borre
       const entries = Object.entries(data).filter(([, v]) => v !== undefined)
       if (isEdit) {
-        return juegosApi.update(juego.id, Object.fromEntries(entries.map(([k, v]) => [k, v === '' ? null : v])))
+        return juegosApi.update(juego.id, Object.fromEntries(entries.map(([k, v]) => [k, v === '' ? null : v])) as JuegoPayload)
       }
-      return juegosApi.create(Object.fromEntries(entries.filter(([, v]) => v !== '')))
+      return juegosApi.create(Object.fromEntries(entries.filter(([, v]) => v !== '')) as JuegoPayload)
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Juego actualizado' : 'Juego añadido al catálogo')
       invalidarJuegos(queryClient)
-      if (!isEdit) queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
       handleClose()
     },
     onError: (err: Error) => toast.error(err.message),

@@ -222,6 +222,7 @@ export function GestionJuegosPage() {
       </div>
 
       <JuegoFormDialog
+        key={editando?.id ?? (dialogOpen ? 'nuevo' : 'cerrado')}
         open={dialogOpen}
         juego={editando}
         onClose={() => { setDialogOpen(false); setEditando(undefined) }}

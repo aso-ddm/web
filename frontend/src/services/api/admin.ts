@@ -6,6 +6,12 @@ import type { PaginatedResponse } from '@/types/api'
 export const adminApi = {
   getUsuarios: (params: { search?: string; estado?: EstadoSocio; page: number; limit: number }) =>
     api.get<PaginatedResponse<SocioAdmin>>(`/admin/usuarios${buildQuery(params)}`),
-  updateUsuario: (id: string, data: Partial<Record<keyof SocioAdmin | 'password', unknown>> & { roles?: Rol[] }) => api.put(`/admin/usuarios/${id}`, data),
+  // Campos editables (mismos que updateUsuarioSchema del backend); null borra el campo
+  updateUsuario: (id: string, data: Partial<Pick<SocioAdmin, 'nombre' | 'apellidos' | 'email' | 'dni' | 'estado' | 'tiene_llaves' | 'consentimiento_tiendas'>> & {
+    roles?: Rol[]
+    password?: string
+    telegram_chat_id?: null
+    [campoOpcional: string]: unknown // telefono, direccion, fechas…: texto o null
+  }) => api.put(`/admin/usuarios/${id}`, data),
   deleteUsuario: (id: string) => api.delete(`/admin/usuarios/${id}`),
 }

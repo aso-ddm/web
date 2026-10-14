@@ -15,6 +15,13 @@ import type { Prestamo } from '@/types/api'
 import { formatDate, diasRestantes } from '@/lib/format'
 import { QueryError } from '@/components/molecules/QueryError'
 
+// Activos (pestaña y contador de vencidos): una sola definición, la misma caché
+// ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
+const usePrestamosActivos = () => useQuery({
+  queryKey: QK.PRESTAMOS_GESTION_ESTADO('activo'),
+  queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
+})
+
 function nombreSocio(p: Prestamo) {
   if (!p.socio) return 'Socio desconocido'
   return `${p.socio.nombre} ${p.socio.apellidos}${p.socio.apodo ? ` (${p.socio.apodo})` : ''}`
@@ -91,11 +98,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
 }
 
 function PrestamosActivos() {
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: QK.PRESTAMOS_GESTION_ESTADO('activo'),
-    // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
-    queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
-  })
+  const { data, isLoading, isError, refetch } = usePrestamosActivos()
 
   const prestamos = data?.data ?? []
   const vencidos = prestamos.filter((p) => diasRestantes(p.fecha_limite) < 0)
@@ -198,11 +201,7 @@ function HistorialPrestamos() {
 }
 
 export function GestionPrestamosPage() {
-  const { data: activoData } = useQuery({
-    queryKey: QK.PRESTAMOS_GESTION_ESTADO('activo'),
-    // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
-    queryFn: () => prestamosApi.getAll({ estado: 'activo', limit: 100 }),
-  })
+  const { data: activoData } = usePrestamosActivos()
   const vencidosCount = (activoData?.data ?? []).filter((p) => diasRestantes(p.fecha_limite) < 0).length
 
   return (

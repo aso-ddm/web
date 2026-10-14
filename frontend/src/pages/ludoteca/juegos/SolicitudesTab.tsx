@@ -33,7 +33,6 @@ export function SolicitudesTab() {
       toast.success('Cesión aprobada — juego añadido al catálogo con el socio como propietario')
       queryClient.invalidateQueries({ queryKey: QK.SOLICITUDES_JUEGO_PENDIENTES })
       invalidarJuegos(queryClient)
-      queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
     },
     onError: (err: Error) => toast.error(err.message),
   })

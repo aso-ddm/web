@@ -27,7 +27,7 @@ export function LogsPanel({ juego }: { juego: Juego }) {
     onSuccess: () => {
       toast.success('Nota añadida')
       queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO(juego.id) })
-      queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL })
+      queryClient.invalidateQueries({ queryKey: QK.LOGS_JUEGO_ALL }) // pestaña Historial
       setNota('')
     },
     onError: (err: Error) => toast.error(err.message),
