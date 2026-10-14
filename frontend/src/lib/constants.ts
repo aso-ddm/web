@@ -82,12 +82,6 @@ export const SOCIAL_URLS = {
   telegram: "https://t.me/+1Vs9bN_8LR42MTNk",
 } as const
 
-export const MAP_URLS = {
-  embed:
-    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3179.089!2d-3.614!3d37.177!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzfCsDEwJzM3LjIiTiAzwrAzNic1MC40Ilc!5e0!3m2!1ses!2ses!4v1234567890",
-  search: "https://www.google.com/maps/search/?api=1&query=Pepita+Serrador+3,+Granada",
-} as const
-
 export const GOOGLE_SHEETS = {
   ludotecaCSV: "https://docs.google.com/spreadsheets/d/1TNUpo2tDCpRxfIMk2k80wHJT5hQQNy8DgmyW0h0IBB0/export?format=csv",
 } as const
