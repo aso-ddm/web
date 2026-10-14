@@ -404,6 +404,17 @@ export function ConfiguracionPage() {
             ) : (
               comunicacionConfigs.map((c) => <ConfigField key={c.clave} config={c} />)
             )}
+            {isBajaLoading ? (
+              <Skeleton className="h-48 w-full" />
+            ) : (
+              <RichTextConfigField
+                key={bajaData?.data?.valor ?? 'empty-baja'}
+                clave="texto_baja_socio"
+                initialValor={bajaData?.data?.valor ?? ''}
+                label="Aviso de baja"
+                description="Se muestra en el popup de confirmación del botón «Darme de baja»"
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -491,31 +502,6 @@ export function ConfiguracionPage() {
                 initialValor={consentimientoData?.data?.valor ?? ''}
                 label="Texto de consentimiento"
                 description="Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta"
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Aviso de baja — Mi panel
-            </CardTitle>
-            <CardDescription>
-              Lo que ve el socio antes de pedir la baja. Actualízalo si cambian las implicaciones de darse de baja.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isBajaLoading ? (
-              <Skeleton className="h-48 w-full" />
-            ) : (
-              <RichTextConfigField
-                key={bajaData?.data?.valor ?? 'empty-baja'}
-                clave="texto_baja_socio"
-                initialValor={bajaData?.data?.valor ?? ''}
-                label="Aviso de baja"
-                description="Se muestra en el popup de confirmación del botón «Darme de baja»"
               />
             )}
           </CardContent>
