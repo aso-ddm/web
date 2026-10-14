@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
-import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle, LogOut } from 'lucide-react'
+import { User, BookOpen, Key, CheckCircle2, AlertCircle, LogOut } from 'lucide-react'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 import { RichTextContent } from '@/components/molecules/RichTextContent'
-import { useConfigValor, useEnlacesInteres } from '@/hooks/useConfigValor'
+import { useConfigValor } from '@/hooks/useConfigValor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ import { QK } from '@/lib/queryKeys'
 import { useMe } from '@/hooks/useMe'
 import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
 import { CarnetTiendasCard } from './dashboard/CarnetTiendasCard'
+import { EnlacesClubCard } from './dashboard/EnlacesClubCard'
 
 const estadoLabels: Record<EstadoSocio, string> = {
   activo: 'Activo',
@@ -68,13 +69,6 @@ export function DashboardPage() {
   })
   const loadingPrestamos = loadingActivos || loadingRecientes
 
-  const clubLinks = {
-    urlEstatutos: useConfigValor('url_estatutos', ''),
-    urlReglamento: useConfigValor('url_reglamento_interno', ''),
-  }
-
-  const { data: enlacesInteres = [] } = useEnlacesInteres()
-
   const queryClient = useQueryClient()
   const { mutate: pedirLlaves, isPending: pidiendoLlaves } = useMutation({
     mutationFn: () => authApi.pedirLlaves(),
@@ -102,6 +96,7 @@ export function DashboardPage() {
   const puedePedirLlaves = !!fechaLlaves && fechaLlaves <= new Date()
   const diasParaPedirLlaves = diasParaRepetirSolicitudLlaves(usuario?.llaves_solicitadas_at)
   const ultimosPrestamos = recientesData?.data ?? []
+  const mostrarCarnet = usuario?.estado === 'activo' && !!usuario.consentimiento_tiendas
 
   return (
     <>
@@ -281,128 +276,65 @@ export function DashboardPage() {
           </Card>
         </div>
 
-        {usuario?.estado === 'activo' && usuario.consentimiento_tiendas && <CarnetTiendasCard />}
-
-        {/* Acciones rápidas + últimos préstamos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Acciones rápidas */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="font-display text-lg text-primary">Acciones rápidas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button asChild variant="outline" className="w-full justify-start gap-3 font-display">
-                <Link to="/area/perfil">
-                  <User className="h-4 w-4" />
-                  Ver y editar mi perfil
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start gap-3 font-display">
-                <Link to="/area/prestamos">
-                  <BookOpen className="h-4 w-4" />
-                  Mis préstamos
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Últimos préstamos */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="font-display text-lg text-primary">Últimos préstamos</CardTitle>
-              <Button asChild variant="ghost" size="sm" className="font-display text-xs text-muted-foreground">
-                <Link to="/area/prestamos">Ver todos</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loadingPrestamos ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
-                </div>
-              ) : ultimosPrestamos.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm font-medium">Aún no tienes préstamos activos</p>
-                  <p className="text-xs mt-1">Los préstamos se aprueban automáticamente al solicitarlos</p>
-                  <Button asChild variant="link" size="sm" className="mt-1 font-display text-secondary">
-                    <Link to="/area/prestamos">Solicitar un juego</Link>
-                  </Button>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {ultimosPrestamos.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center gap-3 py-2 border-b border-border last:border-0"
-                    >
-                      <span className="flex-shrink-0">{prestamoEstadoIcon[p.estado]}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-display font-bold truncate">
-                          {p.juego?.nombre ?? 'Juego desconocido'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(p.fecha_prestamo)}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {prestamoEstadoLabel[p.estado]}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+        {/* Escritorio: préstamos y enlaces a la izquierda, carnet en columna lateral.
+             Móvil: el carnet primero, que es lo que se busca en la tienda */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {mostrarCarnet && (
+            <div className="lg:col-start-3 lg:row-start-1">
+              <CarnetTiendasCard />
+            </div>
+          )}
+          <div className={mostrarCarnet ? 'space-y-6 lg:col-span-2 lg:row-start-1' : 'space-y-6 lg:col-span-3'}>
+            {/* Últimos préstamos */}
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="font-display text-lg text-primary">Últimos préstamos</CardTitle>
+                <Button asChild variant="ghost" size="sm" className="font-display text-xs text-muted-foreground">
+                  <Link to="/area/prestamos">Ver todos</Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingPrestamos ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+                  </div>
+                ) : ultimosPrestamos.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm font-medium">Aún no tienes préstamos activos</p>
+                    <p className="text-xs mt-1">Los préstamos se aprueban automáticamente al solicitarlos</p>
+                    <Button asChild variant="link" size="sm" className="mt-1 font-display text-secondary">
+                      <Link to="/area/prestamos">Solicitar un juego</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {ultimosPrestamos.map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+                      >
+                        <span className="flex-shrink-0">{prestamoEstadoIcon[p.estado]}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-display font-bold truncate">
+                            {p.juego?.nombre ?? 'Juego desconocido'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(p.fecha_prestamo)}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {prestamoEstadoLabel[p.estado]}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+            <EnlacesClubCard />
+          </div>
         </div>
-
-        {/* Enlaces de interés */}
-        {enlacesInteres.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="font-display text-lg text-primary">Enlaces de interés</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {enlacesInteres.map((e, i) => (
-                <Button key={i} asChild variant="outline" className="justify-start gap-3 font-display">
-                  <a href={e.url} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="truncate">{e.label}</span>
-                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                  </a>
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Recursos del club */}
-        {clubLinks && (clubLinks.urlEstatutos || clubLinks.urlReglamento) && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="font-display text-lg text-primary">Recursos del club</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {clubLinks.urlEstatutos && (
-                <Button asChild variant="outline" className="justify-start gap-3 font-display">
-                  <a href={clubLinks.urlEstatutos} target="_blank" rel="noopener noreferrer">
-                    <FileText className="h-4 w-4" />
-                    Estatutos
-                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                  </a>
-                </Button>
-              )}
-              {clubLinks.urlReglamento && (
-                <Button asChild variant="outline" className="justify-start gap-3 font-display">
-                  <a href={clubLinks.urlReglamento} target="_blank" rel="noopener noreferrer">
-                    <FileText className="h-4 w-4" />
-                    Reglamento interno
-                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                  </a>
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       <ConfirmDialog
