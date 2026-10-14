@@ -1,4 +1,4 @@
-import { PrismaClient, Rol } from '@prisma/client'
+import { PrismaClient, Rol, EstadoSocio, EstadoSolicitud } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
@@ -42,7 +42,7 @@ async function avisarSecretarios(prisma: PrismaClient, contexto: string, texto: 
   if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN no configurado')
 
   const secretarios = await prisma.usuario.findMany({
-    where: { roles: { has: Rol.secretario }, estado: 'activo', telegram_chat_id: { not: null } },
+    where: { roles: { has: Rol.secretario }, estado: EstadoSocio.activo, telegram_chat_id: { not: null } },
     select: { telegram_chat_id: true },
   })
 
@@ -77,8 +77,8 @@ const porEmail = (email: string) => ({ email: { equals: email.trim(), mode: 'ins
 
 // Con contraseña entra también una solicitud pendiente, pero solo a editar su formulario (authenticatePendiente)
 function comprobarEstado<T extends { estado: string }>(usuario: T, permitirPendiente = false): T {
-  if (usuario.estado === 'baja') throw new HttpError(403, 'Esta cuenta ha sido dada de baja')
-  if (usuario.estado === 'pendiente' && !permitirPendiente) throw new HttpError(403, 'Tu solicitud está pendiente de aprobación por la directiva')
+  if (usuario.estado === EstadoSocio.baja) throw new HttpError(403, 'Esta cuenta ha sido dada de baja')
+  if (usuario.estado === EstadoSocio.pendiente && !permitirPendiente) throw new HttpError(403, 'Tu solicitud está pendiente de aprobación por la directiva')
   return usuario
 }
 
@@ -140,7 +140,7 @@ export class AuthService {
         password_hash,
         comprobante_transferencia: comprobanteFilename,
         roles: [Rol.socio_basico],
-        estado: 'pendiente',
+        estado: EstadoSocio.pendiente,
         fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : undefined,
       },
       select: {
@@ -186,7 +186,7 @@ export class AuthService {
     // Todos los miembros son iguales: el comprobante es del grupo
     return this.prisma.$transaction(async (tx) => {
       const grupo = await tx.solicitudGrupal.create({
-        data: { estado: 'pendiente', comprobante_transferencia: comprobanteFilename },
+        data: { estado: EstadoSolicitud.pendiente, comprobante_transferencia: comprobanteFilename },
       })
       for (const [i, { password: _p, fecha_nacimiento, ...resto }] of personas.entries()) {
         await tx.usuario.create({
@@ -195,7 +195,7 @@ export class AuthService {
             password_hash: hashes[i],
             tipo_cuota: 'conjunta',
             roles: [Rol.socio_basico],
-            estado: 'pendiente',
+            estado: EstadoSocio.pendiente,
             solicitud_grupal_id: grupo.id,
             fecha_nacimiento: new Date(fecha_nacimiento),
           },
@@ -354,7 +354,7 @@ export class AuthService {
   // Si el envío falla (bot bloqueado, Telegram caído) queda en el log del bot y el código se anula.
   async requestPasswordReset(email: string): Promise<void> {
     const usuario = await this.prisma.usuario.findFirst({ where: porEmail(email) })
-    if (!usuario || !usuario.telegram_chat_id || usuario.estado !== 'activo') return
+    if (!usuario || !usuario.telegram_chat_id || usuario.estado !== EstadoSocio.activo) return
 
     if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN no configurado')
 
@@ -408,7 +408,7 @@ export class AuthService {
       where: { id: userId },
       select: { nombre: true, apellidos: true, apodo: true, email: true, alias_telegram: true, estado: true, fecha_alta: true, tiene_llaves: true, llaves_solicitadas_at: true },
     })
-    if (!socio || socio.estado !== 'activo') throw new HttpError(403, 'Solo los socios activos pueden pedir llaves')
+    if (!socio || socio.estado !== EstadoSocio.activo) throw new HttpError(403, 'Solo los socios activos pueden pedir llaves')
     if (socio.tiene_llaves) throw new HttpError(409, 'Ya tienes llaves del club')
     if (!socio.fecha_alta || fechaPuedePedirLlaves(socio.fecha_alta) > new Date()) {
       throw new HttpError(403, `Necesitas ${MESES_PARA_LLAVES} meses como socio para pedir llaves`)
@@ -442,7 +442,7 @@ Telegram: ${esc(socio.alias_telegram)}` : '')
       where: { id: userId },
       select: { nombre: true, apellidos: true, apodo: true, email: true, alias_telegram: true, estado: true, tipo_cuota: true },
     })
-    if (!socio || socio.estado !== 'activo') throw new HttpError(403, 'Solo los socios activos pueden pedir la baja')
+    if (!socio || socio.estado !== EstadoSocio.activo) throw new HttpError(403, 'Solo los socios activos pueden pedir la baja')
 
     const nombre = `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`
     const texto =

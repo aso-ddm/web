@@ -1,5 +1,6 @@
-import { PrismaClient, TipoLogJuego } from '@prisma/client'
+import { PrismaClient, TipoLogJuego, EstadoSolicitudJuego } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
+import { textoAltaJuego } from './logs_juego.service'
 import { paginado } from '../lib/paginacion'
 import type {
   CrearSolicitudJuegoInput,
@@ -60,13 +61,13 @@ export class SolicitudesJuegoService {
   async aprobar(id: string, staff_id: string) {
     const solicitud = await this.prisma.solicitudJuego.findUnique({ where: { id }, include: { socio: socioSelect } })
     if (!solicitud) throw new HttpError(404, 'Solicitud no encontrada')
-    if (solicitud.estado !== 'pendiente') throw new HttpError(409, 'La solicitud ya fue procesada')
+    if (solicitud.estado !== EstadoSolicitudJuego.pendiente) throw new HttpError(409, 'La solicitud ya fue procesada')
 
     return this.prisma.$transaction(async (tx) => {
       // Marcar primero: un doble clic no crea dos juegos
       const { count } = await tx.solicitudJuego.updateMany({
-        where: { id, estado: 'pendiente' },
-        data: { estado: 'aprobada' },
+        where: { id, estado: EstadoSolicitudJuego.pendiente },
+        data: { estado: EstadoSolicitudJuego.aprobada },
       })
       if (count !== 1) throw new HttpError(409, 'La solicitud ya fue procesada')
 
@@ -82,7 +83,7 @@ export class SolicitudesJuegoService {
         data: {
           juego_id: juego.id,
           tipo: TipoLogJuego.donado,
-          texto: `${juego.nombre} cedido al Dragón por ${solicitud.socio.nombre} ${solicitud.socio.apellidos}`,
+          texto: textoAltaJuego(juego.nombre, solicitud.socio),
           usuario_id: staff_id,
         },
       })
@@ -101,12 +102,12 @@ export class SolicitudesJuegoService {
   async rechazar(id: string, input: RechazarSolicitudJuegoInput) {
     const solicitud = await this.prisma.solicitudJuego.findUnique({ where: { id } })
     if (!solicitud) throw new HttpError(404, 'Solicitud no encontrada')
-    if (solicitud.estado !== 'pendiente') throw new HttpError(409, 'La solicitud ya fue procesada')
+    if (solicitud.estado !== EstadoSolicitudJuego.pendiente) throw new HttpError(409, 'La solicitud ya fue procesada')
 
     return this.prisma.solicitudJuego.update({
       where: { id },
       data: {
-        estado: 'rechazada',
+        estado: EstadoSolicitudJuego.rechazada,
         motivo_rechazo: input.motivo_rechazo ?? null,
       },
       include: { socio: socioSelect },

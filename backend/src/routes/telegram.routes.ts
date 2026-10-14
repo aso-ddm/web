@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { Prisma, Rol } from '@prisma/client'
+import { Prisma, Rol, EstadoSocio } from '@prisma/client'
 import { prisma } from '../lib/prisma'
 import { requireRoles, ROLES } from '../middleware/auth'
 import { HttpError } from '../lib/httpError'
@@ -48,7 +48,7 @@ router.post('/anuncio', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, 
   const socios = await prisma.usuario.findMany({
     where: {
       telegram_chat_id: { not: null },
-      estado: 'activo',
+      estado: EstadoSocio.activo,
       ...(idsFiltro ? { id: { in: idsFiltro } } : {}),
     },
     select: { telegram_chat_id: true },

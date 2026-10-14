@@ -1,3 +1,4 @@
+import { EstadoSolicitudJuego } from '@prisma/client'
 import { Router, Request, Response } from 'express'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
@@ -14,10 +15,9 @@ const service = new SolicitudesJuegoService(prisma)
 // Pendientes para staff
 router.get(
   '/pendientes',
-  authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
-    const filtros = filtrosSolicitudesJuegoSchema.parse({ ...req.query, estado: 'pendiente' })
+    const filtros = filtrosSolicitudesJuegoSchema.parse({ ...req.query, estado: EstadoSolicitudJuego.pendiente })
     const result = await service.getAll(filtros)
     res.json(result)
   },
@@ -26,7 +26,6 @@ router.get(
 // Todas para staff
 router.get(
   '/todas',
-  authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
     const filtros = filtrosSolicitudesJuegoSchema.parse(req.query)
@@ -60,7 +59,6 @@ router.post(
 // Aprobar (staff)
 router.post(
   '/:id/aprobar',
-  authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
     const result = await service.aprobar(req.params.id, req.user!.id)
@@ -71,7 +69,6 @@ router.post(
 // Rechazar (staff)
 router.post(
   '/:id/rechazar',
-  authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
     const input = rechazarSolicitudJuegoSchema.parse(req.body)

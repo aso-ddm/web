@@ -3,6 +3,13 @@ import { HttpError } from '../lib/httpError'
 import type { FiltrosLogsInput } from '../schemas/log_juego.schema'
 import { paginado } from '../lib/paginacion'
 
+/** Texto del log de alta de un juego: cedido por un socio o comprado por el club */
+export function textoAltaJuego(nombre: string, propietario?: { nombre: string; apellidos: string } | null) {
+  return propietario
+    ? `${nombre} cedido al Dragón por ${propietario.nombre} ${propietario.apellidos}`
+    : `${nombre} añadido al catálogo del Dragón`
+}
+
 const usuarioSelect = { select: { id: true, nombre: true, apellidos: true } }
 const juegoSelect   = { select: { id: true, nombre: true } }
 

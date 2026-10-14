@@ -69,16 +69,8 @@ router.get('/:id/comprobante', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async
     return
   }
   const ext = path.extname(socio.comprobante_transferencia).toLowerCase()
-  const mimeTypes: Record<string, string> = {
-    '.pdf': 'application/pdf',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.webp': 'image/webp',
-  }
-  const contentType = mimeTypes[ext] ?? 'application/octet-stream'
   const nombreArchivo = `comprobante_${socio.nombre}_${socio.apellidos}${ext}`.replace(/\s+/g, '_')
-  res.setHeader('Content-Type', contentType)
+  res.type(ext) // Content-Type por extensión (solo se aceptan pdf/jpg/png/webp al subir)
   res.setHeader('Content-Disposition', `inline; filename="${nombreArchivo}"`)
   fs.createReadStream(filePath).pipe(res)
 })

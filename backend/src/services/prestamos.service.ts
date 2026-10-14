@@ -1,4 +1,4 @@
-import { PrismaClient, EstadoPrestamo, TipoLogJuego } from '@prisma/client'
+import { PrismaClient, EstadoPrestamo, TipoLogJuego, EstadoJuego } from '@prisma/client'
 import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema'
 import type { LogsJuegoService } from './logs_juego.service'
 import { finDelDiaMadrid } from '../lib/fechas'
@@ -38,7 +38,7 @@ export class PrestamosService {
   async solicitar(socioId: string, input: SolicitarPrestamoInput) {
     const juego = await this.prisma.juego.findUnique({ where: { id: input.juego_id } })
     if (!juego) throw new HttpError(404, 'Juego no encontrado')
-    if (juego.estado !== 'en_estanteria') throw new HttpError(409, 'El juego no está disponible para préstamo')
+    if (juego.estado !== EstadoJuego.en_estanteria) throw new HttpError(409, 'El juego no está disponible para préstamo')
 
     const [maxPrestamos, diasPrestamo] = await Promise.all([
       configNumero(this.prisma, 'max_prestamos_activos', 3),
@@ -56,8 +56,8 @@ export class PrestamosService {
       }
       // Reserva atómica: si dos socios piden el mismo juego a la vez, solo uno lo consigue
       const { count } = await tx.juego.updateMany({
-        where: { id: input.juego_id, estado: 'en_estanteria' },
-        data: { estado: 'prestado' },
+        where: { id: input.juego_id, estado: EstadoJuego.en_estanteria },
+        data: { estado: EstadoJuego.prestado },
       })
       if (count !== 1) throw new HttpError(409, 'El juego no está disponible para préstamo')
       const prestamo = await tx.prestamo.create({
@@ -129,7 +129,7 @@ export class PrestamosService {
       if (count !== 1) throw new HttpError(409, 'Solo se pueden devolver préstamos activos')
       await tx.juego.update({
         where: { id: prestamo.juego_id },
-        data: { estado: 'en_estanteria' as const },
+        data: { estado: EstadoJuego.en_estanteria },
       })
       await this.logsService.crearSistema(prestamo.juego_id, TipoLogJuego.prestamo_devuelto, `${juego?.nombre ?? 'Juego'} devuelto`, usuarioId, tx)
       return tx.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })

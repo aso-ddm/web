@@ -4,7 +4,7 @@ import { requireRoles } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { SociosService } from '../services/socios.service'
 import { comprobarCambioAdmin, normalizarRoles } from '../lib/roles'
-import { Rol, TipoCambioEstado } from '@prisma/client'
+import { Rol, TipoCambioEstado, EstadoSocio, EstadoPrestamo } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
 import { filtrosAdminSchema, createUsuarioSchema, updateUsuarioSchema } from '../schemas/admin.schema'
 import { buscarIdsUsuarios } from '../lib/search'
@@ -90,7 +90,7 @@ router.post('/usuarios', async (req, res) => {
     data: {
       ...rest,
       password_hash,
-      ...(rest.estado === 'activo' && {
+      ...(rest.estado === EstadoSocio.activo && {
         fecha_alta: new Date(),
         historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: req.user.id } },
       }),
@@ -151,7 +151,7 @@ router.delete('/usuarios/:id', async (req, res) => {
     return
   }
   const prestamosActivos = await prisma.prestamo.count({
-    where: { socio_id: id, estado: 'activo' },
+    where: { socio_id: id, estado: EstadoPrestamo.activo },
   })
   if (prestamosActivos > 0) {
     res.status(400).json({ error: 'El usuario tiene préstamos activos. Devuelve los juegos antes de eliminar la cuenta.' })

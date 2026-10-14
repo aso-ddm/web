@@ -1,6 +1,6 @@
-import { PrismaClient, TipoLogJuego, Prisma } from '@prisma/client'
+import { PrismaClient, TipoLogJuego, Prisma, EstadoJuego } from '@prisma/client'
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
-import type { LogsJuegoService } from './logs_juego.service'
+import { textoAltaJuego, type LogsJuegoService } from './logs_juego.service'
 import { HttpError } from '../lib/httpError'
 import { likePattern } from '../lib/search'
 import { paginado } from '../lib/paginacion'
@@ -101,9 +101,7 @@ export class JuegosService {
       await this.logsService.crearSistema(
         juego.id,
         TipoLogJuego.donado,
-        juego.propietario
-          ? `${juego.nombre} cedido al Dragón por ${juego.propietario.nombre} ${juego.propietario.apellidos}`
-          : `${juego.nombre} añadido al catálogo del Dragón`,
+        textoAltaJuego(juego.nombre, juego.propietario),
         usuario_id,
         tx,
       )
@@ -129,14 +127,14 @@ export class JuegosService {
   async retirar(id: string, usuario_id: string) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
     if (!juego) throw new HttpError(404, 'Juego no encontrado')
-    if (juego.estado === 'retirado') throw new HttpError(409, 'El juego ya está retirado')
-    if (juego.estado === 'prestado') throw new HttpError(409, 'No se puede retirar un juego prestado')
+    if (juego.estado === EstadoJuego.retirado) throw new HttpError(409, 'El juego ya está retirado')
+    if (juego.estado === EstadoJuego.prestado) throw new HttpError(409, 'No se puede retirar un juego prestado')
 
     // Solo desde la estantería: si alguien lo presta a la vez, no queda retirado con préstamo activo
     return this.prisma.$transaction(async (tx) => {
       const { count } = await tx.juego.updateMany({
-        where: { id, estado: 'en_estanteria' },
-        data: { estado: 'retirado' },
+        where: { id, estado: EstadoJuego.en_estanteria },
+        data: { estado: EstadoJuego.retirado },
       })
       if (count !== 1) throw new HttpError(409, 'No se puede retirar un juego prestado')
       await this.logsService.crearSistema(id, TipoLogJuego.retirado, `${juego.nombre} retirado del Dragón`, usuario_id, tx)
@@ -150,13 +148,13 @@ export class JuegosService {
   async reactivar(id: string, usuario_id: string) {
     const juego = await this.prisma.juego.findUnique({ where: { id } })
     if (!juego) throw new HttpError(404, 'Juego no encontrado')
-    if (juego.estado !== 'retirado') throw new HttpError(409, 'Solo se pueden reactivar juegos retirados')
+    if (juego.estado !== EstadoJuego.retirado) throw new HttpError(409, 'Solo se pueden reactivar juegos retirados')
 
     return this.prisma.$transaction(async (tx) => {
       await this.logsService.crearSistema(id, TipoLogJuego.nota_manual, `${juego.nombre} reactivado y vuelto a la estantería`, usuario_id, tx)
       return tx.juego.update({
         where: { id },
-        data: { estado: 'en_estanteria' },
+        data: { estado: EstadoJuego.en_estanteria },
         include: { propietario: propietarioSelect },
       })
     })

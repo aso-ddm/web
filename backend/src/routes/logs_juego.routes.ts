@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import { authenticate, requireRoles, ROLES } from '../middleware/auth'
+import { requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { LogsJuegoService } from '../services/logs_juego.service'
 import { crearLogManualSchema, filtrosLogsSchema } from '../schemas/log_juego.schema'
@@ -9,7 +9,6 @@ const logsService = new LogsJuegoService(prisma)
 
 router.get(
   '/',
-  authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
     const { juegoId } = req.params
@@ -21,7 +20,6 @@ router.get(
 
 router.post(
   '/',
-  authenticate,
   requireRoles(...ROLES.DIRECTIVA_Y_LUDOTECARIO),
   async (req: Request, res: Response) => {
     const { juegoId } = req.params

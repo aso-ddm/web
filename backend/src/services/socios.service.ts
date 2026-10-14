@@ -138,7 +138,7 @@ export class SociosService {
         orderBy: { created_at: 'asc' },
       }),
       this.prisma.solicitudGrupal.findMany({
-        where: { estado: 'pendiente' },
+        where: { estado: EstadoSolicitud.pendiente },
         orderBy: { created_at: 'asc' },
         include: {
           miembros: {
@@ -166,7 +166,7 @@ export class SociosService {
       include: { miembros: true },
     })
     if (!grupo) throw new HttpError(404, 'Solicitud grupal no encontrada')
-    if (grupo.estado !== 'pendiente') {
+    if (grupo.estado !== EstadoSolicitud.pendiente) {
       throw new HttpError(409, 'La solicitud grupal no está en estado pendiente')
     }
     for (const u of grupo.miembros) {
@@ -211,7 +211,7 @@ export class SociosService {
       include: { miembros: true },
     })
     if (!grupo) throw new HttpError(404, 'Solicitud grupal no encontrada')
-    if (grupo.estado !== 'pendiente') {
+    if (grupo.estado !== EstadoSolicitud.pendiente) {
       throw new HttpError(409, 'La solicitud grupal no está en estado pendiente')
     }
     for (const u of grupo.miembros) {
