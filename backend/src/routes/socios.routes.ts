@@ -9,14 +9,25 @@ import {
   aprobarSocioSchema,
   llavesSchema,
   unirCuotaConjuntaSchema,
+  bajaSocioSchema,
 } from '../schemas/socio.schema'
 import { authenticate, requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
+import { EstadoSocio } from '@prisma/client'
+import { HttpError } from '../lib/httpError'
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads/transferencias')
 
 const router = Router()
 const sociosService = new SociosService(prisma)
+
+// Protección de datos: los socios de baja solo los ve la directiva (los vocales gestionan altas, no bajas)
+const esDirectiva = (roles: string[]) => ROLES.DIRECTIVA.some((r) => roles.includes(r))
+async function comprobarAccesoBaja(id: string, roles: string[]) {
+  if (esDirectiva(roles)) return
+  const socio = await prisma.usuario.findUnique({ where: { id }, select: { estado: true } })
+  if (socio?.estado === EstadoSocio.baja) throw new HttpError(403, 'Los datos de los socios de baja solo los ve la directiva')
+}
 
 // GET /api/socios — listado con filtros (directiva + vocales)
 router.get('/', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
@@ -25,8 +36,7 @@ router.get('/', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => 
     res.status(400).json({ error: 'Parámetros inválidos', details: parsed.error.flatten().fieldErrors })
     return
   }
-  const result = await sociosService.getAll(parsed.data)
-  res.json(result)
+  res.json(await sociosService.getAll(parsed.data, esDirectiva(req.user.roles)))
 })
 
 // GET /api/socios/opciones — id + nombre de socios activos para selectores (staff de ludoteca incluido)
@@ -43,6 +53,7 @@ router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (_re
 // GET /api/socios/:id/comprobante — directiva descarga comprobante
 router.get('/:id/comprobante', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (req, res) => {
   const { id } = req.params
+  await comprobarAccesoBaja(id, req.user.roles)
   const socio = await prisma.usuario.findUnique({
     where: { id },
     select: { comprobante_transferencia: true, nombre: true, apellidos: true, solicitud_grupal: { select: { comprobante_transferencia: true } } },
@@ -77,6 +88,7 @@ router.get('/:id', authenticate, async (req, res) => {
     res.status(403).json({ error: 'No tienes permisos para ver este perfil' })
     return
   }
+  if (req.user.id !== id) await comprobarAccesoBaja(id, req.user.roles)
   const socio = await sociosService.getById(id)
   res.json({ data: socio })
 })
@@ -132,7 +144,7 @@ router.post('/:id/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) 
 // POST /api/socios/:id/baja
 router.post('/:id/baja', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
-  const socio = await sociosService.darDeBaja(id, req.user.id)
+  const socio = await sociosService.darDeBaja(id, req.user.id, bajaSocioSchema.parse(req.body ?? {}))
   res.json({ message: 'Socio dado de baja correctamente', data: socio })
 })
 

@@ -34,6 +34,9 @@ export type SocioAdmin = Usuario & {
     id: string
     miembros: { id: string; nombre: string; apellidos: string; estado: EstadoSocio }[]
   } | null
+  // Solo en la ficha (getById): lo que hace falta para decidir la baja
+  juegos_en_propiedad?: { id: string; nombre: string; estado: 'en_estanteria' | 'prestado' }[]
+  _count?: { prestamos: number } // préstamos activos
 }
 
 // Socio de los listados: sin historial ni trazabilidad (están en la ficha, getById)
@@ -66,7 +69,9 @@ export const sociosApi = {
 
   aprobar: (id: string, rol: Rol) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, { rol }),
   rechazar: (id: string) => api.action(`/socios/${id}/rechazar`),
-  darDeBaja: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/baja`),
+  // juegos: qué pasa con cada juego que cedió (obligatorio para todos los que tenga)
+  darDeBaja: (id: string, juegos: { juego_id: string; destino: 'se_lo_lleva' | 'club' }[] = []) =>
+    api.post<{ data: SocioAdmin }>(`/socios/${id}/baja`, { juegos }),
   reactivar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/reactivar`),
 
   getComprobante: async (id: string): Promise<void> => {

@@ -11,8 +11,8 @@ export function likePattern(search: string) {
  */
 export async function buscarIdsUsuarios(
   prisma: PrismaClient,
-  { search, estado, tieneLlaves, conTelegram, limit, skip }:
-    { search: string; estado?: string; tieneLlaves?: boolean; conTelegram?: boolean; limit: number; skip: number },
+  { search, estado, tieneLlaves, conTelegram, sinBajas, limit, skip }:
+    { search: string; estado?: string; tieneLlaves?: boolean; conTelegram?: boolean; sinBajas?: boolean; limit: number; skip: number },
 ) {
   const pattern = likePattern(search)
   const where = Prisma.sql`
@@ -24,6 +24,7 @@ export async function buscarIdsUsuarios(
       OR unaccent(apodo) ILIKE unaccent(${pattern})
     )
     ${estado ? Prisma.sql`AND estado::text = ${estado}` : Prisma.empty}
+    ${sinBajas ? Prisma.sql`AND estado::text <> 'baja'` : Prisma.empty}
     ${tieneLlaves !== undefined ? Prisma.sql`AND tiene_llaves = ${tieneLlaves}` : Prisma.empty}
     ${conTelegram !== undefined ? (conTelegram ? Prisma.sql`AND telegram_chat_id IS NOT NULL` : Prisma.sql`AND telegram_chat_id IS NULL`) : Prisma.empty}
   `

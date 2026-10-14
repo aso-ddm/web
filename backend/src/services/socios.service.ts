@@ -1,5 +1,5 @@
-import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado } from '@prisma/client'
-import { UpdateSocioInput, FiltrosSociosInput } from '../schemas/socio.schema'
+import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, EstadoJuego, EstadoPrestamo, TipoLogJuego } from '@prisma/client'
+import { UpdateSocioInput, FiltrosSociosInput, BajaSocioInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
 import { eventos } from '../lib/eventos'
@@ -60,8 +60,14 @@ const SOCIO_DETAIL_SELECT = {
     select: { id: true, tipo: true, detalle: true, created_at: true, por: { select: { id: true, nombre: true, apellidos: true } } },
     orderBy: { created_at: 'desc' },
   },
+  // Para la baja: juegos que cedió (se decide qué pasa con cada uno) y préstamos sin devolver (la impiden)
+  juegos_en_propiedad: {
+    where: { estado: { not: EstadoJuego.retirado } },
+    select: { id: true, nombre: true, estado: true },
+    orderBy: { nombre: 'asc' },
+  },
+  _count: { select: { prestamos: { where: { estado: EstadoPrestamo.activo } } } },
 } as const
-
 
 const PENDIENTE_EN_SOLICITUDES = 'Este socio está pendiente: apruébalo o recházalo desde Solicitudes'
 
@@ -81,13 +87,15 @@ const yaNoPendiente = (mensaje: string) => (err: unknown): never => {
 export class SociosService {
   constructor(private prisma: PrismaClient) {}
 
-  async getAll(filtros: FiltrosSociosInput) {
+  /** `verBajas`: solo la directiva ve a los socios de baja (protección de datos: los vocales no lo necesitan) */
+  async getAll(filtros: FiltrosSociosInput, verBajas = true) {
     const { estado, search, tiene_llaves, con_telegram, page, limit } = filtros
+    if (!verBajas && estado === EstadoSocio.baja) return paginado([], 0, filtros)
     const skip = (page - 1) * limit
 
     if (search) {
       const { ids, total } = await buscarIdsUsuarios(this.prisma, {
-        search, estado, tieneLlaves: tiene_llaves, conTelegram: con_telegram, limit, skip,
+        search, estado, tieneLlaves: tiene_llaves, conTelegram: con_telegram, sinBajas: !verBajas, limit, skip,
       })
 
       const socios = ids.length > 0
@@ -102,7 +110,7 @@ export class SociosService {
     }
 
     const where: Prisma.UsuarioWhereInput = {
-      ...(estado && { estado }),
+      ...(estado ? { estado } : !verBajas && { estado: { not: EstadoSocio.baja } }),
       ...(tiene_llaves !== undefined && { tiene_llaves }),
       ...(con_telegram !== undefined && { telegram_chat_id: con_telegram ? { not: null } : null }),
     }
@@ -298,7 +306,12 @@ export class SociosService {
     eventos.emit('cambio', 'pendientes')
   }
 
-  async darDeBaja(id: string, bajaPorId: string) {
+  /**
+   * Baja de un socio. Antes tiene que haber devuelto los préstamos, y para cada juego que cedió al club
+   * hay que decidir si se lo lleva (queda retirado) o se queda en el club (pasa a ser del club).
+   * Protección de datos: deja de tratarse lo que ya no tiene sentido (Telegram, consentimiento, token de reset).
+   */
+  async darDeBaja(id: string, bajaPorId: string, { juegos: decisiones }: BajaSocioInput = { juegos: [] }) {
     if (id === bajaPorId) throw new HttpError(403, 'No puedes darte de baja a ti mismo')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new HttpError(404, 'Socio no encontrado')
@@ -310,9 +323,39 @@ export class SociosService {
     }
     if (socio.estado === EstadoSocio.pendiente) throw new HttpError(409, PENDIENTE_EN_SOLICITUDES)
 
+    const [prestamosActivos, cedidos] = await Promise.all([
+      this.prisma.prestamo.count({ where: { socio_id: id, estado: EstadoPrestamo.activo } }),
+      this.prisma.juego.findMany({ where: { propietario_id: id, estado: { not: EstadoJuego.retirado } }, select: { id: true, nombre: true, estado: true } }),
+    ])
+    if (prestamosActivos > 0) {
+      throw new HttpError(409, `Tiene ${prestamosActivos} préstamo${prestamosActivos > 1 ? 's' : ''} sin devolver: registra la devolución antes de darle de baja`)
+    }
+    const destino = new Map(decisiones.map((d) => [d.juego_id, d.destino]))
+    const sinDecidir = cedidos.filter((j) => !destino.has(j.id))
+    if (sinDecidir.length) {
+      throw new HttpError(409, `Decide qué pasa con los juegos que cedió (${sinDecidir.map((j) => j.nombre).join(', ')}): dale de baja desde Gestión de socios`)
+    }
+    const prestado = cedidos.find((j) => destino.get(j.id) === 'se_lo_lleva' && j.estado === EstadoJuego.prestado)
+    if (prestado) throw new HttpError(409, `${prestado.nombre} está prestado a otro socio: espera a que lo devuelva para que se lo lleve`)
+
     const actualizado = await this.prisma.$transaction(async (tx) => {
       if (socio.solicitud_grupal_id) {
         await salirDeCuotaConjunta(tx, id, bajaPorId, 'Sale de la cuota conjunta por la baja')
+      }
+      const nombre = `${socio.nombre} ${socio.apellidos}`
+      for (const juego of cedidos) {
+        if (destino.get(juego.id) === 'se_lo_lleva') {
+          // Condición en el where: si alguien lo presta justo ahora, no queda retirado con un préstamo activo
+          const { count } = await tx.juego.updateMany({
+            where: { id: juego.id, estado: EstadoJuego.en_estanteria },
+            data: { estado: EstadoJuego.retirado },
+          })
+          if (count !== 1) throw new HttpError(409, `${juego.nombre} acaba de prestarse: vuelve a intentarlo cuando se devuelva`)
+          await tx.logJuego.create({ data: { juego_id: juego.id, tipo: TipoLogJuego.retirado, texto: `${juego.nombre} devuelto a ${nombre} por su baja`, usuario_id: bajaPorId } })
+        } else {
+          await tx.juego.update({ where: { id: juego.id }, data: { propietario_id: null } })
+          await tx.logJuego.create({ data: { juego_id: juego.id, tipo: TipoLogJuego.nota_manual, texto: `${juego.nombre} pasa a ser del club por la baja de ${nombre}`, usuario_id: bajaPorId } })
+        }
       }
       return tx.usuario.update({
         where: { id },
@@ -322,6 +365,10 @@ export class SociosService {
           // Telegram no se desvincula nunca salvo con la baja (el aviso de baja usa el chat leído antes)
           telegram_chat_id: null,
           telegram_linked_at: null,
+          // Sin relación con el club no hay base para seguir cediendo sus datos a tiendas
+          consentimiento_tiendas: false,
+          reset_token: null,
+          reset_token_expiry: null,
           baja_por_id: bajaPorId,
           tiene_llaves: false,
           historial_estado: {

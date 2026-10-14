@@ -5,14 +5,14 @@ const makeModel = () => ({
   findUnique: vi.fn(),
   findUniqueOrThrow: vi.fn(),
   findFirst: vi.fn(),
-  findMany: vi.fn(),
+  findMany: vi.fn().mockResolvedValue([]), // por defecto sin filas, como una tabla vacía
   create: vi.fn(),
   update: vi.fn(),
   updateMany: vi.fn(),
   deleteMany: vi.fn(),
   createMany: vi.fn(),
   delete: vi.fn(),
-  count: vi.fn(),
+  count: vi.fn().mockResolvedValue(0),
   upsert: vi.fn(),
 })
 

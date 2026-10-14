@@ -63,7 +63,7 @@ export function RgpdPage() {
               <li>Datos de contacto: dirección, teléfono, correo electrónico.</li>
               <li>Datos bancarios mínimos: comprobante de transferencia de cuota.</li>
               <li>Datos de actividad en el club: préstamos, visitas, solicitud de llaves.</li>
-              <li>Alias de Telegram (si el socio lo facilita voluntariamente).</li>
+              <li>Alias e identificador de Telegram (si el socio vincula voluntariamente su cuenta con el bot del club).</li>
             </ul>
           </section>
 
@@ -83,6 +83,13 @@ export function RgpdPage() {
               durante el plazo legalmente exigible para atender posibles responsabilidades y cumplir obligaciones
               contables y fiscales.
             </p>
+            <p className="text-sm leading-relaxed">Al causar baja:</p>
+            <ul className="list-disc list-inside text-sm leading-relaxed space-y-1 ml-2">
+              <li>Se desvincula su cuenta de Telegram y deja de recibir comunicaciones del club.</li>
+              <li>Se retira el consentimiento para compartir sus datos con las tiendas colaboradoras.</li>
+              <li>Pierde el acceso al área privada.</li>
+              <li>Sus datos quedan accesibles únicamente para la junta directiva.</li>
+            </ul>
           </section>
 
           <section className="space-y-3">
@@ -117,7 +124,7 @@ export function RgpdPage() {
           </section>
 
           <div className="pt-4 border-t border-border text-sm text-muted-foreground">
-            <p>Última actualización: junio de 2026</p>
+            <p>Última actualización: octubre de 2026</p>
             <Link to="/" className="text-primary underline mt-1 inline-block">
               ← Volver al inicio
             </Link>

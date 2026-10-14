@@ -18,9 +18,11 @@ import { RolBadge } from '@/components/atoms/RolBadge'
 import { SocioDetalle } from './socios/SocioDetalle'
 import { QueryError } from '@/components/molecules/QueryError'
 import { Paginacion } from '@/components/molecules/Paginacion'
+import { useAuthStore } from '@/store/authStore'
 
 export function GestionSociosPage() {
   const [search, setSearch] = useState('')
+  const esDirectiva = useAuthStore((s) => s.isDirectiva())
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoSocio | 'todos'>('activo')
   const [page, setPage] = useState(1)
   // Solo el id: la ficha se carga (y se refresca tras cada cambio) con su propia query
@@ -87,7 +89,8 @@ export function GestionSociosPage() {
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="activo">Activos</SelectItem>
               <SelectItem value="pendiente">Pendientes</SelectItem>
-              <SelectItem value="baja">Baja</SelectItem>
+              {/* Protección de datos: las bajas solo las ve la directiva */}
+              {esDirectiva && <SelectItem value="baja">Baja</SelectItem>}
             </SelectContent>
           </Select>
         </div>

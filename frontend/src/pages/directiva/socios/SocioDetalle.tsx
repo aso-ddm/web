@@ -15,6 +15,7 @@ import type { Rol } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { CuotaConjunta } from './CuotaConjunta'
+import { JuegosCedidosBaja, type DestinoJuego } from './JuegosCedidosBaja'
 
 const CAMBIO_LABEL = {
   alta: 'Alta',
@@ -47,8 +48,14 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
     onClose()
   }
 
+  // Baja: decisión por cada juego cedido; con préstamos sin devolver no se puede
+  const juegosCedidos = socio.juegos_en_propiedad ?? []
+  const prestamosActivos = socio._count?.prestamos ?? 0
+  const [decisiones, setDecisiones] = useState<Record<string, DestinoJuego>>({})
+  const faltanDecisiones = juegosCedidos.some((j) => !decisiones[j.id])
+
   const { mutate: darBaja, isPending: bajando } = useMutation({
-    mutationFn: () => sociosApi.darDeBaja(socio.id),
+    mutationFn: () => sociosApi.darDeBaja(socio.id, Object.entries(decisiones).map(([juego_id, destino]) => ({ juego_id, destino }))),
     onSuccess: () => { toast.success(`${socio.nombre} dado de baja`); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -290,11 +297,17 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
                 variant="outline"
                 size="sm"
                 onClick={() => setConfirmBaja(true)}
+                disabled={prestamosActivos > 0}
                 className="font-display text-destructive border-destructive/30 hover:bg-destructive/10 gap-2"
               >
                 <UserX className="h-4 w-4" />
                 Dar de baja al socio
               </Button>
+              {prestamosActivos > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Tiene {prestamosActivos} préstamo{prestamosActivos > 1 ? 's' : ''} sin devolver: registra la devolución antes de darle de baja.
+                </p>
+              )}
             </>
           )}
         </div>}
@@ -305,8 +318,16 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
         open={confirmBaja}
         onOpenChange={setConfirmBaja}
         title={`¿Dar de baja a ${socio.nombre} ${socio.apellidos}?`}
-        description='El socio quedará en estado "baja" y perderá acceso al área privada.'
+        description={<>
+          <p>El socio quedará en estado "baja" y perderá acceso al área privada. Se desvincula su Telegram y se retira su consentimiento para tiendas.</p>
+          <JuegosCedidosBaja
+            juegos={juegosCedidos}
+            decisiones={decisiones}
+            onChange={(id, destino) => setDecisiones((d) => ({ ...d, [id]: destino }))}
+          />
+        </>}
         confirmLabel="Dar de baja"
+        confirmDisabled={faltanDecisiones}
         destructive
         onConfirm={() => darBaja()}
         pending={bajando}

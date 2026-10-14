@@ -430,3 +430,62 @@ describe('SociosService.darDeBaja — Telegram', () => {
     }))
   })
 })
+
+describe('SociosService.darDeBaja — protección de datos y juegos cedidos', () => {
+  const m = (f: unknown) => f as ReturnType<typeof vi.fn>
+  beforeEach(() => {
+    vi.stubEnv('BOT_TOKEN', '')
+    m(prisma.usuario.findUnique).mockResolvedValue({ ...socioActivo, apellidos: 'López' })
+    m(prisma.usuario.update).mockResolvedValue({})
+  })
+
+  it('con préstamos sin devolver → 409 y no toca nada', async () => {
+    m(prisma.prestamo.count).mockResolvedValue(2)
+    await expect(service.darDeBaja('u1', 'admin1')).rejects.toMatchObject({ status: 409 })
+    expect(prisma.usuario.update).not.toHaveBeenCalled()
+  })
+
+  it('con juegos cedidos sin decidir → 409 que los nombra', async () => {
+    m(prisma.juego.findMany).mockResolvedValue([{ id: 'j1', nombre: 'Catan', estado: 'en_estanteria' }])
+    await expect(service.darDeBaja('u1', 'admin1')).rejects.toThrow('Catan')
+    expect(prisma.usuario.update).not.toHaveBeenCalled()
+  })
+
+  it('"se lo lleva" un juego prestado a otro → 409', async () => {
+    m(prisma.juego.findMany).mockResolvedValue([{ id: 'j1', nombre: 'Catan', estado: 'prestado' }])
+    await expect(service.darDeBaja('u1', 'admin1', { juegos: [{ juego_id: 'j1', destino: 'se_lo_lleva' }] }))
+      .rejects.toThrow('prestado')
+  })
+
+  it('aplica cada decisión con su log y deja de tratar consentimiento y token', async () => {
+    m(prisma.juego.findMany).mockResolvedValue([
+      { id: 'j1', nombre: 'Catan', estado: 'en_estanteria' },
+      { id: 'j2', nombre: 'Azul', estado: 'prestado' },
+    ])
+    m(prisma.juego.updateMany).mockResolvedValue({ count: 1 })
+
+    await service.darDeBaja('u1', 'admin1', { juegos: [
+      { juego_id: 'j1', destino: 'se_lo_lleva' },
+      { juego_id: 'j2', destino: 'club' }, // prestado puede quedarse en el club: sigue el préstamo
+    ] })
+
+    expect(prisma.juego.updateMany).toHaveBeenCalledWith({ where: { id: 'j1', estado: 'en_estanteria' }, data: { estado: 'retirado' } })
+    expect(prisma.juego.update).toHaveBeenCalledWith({ where: { id: 'j2' }, data: { propietario_id: null } })
+    expect(prisma.logJuego.create).toHaveBeenCalledTimes(2)
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ consentimiento_tiendas: false, reset_token: null, reset_token_expiry: null }),
+    }))
+  })
+})
+
+describe('SociosService.getAll — los vocales no ven bajas', () => {
+  it('sin filtro de estado excluye las bajas; pidiendo bajas devuelve vacío sin consultar', async () => {
+    await service.getAll({ page: 1, limit: 20 }, false)
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { estado: { not: 'baja' } } }))
+
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockClear()
+    const r = await service.getAll({ estado: 'baja', page: 1, limit: 20 }, false)
+    expect(r).toMatchObject({ data: [], total: 0 })
+    expect(prisma.usuario.findMany).not.toHaveBeenCalled()
+  })
+})

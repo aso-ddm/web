@@ -41,5 +41,14 @@ export const filtrosSociosSchema = z.object({
   ...paginacion(20, 500),
 })
 
+// Baja: qué pasa con cada juego que el socio cedió al club (se decide en el momento)
+export const bajaSocioSchema = z.object({
+  juegos: z.array(z.object({
+    juego_id: z.string().uuid(),
+    destino: z.enum(['se_lo_lleva', 'club']),
+  })).default([]),
+})
+
+export type BajaSocioInput = z.infer<typeof bajaSocioSchema>
 export type UpdateSocioInput = z.infer<typeof updateSocioSchema>
 export type FiltrosSociosInput = z.infer<typeof filtrosSociosSchema>
