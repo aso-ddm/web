@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { RichTextContent } from '@/components/molecules/RichTextContent'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
@@ -17,6 +19,7 @@ import { getRolLabel } from '@/lib/roles'
 import { formatDate } from '@/lib/format'
 import { QK } from '@/lib/queryKeys'
 import { useMe } from '@/hooks/useMe'
+import { useConfig } from '@/hooks/useConfigValor'
 import { useShallow } from 'zustand/react/shallow'
 
 const perfilSchema = z.object({
@@ -25,6 +28,7 @@ const perfilSchema = z.object({
   telefono: z.string().optional(),
   direccion: z.string().optional(),
   apodo: z.string().optional(),
+  consentimiento_tiendas: z.boolean(),
 })
 type PerfilForm = z.infer<typeof perfilSchema>
 
@@ -39,6 +43,8 @@ export function PerfilPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<PerfilForm>({
     resolver: zodResolver(perfilSchema),
@@ -49,9 +55,12 @@ export function PerfilPage() {
       telefono: usuario.telefono ?? '',
       direccion: usuario.direccion ?? '',
       apodo: usuario.apodo ?? '',
+      consentimiento_tiendas: usuario.consentimiento_tiendas ?? false,
     },
     resetOptions: { keepDirtyValues: true },
   })
+  const consentimientoTiendas = watch('consentimiento_tiendas')
+  const textoConsentimiento = useConfig('texto_consentimiento_tiendas').data
 
   const { mutate: guardar, isPending: guardando } = useMutation({
     mutationFn: (data: PerfilForm) => sociosApi.update(authUsuario!.id, data),
@@ -156,6 +165,17 @@ export function PerfilPage() {
                 <Label htmlFor="direccion" className="font-display font-bold text-xs">Dirección</Label>
                 <Input id="direccion" {...register('direccion')} placeholder="Calle, número, ciudad..." />
               </div>
+
+              {/* RGPD art. 7.3: retirarlo tan fácil como darlo. Sin él desaparece el carnet de tiendas del panel */}
+              <label htmlFor="consentimiento_tiendas" className="flex items-start gap-3 rounded-lg border border-border p-4 cursor-pointer hover:bg-muted/30 transition-colors">
+                <Checkbox
+                  id="consentimiento_tiendas"
+                  checked={consentimientoTiendas}
+                  onCheckedChange={(v) => setValue('consentimiento_tiendas', Boolean(v), { shouldDirty: true })}
+                  className="mt-0.5 flex-shrink-0"
+                />
+                <RichTextContent html={textoConsentimiento || 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
+              </label>
 
               <div className="flex justify-end pt-2">
                 <Button

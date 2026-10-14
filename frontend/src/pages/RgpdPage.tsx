@@ -74,7 +74,8 @@ export function RgpdPage() {
               consentimiento expreso para compartir nombre y apellidos con las tiendas colaboradoras de la
               Asociación a efectos de descuentos. Las tiendas no reciben ningún listado: el socio muestra en su
               área de socio un código QR que caduca a los pocos minutos y, al escanearlo, la tienda ve solo su
-              nombre y apellidos y que es socio activo.
+              nombre y apellidos y que es socio activo. El socio puede retirar o volver a dar este consentimiento
+              cuando quiera desde &laquo;Mi perfil&raquo;.
             </p>
           </section>
 
