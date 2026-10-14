@@ -170,6 +170,19 @@ describe('SociosService.darDeBaja', () => {
       }),
     )
   })
+
+  it('con Telegram vinculado → le envía el mensaje configurado', async () => {
+    vi.stubEnv('BOT_TOKEN', 't')
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, telegram_chat_id: BigInt(7) })
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ valor: 'Adiós, {nombre}' })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }))
+
+    await service.darDeBaja('u1', 'admin1')
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+    expect(JSON.parse(fetchSpy.mock.calls[0][1]!.body as string)).toEqual({ chat_id: '7', text: 'Adiós, Ana' })
+    vi.unstubAllEnvs()
+  })
 })
 
 describe('SociosService.updateRoles', () => {

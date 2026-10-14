@@ -5,6 +5,7 @@ import { Settings, FileText, Link, Loader2, Save, Plus, Trash2, MessageCircle } 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RichTextEditor } from '@/components/molecules/RichTextEditor'
@@ -60,6 +61,10 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     label: 'Estatutos (enlace)',
     description: 'URL del documento de estatutos (Google Drive, Dropbox, cualquier alojamiento)',
   },
+  texto_baja_confirmada: {
+    label: 'Mensaje de baja confirmada',
+    description: 'Lo recibe por Telegram el socio al que se da de baja (si lo tiene vinculado). {nombre} se cambia por su nombre. Vacío = no se envía',
+  },
   url_reglamento_interno: {
     label: 'Reglamento interno (enlace)',
     description: 'URL del documento de reglamento interno (Google Drive, Dropbox, cualquier alojamiento)',
@@ -92,6 +97,15 @@ function ConfigField({ config }: { config: ConfigItem }) {
       {meta?.description && (
         <p className="text-xs text-muted-foreground">{meta.description}</p>
       )}
+      {config.tipo === 'texto_largo' ? (
+        <div className="space-y-2">
+          <Textarea id={config.clave} value={valor} onChange={(e) => setValor(e.target.value)} rows={6} />
+          <Button size="sm" onClick={() => guardar()} disabled={isPending || !changed} className="font-display font-bold gap-1">
+            {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            Guardar
+          </Button>
+        </div>
+      ) : (
       <div className="flex gap-2 items-center">
         <div className="relative flex-1 max-w-xs">
           <Input
@@ -118,6 +132,7 @@ function ConfigField({ config }: { config: ConfigItem }) {
           Guardar
         </Button>
       </div>
+      )}
     </div>
   )
 }
@@ -276,6 +291,12 @@ export function ConfiguracionPage() {
     retry: false,
   })
 
+  const { data: bajaData, isLoading: isBajaLoading } = useQuery({
+    queryKey: ['config', 'texto_baja_socio'],
+    queryFn: () => configuracionApi.getOne('texto_baja_socio'),
+    retry: false,
+  })
+
   const { data: enlacesData, isLoading: isEnlacesLoading } = useQuery({
     queryKey: ['config', 'enlaces_interes'],
     queryFn: () => enlacesInteresApi.getAll(),
@@ -284,7 +305,7 @@ export function ConfiguracionPage() {
 
   const configs = (data?.data ?? []).filter((c) => c.tipo === 'numero')
   const urlConfigs = (data?.data ?? []).filter((c) => c.tipo === 'url')
-  const comunicacionConfigs = ['telegram_bot_username']
+  const comunicacionConfigs = ['telegram_bot_username', 'texto_baja_confirmada']
     .map((clave) => (data?.data ?? []).find((c) => c.clave === clave))
     .filter(Boolean) as typeof configs
 
@@ -470,6 +491,31 @@ export function ConfiguracionPage() {
                 initialValor={consentimientoData?.data?.valor ?? ''}
                 label="Texto de consentimiento"
                 description="Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta"
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="font-display text-base text-primary flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Aviso de baja — Mi panel
+            </CardTitle>
+            <CardDescription>
+              Lo que ve el socio antes de pedir la baja. Actualízalo si cambian las implicaciones de darse de baja.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isBajaLoading ? (
+              <Skeleton className="h-48 w-full" />
+            ) : (
+              <RichTextConfigField
+                key={bajaData?.data?.valor ?? 'empty-baja'}
+                clave="texto_baja_socio"
+                initialValor={bajaData?.data?.valor ?? ''}
+                label="Aviso de baja"
+                description="Se muestra en el popup de confirmación del botón «Darme de baja»"
               />
             )}
           </CardContent>

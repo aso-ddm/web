@@ -28,7 +28,8 @@ export function ConfirmDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="font-display text-primary">{title}</AlertDialogTitle>
-          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
+          {/* div: la descripción puede llevar bloques (texto enriquecido) */}
+          {description && <AlertDialogDescription asChild><div>{description}</div></AlertDialogDescription>}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className="font-display" disabled={pending}>Cancelar</AlertDialogCancel>

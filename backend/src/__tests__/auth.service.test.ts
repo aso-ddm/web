@@ -257,3 +257,22 @@ describe('AuthService.pedirLlaves', () => {
     await expect(service.pedirLlaves('u1')).rejects.toThrow('No hemos podido avisar')
   })
 })
+
+describe('AuthService.pedirBaja', () => {
+  const socio = { nombre: 'Ana', apellidos: 'García', apodo: null, email: 'a@x.com', alias_telegram: '@ana', estado: 'activo', tipo_cuota: 'individual' }
+
+  it('socio activo → avisa al secretario por Telegram', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(socio)
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ telegram_chat_id: BigInt(7) }])
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ ok: true }))
+    await expect(service.pedirBaja('u1')).resolves.toBeUndefined()
+    expect(JSON.parse(fetchSpy.mock.calls[0][1]!.body as string).text).toContain('Ana García quiere darse de baja')
+  })
+
+  it('socio no activo → 403 sin avisar', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socio, estado: 'baja' })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    await expect(service.pedirBaja('u1')).rejects.toThrow('socios activos')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})

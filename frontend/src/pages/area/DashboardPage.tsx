@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
-import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle } from 'lucide-react'
+import { User, BookOpen, Key, CheckCircle2, AlertCircle, ExternalLink, FileText, MessageCircle, LogOut } from 'lucide-react'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
+import { RichTextContent } from '@/components/molecules/RichTextContent'
+import { useConfigValor } from '@/hooks/useConfigValor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -87,6 +91,17 @@ export function DashboardPage() {
       toast.success('Ya hemos avisado al secretario. Espera a que se ponga en contacto contigo por Telegram.')
       // Devolver la promesa mantiene el botón en "Enviando…" hasta que llega el /me actualizado
       return queryClient.invalidateQueries({ queryKey: ['me'] })
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'No se pudo enviar la solicitud'),
+  })
+
+  const [bajaOpen, setBajaOpen] = useState(false)
+  const textoBaja = useConfigValor('texto_baja_socio', '')
+  const { mutate: pedirBaja, isPending: pidiendoBaja } = useMutation({
+    mutationFn: () => authApi.pedirBaja(),
+    onSuccess: () => {
+      setBajaOpen(false)
+      toast.success('Hemos avisado al secretario. Se pondrá en contacto contigo por Telegram para tramitar la baja.')
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : 'No se pudo enviar la solicitud'),
   })
@@ -263,6 +278,17 @@ export function DashboardPage() {
               <p className="text-xs text-muted-foreground mt-3 truncate">
                 {usuario?.email ?? '—'}
               </p>
+              {usuario?.estado === 'activo' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full mt-3 font-display gap-2 text-destructive hover:text-destructive"
+                  onClick={() => setBajaOpen(true)}
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Darme de baja
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -388,6 +414,21 @@ export function DashboardPage() {
           </Card>
         )}
       </div>
+
+      <ConfirmDialog
+        open={bajaOpen}
+        onOpenChange={setBajaOpen}
+        title="¿Quieres darte de baja?"
+        description={
+          textoBaja
+            ? <RichTextContent html={textoBaja} />
+            : 'Vamos a avisar al secretario del club de que quieres darte de baja. Se pondrá en contacto contigo por Telegram.'
+        }
+        confirmLabel="Avisar al secretario"
+        onConfirm={() => pedirBaja()}
+        pending={pidiendoBaja}
+        destructive
+      />
     </>
   )
 }

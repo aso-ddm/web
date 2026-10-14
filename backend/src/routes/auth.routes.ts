@@ -50,6 +50,7 @@ const resetRequestLimit = rateLimit({ max: 5, windowMs: 15 * MIN })
 const resetConfirmLimit = rateLimit({ max: 10, windowMs: 15 * MIN })
 // Evita que un socio sature al secretario a avisos
 const pedirLlavesLimit = rateLimit({ max: 3, windowMs: 60 * MIN })
+const pedirBajaLimit = rateLimit({ max: 3, windowMs: 60 * MIN })
 const authService = new AuthService(prisma)
 
 // POST /api/auth/register — multipart/form-data
@@ -185,6 +186,12 @@ router.post('/link-telegram', authenticate, async (req, res) => {
 // POST /api/auth/pedir-llaves — avisa al secretario por Telegram
 router.post('/pedir-llaves', pedirLlavesLimit, authenticate, async (req, res) => {
   await authService.pedirLlaves(req.user.id)
+  res.json({ data: { ok: true } })
+})
+
+// POST /api/auth/pedir-baja — avisa al secretario por Telegram
+router.post('/pedir-baja', pedirBajaLimit, authenticate, async (req, res) => {
+  await authService.pedirBaja(req.user.id)
   res.json({ data: { ok: true } })
 })
 

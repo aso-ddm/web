@@ -66,6 +66,7 @@ export const authApi = {
 
   // Avisa al secretario por Telegram (requiere 6 meses como socio)
   pedirLlaves: () => api.post<{ data: { ok: boolean } }>('/auth/pedir-llaves', {}),
+  pedirBaja: () => api.post<{ data: { ok: boolean } }>('/auth/pedir-baja', {}),
 
   requestPasswordReset: (email: string) =>
     api.post<{ data: { hasTelegram: boolean } }>('/auth/reset-password/request', { email }),

@@ -146,6 +146,28 @@ async function main() {
       descripcion: 'Texto del checkbox de consentimiento de datos con tiendas colaboradoras (visible en el formulario de alta)',
       valor: 'Acepto que se compartan mis datos (nombre y apellidos) con las tiendas colaboradoras de la asociación (FreakMondo, Bazar de Iglesias, Dune) para poder beneficiarme del descuento del 10% en compras como socio de Dragón de Madera.',
     },
+    {
+      clave: 'texto_baja_socio',
+      tipo: 'texto_largo',
+      descripcion: 'Aviso que ve el socio en Mi panel antes de pedir la baja (qué implica darse de baja)',
+      valor: [
+        '<p>Vamos a avisar al secretario del club de que quieres darte de baja. Se pondrá en contacto contigo por Telegram para cerrarla.</p>',
+        '<p><strong>Darte de baja implica:</strong></p><ul>',
+        '<li><p>Dejarás de pagar la cuota a partir del mes siguiente. Las cuotas ya pagadas no se devuelven.</p></li>',
+        '<li><p>Tendrás que devolver los juegos que tengas en préstamo y, si las tienes, las llaves del local.</p></li>',
+        '<li><p>Perderás el acceso al área de socios y a los grupos del club.</p></li>',
+        '<li><p>Si vuelves más adelante, tendrás que hacer una nueva alta y la antigüedad para pedir llaves empezará de cero.</p></li>',
+        '</ul>',
+      ].join(''),
+    },
+    {
+      clave: 'texto_baja_confirmada',
+      tipo: 'texto_largo',
+      descripcion: 'Mensaje de Telegram que recibe el socio al darle de baja ({nombre} = nombre del socio)',
+      valor:
+        '¡Hola, {nombre}! 👋\n\nTe confirmamos que se ha tramitado correctamente tu baja como socio/a de Dragón de Madera 🐉\n\n' +
+        'Gracias por todo el tiempo que has compartido con nosotros. Si algún día quieres volver, las puertas del club siguen abiertas.',
+    },
   ]
 
   for (const config of configsIniciales) {

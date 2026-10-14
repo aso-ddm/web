@@ -484,4 +484,25 @@ Telegram: ${esc(socio.alias_telegram)}` : '')
 
     await this.prisma.usuario.update({ where: { id: userId }, data: { llaves_solicitadas_at: new Date() } })
   }
+
+  // Avisa por Telegram a los secretarios de que un socio quiere darse de baja; la baja la tramita la directiva
+  async pedirBaja(userId: string) {
+    const socio = await this.prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { nombre: true, apellidos: true, apodo: true, email: true, alias_telegram: true, estado: true, tipo_cuota: true },
+    })
+    if (!socio || socio.estado !== 'activo') throw new HttpError(403, 'Solo los socios activos pueden pedir la baja')
+
+    const nombre = `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`
+    const texto =
+      `🚪 <b>Solicitud de baja</b>\n\n` +
+      `${esc(nombre)} quiere darse de baja del club.\n` +
+      `Cuota: ${esc(socio.tipo_cuota)}\n` +
+      `Email: ${esc(socio.email)}` +
+      (socio.alias_telegram ? `\nTelegram: ${esc(socio.alias_telegram)}` : '')
+
+    if (!(await avisarSecretarios(this.prisma, texto))) {
+      throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
+    }
+  }
 }

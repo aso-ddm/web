@@ -389,7 +389,7 @@ export class SociosService {
     }
     if (socio.estado === EstadoSocio.pendiente) throw new Error(PENDIENTE_EN_SOLICITUDES)
 
-    return this.prisma.$transaction(async (tx) => {
+    const actualizado = await this.prisma.$transaction(async (tx) => {
       if (socio.solicitud_grupal_id) {
         await salirDeCuotaConjunta(tx, id, bajaPorId, 'Sale de la cuota conjunta por la baja')
       }
@@ -410,6 +410,26 @@ export class SociosService {
         select: SOCIO_PUBLIC_SELECT,
       })
     })
+
+    if (socio.telegram_chat_id) this.avisarBaja(socio.telegram_chat_id, socio.nombre)
+    return actualizado
+  }
+
+  // Fire and forget: un fallo del bot no debe deshacer ni bloquear la baja
+  private avisarBaja(chatId: bigint, nombre: string) {
+    const botToken = process.env.BOT_TOKEN
+    if (!botToken) return
+    this.prisma.configuracion.findUnique({ where: { clave: 'texto_baja_confirmada' } })
+      .then((config) => {
+        if (!config?.valor.trim()) return
+        // Texto plano (sin parse_mode): lo escribe la directiva y no hay que escapar nada
+        return fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId.toString(), text: config.valor.split('{nombre}').join(nombre) }),
+        })
+      })
+      .catch((err) => console.error('Aviso de baja por Telegram:', err))
   }
 
   async salirCuotaConjunta(id: string, porId: string) {
