@@ -48,6 +48,9 @@ describe('AuthService.register (individual)', () => {
     nombre: 'Ana',
     apellidos: 'García',
     apodo: 'Anita',
+    telefono: '600000000',
+    fecha_nacimiento: '1990-01-01',
+    direccion: 'Calle Mayor 1',
     consentimiento_tiendas: false,
     password: 'Password123!',
   }
@@ -154,7 +157,7 @@ describe('AuthService.login', () => {
 })
 
 describe('AuthService.updateSolicitud', () => {
-  const datos = { nombre: 'Ana', apellidos: 'Pérez', dni: '12345678Z', fecha_nacimiento: '1990-01-01', apodo: 'Ana', consentimiento_tiendas: false }
+  const datos = { nombre: 'Ana', apellidos: 'Pérez', dni: '12345678Z', telefono: '600000000', fecha_nacimiento: '1990-01-01', apodo: 'Ana', consentimiento_tiendas: false }
 
   it('DNI de otra cuenta → 409', async () => {
     ;(prisma.usuario.findUniqueOrThrow as ReturnType<typeof vi.fn>).mockResolvedValue({ comprobante_transferencia: 'a.pdf', solicitud_grupal: null })

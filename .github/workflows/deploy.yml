@@ -143,6 +143,10 @@ jobs:
         working-directory: backend
         run: pnpm test:run
 
+      # vitest no comprueba tipos y el build excluye los tests: el tsconfig raíz los incluye
+      - name: Verificar tipos de los tests
+        run: pnpm exec tsc -p tsconfig.json
+
       - name: Compilar TypeScript
         working-directory: backend
         run: pnpm run build

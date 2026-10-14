@@ -7,7 +7,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    // Solo para el IDE y comprobar tipos: el build del backend usa backend/tsconfig.json
+    "noEmit": true,
+    // El test de contrato importa ficheros del frontend, que usan el alias @/
+    "baseUrl": ".",
+    "paths": { "@/*": ["frontend/src/*"] }
   },
   "include": ["backend/src/**/*"],
   "exclude": ["node_modules", "frontend", "backend/dist"]
