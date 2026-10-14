@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { Rol } from '@prisma/client'
+import { Prisma, Rol } from '@prisma/client'
 import { SociosService, normalizarRoles, salirDeCuotaConjunta } from '../services/socios.service'
 import { createPrismaMock } from './helpers/prisma.mock'
 import type { PrismaClient } from '@prisma/client'
@@ -135,9 +135,12 @@ describe('SociosService.rechazar', () => {
       estado: 'pendiente',
     })
 
+    ;(prisma.usuario.delete as ReturnType<typeof vi.fn>).mockResolvedValue({})
+
     await service.rechazar('u1')
 
-    expect(prisma.usuario.delete).toHaveBeenCalledWith({ where: { id: 'u1' } })
+    // Con el estado en el where: si otra petición la aprobó entretanto, no se borra a un socio
+    expect(prisma.usuario.delete).toHaveBeenCalledWith({ where: { id: 'u1', estado: 'pendiente' } })
   })
 })
 
@@ -379,5 +382,35 @@ describe('SociosService.getAll (filtros de Llaves y Anuncios)', () => {
     expect(prisma.usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { estado: 'activo', tiene_llaves: true, telegram_chat_id: { not: null } },
     }))
+  })
+})
+
+describe('aprobaciones simultáneas', () => {
+  it('si otra petición ya aprobó la solicitud, la segunda recibe 409', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...socioActivo, estado: 'pendiente', solicitud_grupal_id: null })
+    ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('No record', { code: 'P2025', clientVersion: 'test' }),
+    )
+    await expect(service.aprobar('u1', 'admin1', Rol.socio_basico)).rejects.toMatchObject({ status: 409 })
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u1', estado: 'pendiente' } }))
+  })
+})
+
+describe('salirDeCuotaConjunta — concurrencia', () => {
+  it('bloquea el grupo antes de contar a los miembros que quedan', async () => {
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      nombre: 'Ana', apellidos: 'López', solicitud_grupal: { id: 'g1', miembros: [{ id: 'a' }, { id: 'm1' }, { id: 'm2' }] },
+    })
+    ;(prisma.pagoCuota.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    const orden: string[] = []
+    ;(prisma.$queryRaw as ReturnType<typeof vi.fn>).mockImplementation(() => { orden.push('bloqueo'); return [] })
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+      orden.push('lectura')
+      return { nombre: 'Ana', apellidos: 'López', solicitud_grupal: { id: 'g1', miembros: [{ id: 'a' }, { id: 'm1' }, { id: 'm2' }] } }
+    })
+
+    await salirDeCuotaConjunta(prisma as never, 'm1', 'dir', 'Sale')
+
+    expect(orden.slice(0, 2)).toEqual(['bloqueo', 'lectura'])
   })
 })

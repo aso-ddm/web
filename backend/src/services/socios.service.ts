@@ -94,6 +94,12 @@ function mesPagadoAlAlta(fecha: Date) {
 }
 
 type Tx = Prisma.TransactionClient
+
+// La escritura lleva la condición (estado pendiente) en el where: si otra petición se adelantó, Prisma da P2025
+const yaNoPendiente = (mensaje: string) => (err: unknown): never => {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') throw new HttpError(409, mensaje)
+  throw err
+}
 const nombreCompleto = (u: { nombre: string; apellidos: string }) => `${u.nombre} ${u.apellidos}`
 
 // Copia los pagos de la cuota conjunta al socio; en los meses que coincidan prevalecen los copiados
@@ -115,6 +121,8 @@ async function pasarAIndividual(tx: Tx, socioId: string) {
  * Si queda un solo miembro, el grupo se disuelve y ese miembro también se lleva la copia.
  */
 export async function salirDeCuotaConjunta(tx: Tx, socioId: string, porId: string, motivo: string) {
+  // Bloquea el grupo: si dos miembros salen a la vez, el segundo ve ya al primero fuera (y no queda un grupo de uno)
+  await tx.$queryRaw`SELECT 1 FROM "SolicitudGrupal" WHERE id = (SELECT solicitud_grupal_id FROM "Usuario" WHERE id = ${socioId}) FOR UPDATE`
   const socio = await tx.usuario.findUnique({
     where: { id: socioId },
     select: {
@@ -243,6 +251,10 @@ export class SociosService {
 
     const ahora = new Date()
     await this.prisma.$transaction([
+      this.prisma.solicitudGrupal.update({
+        where: { id: grupoId, estado: EstadoSolicitud.pendiente },
+        data: { estado: EstadoSolicitud.aprobada },
+      }),
       this.prisma.usuario.updateMany({
         where: { solicitud_grupal_id: grupoId },
         data: {
@@ -252,16 +264,12 @@ export class SociosService {
           roles: [Rol.socio_basico],
         },
       }),
-      this.prisma.solicitudGrupal.update({
-        where: { id: grupoId },
-        data: { estado: 'aprobada' },
-      }),
       this.prisma.historialEstadoSocio.createMany({
         data: grupo.miembros.map((u) => ({ socio_id: u.id, tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora })),
       }),
       // El comprobante de alta cubre el mes de alta
       this.prisma.pagoCuota.create({ data: { grupo_id: grupoId, ...mesPagadoAlAlta(ahora) } }),
-    ])
+    ]).catch(yaNoPendiente('La solicitud grupal ya no está pendiente'))
 
     eventos.emit('cambio', 'pendientes')
     return this.prisma.solicitudGrupal.findUnique({
@@ -287,9 +295,11 @@ export class SociosService {
     }
 
     await this.prisma.$transaction([
+      // Condición primero: si otra petición la aprobó entretanto, no se borra a nadie
+      this.prisma.solicitudGrupal.update({ where: { id: grupoId, estado: EstadoSolicitud.pendiente }, data: { estado: EstadoSolicitud.rechazada } }),
       this.prisma.usuario.deleteMany({ where: { solicitud_grupal_id: grupoId } }),
       this.prisma.solicitudGrupal.delete({ where: { id: grupoId } }),
-    ])
+    ]).catch(yaNoPendiente('La solicitud grupal ya no está pendiente'))
     borrarComprobantes([grupo.comprobante_transferencia])
     eventos.emit('cambio', 'pendientes')
   }
@@ -328,7 +338,7 @@ export class SociosService {
 
     const ahora = new Date()
     const aprobado = await this.prisma.usuario.update({
-      where: { id },
+      where: { id, estado: EstadoSocio.pendiente },
       data: {
         estado: EstadoSocio.activo,
         fecha_alta: ahora,
@@ -339,7 +349,7 @@ export class SociosService {
         historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora } },
       },
       select: SOCIO_LIST_SELECT,
-    })
+    }).catch(yaNoPendiente('La solicitud ya no está pendiente'))
     eventos.emit('cambio', 'pendientes')
     return aprobado
   }
@@ -356,7 +366,8 @@ export class SociosService {
       throw new HttpError(409, 'Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
 
-    await this.prisma.usuario.delete({ where: { id } })
+    await this.prisma.usuario.delete({ where: { id, estado: EstadoSocio.pendiente } })
+      .catch(yaNoPendiente('La solicitud ya no está pendiente'))
     borrarComprobantes([socio.comprobante_transferencia])
     eventos.emit('cambio', 'pendientes')
   }
@@ -422,6 +433,9 @@ export class SociosService {
   async unirCuotaConjunta(id: string, otroId: string, porId: string) {
     if (id === otroId) throw new HttpError(400, 'Elige a otro socio')
     return this.prisma.$transaction(async (tx) => {
+      // Bloquea a los dos socios y el grupo del otro: dos uniones o una unión y una salida a la vez no se pisan
+      await tx.$queryRaw`SELECT 1 FROM "Usuario" WHERE id IN (${id}, ${otroId}) FOR UPDATE`
+      await tx.$queryRaw`SELECT 1 FROM "SolicitudGrupal" WHERE id = (SELECT solicitud_grupal_id FROM "Usuario" WHERE id = ${otroId}) FOR UPDATE`
       const select = {
         id: true,
         nombre: true,
