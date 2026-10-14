@@ -23,9 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm 11 necesita Node >= 22.13; la misma mayor que en local
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       # Misma versión mayor que en local (lockfile de pnpm 11)
       - name: Instalar pnpm

@@ -1,9 +1,10 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
 # Mismo lockfile que el backend (pnpm-lock.yaml de la raíz): builds reproducibles
-FROM node:20-alpine AS builder
+# pnpm 11 (el del lockfile) necesita Node >= 22.13
+FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@11
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY backend/package.json ./backend/
