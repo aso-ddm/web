@@ -6,6 +6,8 @@ import { SEOHead } from '@/components/atoms/SEOHead'
 import { sociosApi } from '@/services/api/socios'
 import { QK } from '@/lib/queryKeys'
 import { QueryError } from '@/components/molecules/QueryError'
+import { SocioDatos } from '@/components/molecules/SocioDatos'
+import { RolBadge } from '@/components/atoms/RolBadge'
 
 export function LlavesPage() {
   const { data, isLoading, isError, refetch } = useQuery({
@@ -44,31 +46,18 @@ export function LlavesPage() {
                 <p className="text-sm text-muted-foreground">Ningún socio tiene llaves asignadas</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left px-4 py-3 font-display font-bold text-muted-foreground text-xs uppercase tracking-wide">
-                        Socio
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {titulares.map((socio) => (
-                      <tr key={socio.id} className="hover:bg-accent/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="font-display font-bold">
-                            {socio.nombre} {socio.apellidos}
-                          </p>
-                          {socio.apodo && (
-                            <p className="text-xs text-muted-foreground">({socio.apodo})</p>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="divide-y divide-border">
+                {titulares.map((socio) => (
+                  <li key={socio.id} className="px-4 py-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-display font-bold text-sm">{socio.nombre} {socio.apellidos}</p>
+                      {socio.apodo && <span className="text-xs text-muted-foreground">({socio.apodo})</span>}
+                      {socio.roles.map((r) => <RolBadge key={r} rol={r} />)}
+                    </div>
+                    <SocioDatos socio={socio} />
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>

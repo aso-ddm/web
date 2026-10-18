@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Search, Users, ChevronRight } from 'lucide-react'
+import { Search, Users, ChevronRight, Key } from 'lucide-react'
+import { SocioDatos } from '@/components/molecules/SocioDatos'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -131,11 +132,12 @@ export function GestionSociosPage() {
                           {socio.solicitud_grupal && (
                             <Badge variant="outline" className="text-xs font-display">Cuota conjunta</Badge>
                           )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{socio.email}</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
+                          {socio.tiene_llaves && (
+                            <Badge variant="outline" className="text-xs font-display gap-1"><Key className="h-3 w-3" />Llaves</Badge>
+                          )}
                           {socio.roles.map((r) => <RolBadge key={r} rol={r} />)}
                         </div>
+                        <SocioDatos socio={socio} />
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </button>

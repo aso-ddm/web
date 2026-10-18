@@ -14,6 +14,7 @@ import { prestamosApi } from '@/services/api/prestamos'
 import type { Prestamo } from '@/types/api'
 import { formatDate, diasRestantes } from '@/lib/format'
 import { QueryError } from '@/components/molecules/QueryError'
+import { PrestamoDevueltoRow } from '@/components/molecules/PrestamoDevueltoRow'
 
 // Activos (pestaña y contador de vencidos): una sola definición, la misma caché
 // ponytail: 100 activos a la vez es el máximo del backend; paginar si el club llega ahí
@@ -176,17 +177,7 @@ function HistorialPrestamos() {
   return (
     <Card>
       <CardContent className="pt-4">
-        {prestamos.map((p) => (
-          <div key={p.id} className="py-2 border-b border-border last:border-0 flex items-center justify-between gap-3">
-            <div>
-              <p className="font-display font-bold text-sm">{p.juego?.nombre ?? '—'}</p>
-              <p className="text-xs text-muted-foreground">
-                {nombreSocio(p)} · {formatDate(p.fecha_prestamo)} → {formatDate(p.fecha_devolucion)}
-              </p>
-            </div>
-            <Badge variant="outline" className="font-display text-xs">Devuelto</Badge>
-          </div>
-        ))}
+        {prestamos.map((p) => <PrestamoDevueltoRow key={p.id} prestamo={p} conSocio />)}
         {hasNextPage && (
           <div className="flex justify-center pt-3">
             <Button variant="outline" size="sm" className="font-display gap-2" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>

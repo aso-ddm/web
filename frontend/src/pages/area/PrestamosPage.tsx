@@ -4,10 +4,10 @@ import { toast } from 'sonner'
 import { BookOpen, Plus, Loader2, RotateCcw, RefreshCw, AlertTriangle, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { QueryError } from '@/components/molecules/QueryError'
+import { PrestamoDevueltoRow } from '@/components/molecules/PrestamoDevueltoRow'
 import { prestamosApi } from '@/services/api/prestamos'
 import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
@@ -204,17 +204,7 @@ export function PrestamosPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {historial.map((p) => (
-                    <div key={p.id} className="py-2 border-b border-border last:border-0 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-display font-bold text-sm">{p.juego?.nombre ?? '—'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(p.fecha_prestamo)} → {formatDate(p.fecha_devolucion)}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="font-display text-xs">Devuelto</Badge>
-                    </div>
-                  ))}
+                  {historial.map((p) => <PrestamoDevueltoRow key={p.id} prestamo={p} />)}
                   {historialQuery.hasNextPage && (
                     <div className="flex justify-center pt-3">
                       <Button variant="outline" size="sm" className="font-display gap-2" disabled={historialQuery.isFetchingNextPage} onClick={() => historialQuery.fetchNextPage()}>

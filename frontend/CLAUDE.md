@@ -20,7 +20,8 @@ No hay ESLint configurado: `tsc` con `strict`, `noUnusedLocals` y `noUnusedParam
   Las dependencias de Radix que no usa ningún componente se quitan (se vuelven a añadir con el CLI si hacen falta).
 - `components/atoms|molecules|organisms/` — atomic design. Importar cada componente por su ruta (no hay barrels).
   - átomos: `SEOHead`, `RolBadge`, `PageLoader`
-  - moléculas: `RichTextContent`, `RichTextEditor`, `TelegramLoginWidget`, `QueryError`, `Paginacion`
+  - moléculas: `RichTextContent`, `RichTextEditor`, `TelegramLoginWidget`, `QueryError`, `Paginacion`,
+    `SocioDatos` (contacto e identificación en celdas alineadas para listados de socios), `PrestamoDevueltoRow`
   - organismos: `ConfirmDialog`, `AreaLayout`, `SolicitarPrestamoDialog`, `LudotecaTable`
 - `pages/` — una página por ruta; las piezas de las páginas grandes van en una carpeta hermana
   (`admin/usuarios/`, `area/visita/`, `directiva/socios/`, `directiva/solicitudes/`, `ludoteca/juegos/`, `registro/`).

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Search, UserX, Shield } from 'lucide-react'
+import { Search, UserX, Shield, Key, ChevronRight } from 'lucide-react'
+import { SocioDatos } from '@/components/molecules/SocioDatos'
+import { RolBadge } from '@/components/atoms/RolBadge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -98,31 +100,38 @@ export function AdminUsuariosPage() {
         ) : (
           <div className="space-y-1">
             {usuarios.map((usuario) => (
-              <div
+              <button
                 key={usuario.id}
+                type="button"
                 onClick={() => setUsuarioSeleccionado(usuario)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 cursor-pointer transition-colors"
+                className="w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-colors"
               >
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="h-8 w-8 rounded-full bg-primary/10 hidden sm:flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-display font-bold text-primary">
                     {usuario.nombre[0]}{usuario.apellidos[0]}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-display font-bold truncate">
-                    {usuario.nombre} {usuario.apellidos}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">{usuario.email}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-display font-bold">
+                      {usuario.nombre} {usuario.apellidos}
+                    </p>
+                    {usuario.apodo && <span className="text-xs text-muted-foreground">({usuario.apodo})</span>}
+                    <Badge variant={ESTADO_SOCIO_VARIANT[usuario.estado]} className="font-display capitalize text-xs">
+                      {usuario.estado}
+                    </Badge>
+                    {usuario.tipo_cuota === 'conjunta' && (
+                      <Badge variant="outline" className="text-xs font-display">Cuota conjunta</Badge>
+                    )}
+                    {usuario.tiene_llaves && (
+                      <Badge variant="outline" className="text-xs font-display gap-1"><Key className="h-3 w-3" />Llaves</Badge>
+                    )}
+                    {usuario.roles.map((r) => <RolBadge key={r} rol={r} />)}
+                  </div>
+                  <SocioDatos socio={usuario} />
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Badge variant={ESTADO_SOCIO_VARIANT[usuario.estado]} className="font-display capitalize text-xs hidden sm:flex">
-                    {usuario.estado}
-                  </Badge>
-                  {usuario.roles.includes('administrador') && (
-                    <Shield className="h-3.5 w-3.5 text-primary" />
-                  )}
-                </div>
-              </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              </button>
             ))}
           </div>
         )}
