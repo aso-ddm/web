@@ -67,7 +67,7 @@ export const sociosApi = {
 
   getPendientes: () => api.get<{ data: { individuales: SocioListado[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),
 
-  aprobar: (id: string, rol: Rol) => api.post<{ data: SocioAdmin }>(`/socios/${id}/aprobar`, { rol }),
+  aprobar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar`),
   rechazar: (id: string) => api.action(`/socios/${id}/rechazar`),
   // juegos: qué pasa con cada juego que cedió (obligatorio para todos los que tenga)
   darDeBaja: (id: string, juegos: { juego_id: string; destino: 'se_lo_lleva' | 'club' }[] = []) =>

@@ -258,7 +258,8 @@ export class SociosService {
     })
   }
 
-  async aprobar(id: string, aprobadoPorId: string, rol: Rol) {
+  // Toda alta entra como socio_basico; los cargos se asignan después desde Gestión de socios
+  async aprobar(id: string, aprobadoPorId: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (socio.estado !== EstadoSocio.pendiente) {
@@ -268,8 +269,6 @@ export class SociosService {
     if (socio.solicitud_grupal_id) {
       throw new HttpError(409, 'Este socio pertenece a una solicitud conjunta: gestiónala desde el grupo')
     }
-    comprobarCambioAdmin(socio.roles, [rol])
-
     const ahora = new Date()
     const aprobado = await this.prisma.usuario.update({
       where: { id, estado: EstadoSocio.pendiente },
@@ -277,7 +276,7 @@ export class SociosService {
         estado: EstadoSocio.activo,
         fecha_alta: ahora,
         aprobado_por_id: aprobadoPorId,
-        roles: normalizarRoles([rol]),
+        roles: [Rol.socio_basico],
         // El comprobante de alta cubre el mes de alta
         pagos_cuota: { create: mesPagadoAlAlta(ahora) },
         historial_estado: { create: { tipo: TipoCambioEstado.alta, por_id: aprobadoPorId, created_at: ahora } },
@@ -443,9 +442,9 @@ export class SociosService {
     if (!socio) throw new HttpError(404, 'Socio no encontrado')
     if (socio.estado === estado) return
     if (socio.estado === EstadoSocio.pendiente) {
-      // Aprobar desde aquí equivale a Solicitudes con rol socio_basico; rechazar borra la solicitud: solo desde Solicitudes
+      // Aprobar desde aquí equivale a Solicitudes; rechazar borra la solicitud: solo desde Solicitudes
       if (estado !== EstadoSocio.activo) throw new HttpError(409, PENDIENTE_EN_SOLICITUDES)
-      await this.aprobar(id, porId, Rol.socio_basico)
+      await this.aprobar(id, porId)
     } else if (estado === EstadoSocio.baja) {
       await this.darDeBaja(id, porId)
     } else if (estado === EstadoSocio.activo) {

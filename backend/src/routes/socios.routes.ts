@@ -6,7 +6,6 @@ import {
   updateSocioSchema,
   updateRolesSchema,
   filtrosSociosSchema,
-  aprobarSocioSchema,
   llavesSchema,
   unirCuotaConjuntaSchema,
   bajaSocioSchema,
@@ -122,15 +121,9 @@ router.put('/:id/roles', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   res.json({ data: socio })
 })
 
-// POST /api/socios/:id/aprobar
+// POST /api/socios/:id/aprobar — siempre como socio_basico
 router.post('/:id/aprobar', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
-  const { id } = req.params
-  const parsed = aprobarSocioSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Debe asignar un rol válido al socio antes de aprobar', details: parsed.error.flatten().fieldErrors })
-    return
-  }
-  const socio = await sociosService.aprobar(id, req.user.id, parsed.data.rol)
+  const socio = await sociosService.aprobar(req.params.id, req.user.id)
   res.json({ message: 'Socio aprobado correctamente', data: socio })
 })
 

@@ -71,7 +71,7 @@ describe('SociosService.aprobar', () => {
   it('no encontrado → throws', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
 
-    await expect(service.aprobar('u1', 'admin', Rol.socio_basico)).rejects.toThrow('Socio no encontrado')
+    await expect(service.aprobar('u1', 'admin')).rejects.toThrow('Socio no encontrado')
   })
 
   it('estado !== pendiente → throws', async () => {
@@ -80,12 +80,12 @@ describe('SociosService.aprobar', () => {
       estado: 'activo',
     })
 
-    await expect(service.aprobar('u1', 'admin', Rol.socio_basico)).rejects.toThrow(
+    await expect(service.aprobar('u1', 'admin')).rejects.toThrow(
       'Solo se pueden aprobar solicitudes en estado pendiente',
     )
   })
 
-  it('pendiente → actualiza a activo con fecha_alta, aprobado_por_id y rol', async () => {
+  it('pendiente → activo como socio_basico, con fecha_alta y aprobado_por_id', async () => {
     ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...socioActivo,
       estado: 'pendiente',
@@ -96,7 +96,7 @@ describe('SociosService.aprobar', () => {
       roles: [Rol.socio_basico],
     })
 
-    const result = await service.aprobar('u1', 'admin1', Rol.socio_basico)
+    const result = await service.aprobar('u1', 'admin1')
 
     expect(prisma.usuario.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -226,18 +226,6 @@ describe('SociosService.updateRoles', () => {
       expect.objectContaining({ data: { roles: [Rol.tesorero] } }),
     )
   })
-
-  it('aprobar alta con rol administrador → throws', async () => {
-    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...socioActivo,
-      estado: 'pendiente',
-      roles: [],
-    })
-
-    await expect(service.aprobar('u1', 'admin1', Rol.administrador)).rejects.toThrow(
-      'El rol de administrador no se puede asignar ni retirar',
-    )
-  })
 })
 
 describe('normalizarRoles', () => {
@@ -346,7 +334,7 @@ describe('SociosService.cambiarEstado (panel de admin)', () => {
     conEstado('pendiente')
     const aprobar = vi.spyOn(service, 'aprobar').mockResolvedValue({} as never)
     await service.cambiarEstado('u1', 'activo', 'admin1')
-    expect(aprobar).toHaveBeenCalledWith('u1', 'admin1', Rol.socio_basico)
+    expect(aprobar).toHaveBeenCalledWith('u1', 'admin1')
   })
 
   it('activo → baja pasa por darDeBaja (cuota conjunta y aviso)', async () => {
@@ -393,7 +381,7 @@ describe('aprobaciones simultáneas', () => {
     ;(prisma.usuario.update as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('No record', { code: 'P2025', clientVersion: 'test' }),
     )
-    await expect(service.aprobar('u1', 'admin1', Rol.socio_basico)).rejects.toMatchObject({ status: 409 })
+    await expect(service.aprobar('u1', 'admin1')).rejects.toMatchObject({ status: 409 })
     expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u1', estado: 'pendiente' } }))
   })
 })
