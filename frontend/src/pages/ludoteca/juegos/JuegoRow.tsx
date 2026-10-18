@@ -33,7 +33,7 @@ export const JuegoRow = memo(function JuegoRow({
     <div className="border-b border-border last:border-0">
       <div className="flex items-center gap-4 px-4 py-3">
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-sm">{juego.nombre}</p>
+          <p className="font-display font-bold text-sm truncate" title={juego.nombre}>{juego.nombre}</p>
           {/* Celdas fijas con "—" si falta el dato: así las columnas se alinean entre juegos */}
           <div className="mt-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5 min-w-0" title="Ubicación">
@@ -58,7 +58,8 @@ export const JuegoRow = memo(function JuegoRow({
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          <Badge variant={cfg.variant} className="font-display text-xs">
+          {/* Ancho fijo: si cambiara con el estado, la rejilla de datos se movería de una fila a otra */}
+          <Badge variant={cfg.variant} className="font-display text-xs w-28 justify-center">
             {cfg.label}
           </Badge>
 
