@@ -17,6 +17,7 @@ export const QK = {
   JUEGOS_GESTION: (search: string, estado: string) => ['juegos', 'gestion', search, estado] as const,
   JUEGOS_CATALOGO: (search: string) => ['juegos', 'catalogo', search] as const, // área socios – PrestamosPage
   LUDOTECA: (search: string, estado: string) => ['juegos', 'ludoteca', search, estado] as const, // área socios – LudotecaPage
+  MIS_JUEGOS: ['juegos', 'mios'] as const, // juegos cedidos por el socio – DashboardPage
   LOGS_JUEGO: (id: string) => ['juegos', 'logs', id] as const,
   LOGS_JUEGO_ALL: ['juegos', 'logs-todos'] as const,
   LOGS_JUEGO_ALL_PAGINA: (page: number) => ['juegos', 'logs-todos', page] as const,

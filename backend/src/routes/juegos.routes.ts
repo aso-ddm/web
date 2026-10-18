@@ -36,6 +36,11 @@ router.get('/', authenticate, async (req, res) => {
   res.json(result)
 })
 
+// GET /api/juegos/mios — juegos cedidos por el socio autenticado
+router.get('/mios', authenticate, async (req, res) => {
+  res.json({ data: await juegosService.getDePropietario(req.user!.id) })
+})
+
 // GET /api/juegos/:id — detalle
 router.get('/:id', authenticate, async (req, res) => {
   const juego = await juegosService.getById(req.params.id)

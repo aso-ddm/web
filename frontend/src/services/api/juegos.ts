@@ -22,6 +22,9 @@ export const juegosApi = {
   getAll: (filtros: FiltrosJuegos = {}) =>
     api.get<PaginatedResponse<Juego>>(`/juegos${buildQuery({ ...filtros })}`),
 
+  /** Juegos de los que el socio autenticado es propietario */
+  mios: () => api.get<{ data: Juego[] }>('/juegos/mios'),
+
   create: (data: JuegoPayload) => api.post<{ data: Juego }>('/juegos', data),
   update: (id: string, data: JuegoPayload) => api.put<{ data: Juego }>(`/juegos/${id}`, data),
   delete: (id: string) => api.delete<void>(`/juegos/${id}`),

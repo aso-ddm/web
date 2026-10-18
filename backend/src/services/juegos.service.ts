@@ -82,6 +82,11 @@ export class JuegosService {
     return paginado(juegos, total, filtros)
   }
 
+  // ponytail: sin paginar, un socio cede pocos juegos
+  async getDePropietario(propietario_id: string) {
+    return this.prisma.juego.findMany({ where: { propietario_id }, orderBy: { nombre: 'asc' } })
+  }
+
   async getById(id: string) {
     const juego = await this.prisma.juego.findUnique({
       where: { id },
