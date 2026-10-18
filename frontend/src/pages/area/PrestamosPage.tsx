@@ -126,10 +126,6 @@ export function PrestamosPage() {
 
   const maxRenovaciones = useConfigNumero('max_renovaciones', 2)
 
-  const maxPrestamosActivos = useConfigNumero('max_prestamos_activos', 3)
-
-  const limitePrestamosAlcanzado = activos.length >= maxPrestamosActivos
-
   return (
     <>
       <SEOHead title="Mis préstamos" description="Historial y gestión de préstamos" path="/area/prestamos" noindex />
@@ -140,20 +136,9 @@ export function PrestamosPage() {
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Mis préstamos</h1>
             <p className="text-muted-foreground mt-1">Gestiona tus préstamos activos y devoluciones</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <Button
-              onClick={() => setDialogOpen(true)}
-              disabled={limitePrestamosAlcanzado}
-              className="font-display font-bold gap-2"
-            >
-              <Plus className="h-4 w-4" /> Pedir juego prestado
-            </Button>
-            {limitePrestamosAlcanzado && (
-              <p className="text-xs text-muted-foreground">
-                Límite de {maxPrestamosActivos} préstamos simultáneos alcanzado
-              </p>
-            )}
-          </div>
+          <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
+            <Plus className="h-4 w-4" /> Pedir juego prestado
+          </Button>
         </div>
 
         {isLoading ? (

@@ -38,11 +38,6 @@ const configLabels: Record<string, { label: string; description: string; suffix?
     label: 'Nombre del bot de Telegram',
     description: 'Usuario del bot sin @ (ej: dragondemadera_bot). Necesario para el widget de vinculación de Telegram',
   },
-  max_prestamos_activos: {
-    label: 'Préstamos simultáneos por socio',
-    description: 'Número máximo de préstamos activos que puede tener un socio al mismo tiempo',
-    suffix: 'préstamos',
-  },
   dias_prestamo: {
     label: 'Duración del préstamo',
     description: 'Días que dura un préstamo desde que el socio se lleva el juego',
@@ -285,7 +280,7 @@ function Seccion({ icono, titulo, descripcion, children }: {
 const SECCIONES_NUMERICAS = [
   { titulo: 'Configuración de cuotas', descripcion: 'Precios mensuales aplicados a los socios', claves: ['precio_cuota_individual', 'precio_cuota_adicional'] },
   { titulo: 'Configuración de visitas', descripcion: 'Parámetros para el control de visitas de no socios', claves: ['visitas_gratuitas', 'precio_visita_pago'] },
-  { titulo: 'Configuración de préstamos', descripcion: 'Límites y plazos de los préstamos de la ludoteca', claves: ['max_prestamos_activos', 'dias_prestamo', 'dias_renovacion', 'max_renovaciones'] },
+  { titulo: 'Configuración de préstamos', descripcion: 'Plazos y renovaciones de los préstamos de la ludoteca', claves: ['dias_prestamo', 'dias_renovacion', 'max_renovaciones'] },
 ]
 
 const TEXTOS_LARGOS = [

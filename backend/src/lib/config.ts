@@ -2,7 +2,6 @@ import type { Prisma } from '@prisma/client'
 
 // Claves numéricas de Configuracion que usa el backend: un typo en la clave es error de compilación
 export type ClaveNumero =
-  | 'max_prestamos_activos'
   | 'dias_prestamo'
   | 'dias_renovacion'
   | 'max_renovaciones'

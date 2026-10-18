@@ -190,8 +190,8 @@ docker build -t asoddm/dragondemadera-frontend:latest -f frontend/Dockerfile .
 ### Concurrencia e integridad
 - **Escrituras condicionadas** al estado esperado en el `where` (`updateMany({ where: { id, estado } })` y comprobar
   `count`, o `update({ where: { id, estado } })` + P2025 → 409). Así una segunda petición simultánea no repite la acción.
-- **Bloqueos dentro de la transacción** cuando se cuenta y luego se escribe: `SELECT ... FOR UPDATE` (límite de
-  préstamos por socio, miembros de una cuota conjunta) o `pg_advisory_xact_lock` (visitas por nombre).
+- **Bloqueos dentro de la transacción** cuando se cuenta y luego se escribe: `SELECT ... FOR UPDATE` (miembros de
+  una cuota conjunta) o `pg_advisory_xact_lock` (visitas por nombre).
 - El log de cada operación se escribe en la misma transacción que la operación.
 - Reglas de negocio en un solo sitio, el backend: p. ej. si una visita es gratis lo devuelve `GET /visitas/buscar`
   (`siguiente_es_pago`, `importe_siguiente`, `nuevo`); el frontend no recalcula.

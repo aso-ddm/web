@@ -71,16 +71,6 @@ describe.skipIf(!url)('integración con Postgres', () => {
     expect((await prisma.juego.findUniqueOrThrow({ where: { id: juego.id } })).estado).toBe('prestado')
   })
 
-  it('un socio en el límite no lo supera con peticiones simultáneas', async () => {
-    const socio = await crearSocio()
-    const max = Number((await prisma.configuracion.findUnique({ where: { clave: 'max_prestamos_activos' } }))?.valor ?? 3)
-    const libres = await Promise.all(Array.from({ length: max + 2 }, crearJuego))
-
-    await Promise.allSettled(libres.map((j) => prestamos.solicitar(socio.id, { juego_id: j.id })))
-
-    expect(await prisma.prestamo.count({ where: { socio_id: socio.id, estado: 'activo' } })).toBe(max)
-  })
-
   it('visitas: la búsqueda agrupa mayúsculas y espacios, y dos registros a la vez llevan números distintos', async () => {
     const socio = await crearSocio()
     const nombre = `Visitante ${run}`

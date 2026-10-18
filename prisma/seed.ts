@@ -72,12 +72,6 @@ async function main() {
       descripcion: 'Días antes del vencimiento para enviar aviso al socio (pendiente de implementar notificaciones)',
     },
     {
-      clave: 'max_prestamos_activos',
-      valor: '3',
-      tipo: 'numero',
-      descripcion: 'Número máximo de préstamos activos simultáneos por socio',
-    },
-    {
       clave: 'precio_cuota_individual',
       valor: '15',
       tipo: 'numero',

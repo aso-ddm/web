@@ -11,8 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { useConfig, useConfigNumero } from '@/hooks/useConfigValor'
-import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
+import { useConfig } from '@/hooks/useConfigValor'
 import { prestamosApi } from '@/services/api/prestamos'
 import { juegosApi } from '@/services/api/juegos'
 import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
@@ -74,10 +73,6 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [juegoSeleccionado, setJuegoSeleccionado] = useState<Juego | null>(juegoInicial)
-  // El backend rechaza el préstamo por encima del límite: se avisa antes de intentarlo
-  const { data: activos = [] } = useMisPrestamosActivos()
-  const maxPrestamos = useConfigNumero('max_prestamos_activos', 3)
-  const limiteAlcanzado = activos.length >= maxPrestamos
   const [notas, setNotas] = useState('')
   // Juego cedido: el socio confirma que el propietario le ha dado permiso (para quien no lee las normas)
   const [aceptadoPropietario, setAceptadoPropietario] = useState(false)
@@ -168,11 +163,6 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
                 <span>El socio propietario me ha aceptado el préstamo</span>
               </label>
             )}
-            {limiteAlcanzado && (
-              <p className="text-sm text-destructive">
-                Ya tienes {maxPrestamos} préstamos activos, el máximo. Devuelve alguno para pedir otro.
-              </p>
-            )}
             <div className="space-y-1.5">
               <label className="text-sm font-display font-bold">Notas (opcional)</label>
               <Input
@@ -189,7 +179,7 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
           {juegoSeleccionado && (
             <Button
               onClick={() => solicitar()}
-              disabled={isPending || limiteAlcanzado || (!!juegoSeleccionado.propietario && !aceptadoPropietario)}
+              disabled={isPending || (!!juegoSeleccionado.propietario && !aceptadoPropietario)}
               className="font-display font-bold"
             >
               {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : 'Confirmar préstamo'}

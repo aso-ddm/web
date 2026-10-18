@@ -40,20 +40,11 @@ export class PrestamosService {
     if (!juego) throw new HttpError(404, 'Juego no encontrado')
     if (juego.estado !== EstadoJuego.en_estanteria) throw new HttpError(409, 'El juego no está disponible para préstamo')
 
-    const [maxPrestamos, diasPrestamo] = await Promise.all([
-      configNumero(this.prisma, 'max_prestamos_activos', 3),
-      configNumero(this.prisma, 'dias_prestamo', 14),
-    ])
+    const diasPrestamo = await configNumero(this.prisma, 'dias_prestamo', 14)
     const ahora = new Date()
     const fechaLimite = finDelDiaMadrid(ahora, diasPrestamo) // vence al acabar el día
 
     return this.prisma.$transaction(async (tx) => {
-      // Bloquea la fila del socio: dos peticiones suyas a la vez no pueden pasar las dos del límite
-      await tx.$queryRaw`SELECT 1 FROM "Usuario" WHERE id = ${socioId} FOR UPDATE`
-      const prestamosActivos = await tx.prestamo.count({ where: { socio_id: socioId, estado: EstadoPrestamo.activo } })
-      if (prestamosActivos >= maxPrestamos) {
-        throw new HttpError(409, `Has alcanzado el límite de ${maxPrestamos} préstamos simultáneos`)
-      }
       // Reserva atómica: si dos socios piden el mismo juego a la vez, solo uno lo consigue
       const { count } = await tx.juego.updateMany({
         where: { id: input.juego_id, estado: EstadoJuego.en_estanteria },
