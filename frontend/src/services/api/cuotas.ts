@@ -19,4 +19,7 @@ export const cuotasApi = {
   // estado null = volver a "sin revisar"
   marcar: (socioId: string, anio: number, mes: number, estado: EstadoPago | null) =>
     api.put<unknown>(`/cuotas/${socioId}/${anio}/${mes}`, { estado }),
+  // Marca como pagados `meses` meses seguidos desde anio/mes
+  adelantar: (socioId: string, anio: number, mes: number, meses: number) =>
+    api.post<unknown>(`/cuotas/${socioId}/adelantado`, { anio, mes, meses }),
 }

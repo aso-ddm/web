@@ -1,23 +1,26 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Wallet, Users } from 'lucide-react'
+import { Wallet, Users, CalendarPlus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { cuotasApi, type SocioCuotas } from '@/services/api/cuotas'
-import { esMoroso, mesEnPeriodo, type EstadoPago } from '@/lib/cuotas'
+import { esMoroso, mesEnPeriodo, mesFuturo, type EstadoPago } from '@/lib/cuotas'
 import { cn } from '@/lib/utils'
 import { QK } from '@/lib/queryKeys'
+import { AdelantarCuotaDialog } from './cuotas/AdelantarCuotaDialog'
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 type Tab = 'todos' | 'morosos'
-const ETIQUETA = { pagado: 'Pago realizado', sin_pagar: 'Pago no realizado', sin_revisar: 'Pendiente de revisar' }
-// Clic en una celda: pendiente de revisar → pago realizado → pago no realizado → pendiente de revisar
-const SIGUIENTE = (e: EstadoPago | undefined): EstadoPago | null =>
-  e === undefined ? 'pagado' : e === 'pagado' ? 'sin_pagar' : null
+const ETIQUETA = { pagado: 'Pago realizado', sin_pagar: 'Pago no realizado', sin_revisar: 'Pendiente de revisar', futuro: 'Sin adelantar' }
+// Clic en una celda: pendiente de revisar → pago realizado → pago no realizado → pendiente de revisar.
+// Meses futuros: sin adelantar ↔ pago realizado (un mes que no ha llegado no puede estar sin pagar)
+const SIGUIENTE = (e: EstadoPago | undefined, futuro: boolean): EstadoPago | null =>
+  e === undefined ? 'pagado' : e === 'pagado' && !futuro ? 'sin_pagar' : null
 
 // Una fila por cuota: los miembros de una cuota conjunta comparten los pagos, así que van juntos.
 // El periodo empieza con el alta más antigua del grupo.
@@ -42,6 +45,7 @@ export function CuotasPage() {
   const [anio, setAnio] = useState(hoy.getFullYear())
   // Morosos tocados en la pestaña: siguen visibles aunque se pongan al día, para poder seguir marcando
   const [fijados, setFijados] = useState<Set<string>>(new Set())
+  const [adelantar, setAdelantar] = useState<{ socioId: string; nombres: string } | null>(null)
 
   const queryKey = QK.CUOTAS_ANIO(anio)
   const { data, isLoading } = useQuery({ queryKey, queryFn: () => cuotasApi.getAll(anio), placeholderData: keepPreviousData })
@@ -74,7 +78,9 @@ export function CuotasPage() {
   const visibles = tab === 'todos' ? cuotas : cuotas.filter((c) => fijados.has(c.cuota_id) || morosos.includes(c))
 
   const primerAnio = Math.min(hoy.getFullYear(), ...cuotas.map((c) => new Date(c.fecha_alta).getFullYear()))
-  const anios = Array.from({ length: hoy.getFullYear() - primerAnio + 1 }, (_, i) => hoy.getFullYear() - i)
+  // Hasta dos años por delante, para ver y marcar pagos adelantados
+  const ultimoAnio = hoy.getFullYear() + 2
+  const anios = Array.from({ length: ultimoAnio - primerAnio + 1 }, (_, i) => ultimoAnio - i)
 
   return (
     <>
@@ -89,6 +95,7 @@ export function CuotasPage() {
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               Pulsa un mes para cambiar su estado: pendiente de revisar → pago realizado → pago no realizado.
+              Para un pago de varios meses o años, usa el botón <CalendarPlus className="inline h-4 w-4 align-text-bottom" aria-hidden /> de cada cuota.
             </p>
           </div>
           <Select value={String(anio)} onValueChange={(v) => setAnio(Number(v))}>
@@ -136,9 +143,11 @@ export function CuotasPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {visibles.map((s) => {
+                      const nombres = s.miembros.map((m) => `${m.nombre} ${m.apellidos}`).join(', ')
                       return (
                         <tr key={s.cuota_id} className="hover:bg-accent/30 transition-colors">
                           <td className="sticky left-0 bg-card px-4 py-2 whitespace-nowrap">
+                            <div className="flex items-center justify-between gap-2">
                             {s.conjunta ? (
                               <div className="border-l-2 border-secondary/50 pl-2">
                                 <p className="text-xs font-display font-bold text-secondary uppercase tracking-wide flex items-center gap-1">
@@ -151,21 +160,33 @@ export function CuotasPage() {
                             ) : (
                               <p className="font-display font-bold">{s.nombre} {s.apellidos}</p>
                             )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setAdelantar({ socioId: s.id, nombres })}
+                                title="Registrar pago de varios meses"
+                                aria-label={`Registrar pago de varios meses: ${nombres}`}
+                              >
+                                <CalendarPlus className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                           {MESES.map((nombreMes, i) => {
                             const mes = i + 1
-                            if (!mesEnPeriodo(s.fecha_alta, anio, mes, hoy)) {
+                            const futuro = mesFuturo(anio, mes, hoy)
+                            if (!futuro && !mesEnPeriodo(s.fecha_alta, anio, mes, hoy)) {
                               return <td key={mes} className="text-center text-muted-foreground/70">—</td>
                             }
                             const estado = s.pagos_cuota.find((p) => p.anio === anio && p.mes === mes)?.estado
-                            const etiqueta = ETIQUETA[estado ?? 'sin_revisar']
+                            const etiqueta = ETIQUETA[estado ?? (futuro ? 'futuro' : 'sin_revisar')]
                             return (
                               <td key={mes} className="px-1 py-1 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => marcar({ cuotaId: s.cuota_id, socioId: s.id, mes, estado: SIGUIENTE(estado) })}
+                                  onClick={() => marcar({ cuotaId: s.cuota_id, socioId: s.id, mes, estado: SIGUIENTE(estado, futuro) })}
                                   title={`${nombreMes} ${anio}: ${etiqueta}`}
-                                  aria-label={`${s.miembros.map((m) => `${m.nombre} ${m.apellidos}`).join(', ')}, ${nombreMes} ${anio}: ${etiqueta}`}
+                                  aria-label={`${nombres}, ${nombreMes} ${anio}: ${etiqueta}`}
                                   className={cn(
                                     'w-24 min-h-10 px-1.5 py-1 rounded-md inline-flex items-center justify-center border text-xs leading-tight font-medium transition-colors',
                                     estado === 'pagado' && 'bg-emerald-700/15 border-emerald-600/40 text-emerald-800',
@@ -188,6 +209,8 @@ export function CuotasPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AdelantarCuotaDialog key={adelantar?.socioId} cuota={adelantar} onClose={() => setAdelantar(null)} />
     </>
   )
 }

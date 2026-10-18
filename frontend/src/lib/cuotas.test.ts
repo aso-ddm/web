@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest'
-import { esMoroso, mesEnPeriodo } from './cuotas'
+import { esMoroso, mesEnPeriodo, mesFuturo } from './cuotas'
 
 const hoy = new Date(2026, 2, 10) // marzo 2026
 const alta = new Date(2026, 0, 20).toISOString() // enero 2026
@@ -12,4 +12,10 @@ it('detecta morosos dentro del periodo de socio', () => {
   expect(esMoroso(alta, [{ anio: 2025, mes: 12, estado: 'sin_pagar' }], hoy)).toBe(false)
   expect(mesEnPeriodo(alta, 2025, 12, hoy)).toBe(false)
   expect(mesEnPeriodo(alta, 2026, 4, hoy)).toBe(false)
+})
+
+it('los meses futuros no cuentan para morosidad', () => {
+  expect(mesFuturo(2026, 3, hoy)).toBe(false)
+  expect(mesFuturo(2026, 4, hoy)).toBe(true)
+  expect(esMoroso(alta, [{ anio: 2026, mes: 4, estado: 'sin_pagar' }], hoy)).toBe(false)
 })

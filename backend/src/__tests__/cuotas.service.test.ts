@@ -45,3 +45,32 @@ describe('CuotasService.marcar', () => {
     await expect(service.marcar('x', { anio: 2026, mes: 3, estado: 'pagado' }, 'dir1')).rejects.toMatchObject({ status: 404 })
   })
 })
+
+describe('CuotasService.adelantar', () => {
+  it('marca como pagados los meses seguidos, cruzando de año, en una transacción', async () => {
+    findSocio().mockResolvedValue({ id: 's1', solicitud_grupal_id: null })
+    const r = await service.adelantar('s1', { anio: 2026, mes: 11, meses: 3 }, 'dir1')
+    expect(r.meses).toEqual([{ anio: 2026, mes: 11 }, { anio: 2026, mes: 12 }, { anio: 2027, mes: 1 }])
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1)
+    expect(prisma.pagoCuota.upsert).toHaveBeenCalledTimes(3)
+    expect(prisma.pagoCuota.upsert).toHaveBeenLastCalledWith({
+      where: { socio_id_anio_mes: { socio_id: 's1', anio: 2027, mes: 1 } },
+      create: { socio_id: 's1', anio: 2027, mes: 1, estado: 'pagado', revisado_por_id: 'dir1' },
+      update: { estado: 'pagado', revisado_por_id: 'dir1' },
+    })
+  })
+
+  it('cuota conjunta → se apunta en el grupo', async () => {
+    findSocio().mockResolvedValue({ id: 's1', solicitud_grupal_id: 'g1' })
+    await service.adelantar('s1', { anio: 2026, mes: 1, meses: 12 }, 'dir1')
+    expect(prisma.pagoCuota.upsert).toHaveBeenCalledTimes(12)
+    expect(prisma.pagoCuota.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: { grupo_id_anio_mes: { grupo_id: 'g1', anio: 2026, mes: 12 } },
+    }))
+  })
+
+  it('socio inexistente → 404', async () => {
+    findSocio().mockResolvedValue(null)
+    await expect(service.adelantar('x', { anio: 2026, mes: 1, meses: 3 }, 'dir1')).rejects.toMatchObject({ status: 404 })
+  })
+})

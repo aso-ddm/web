@@ -11,6 +11,9 @@ export function mesEnPeriodo(fechaAlta: string, anio: number, mes: number, hoy =
   return m >= mesAbsFecha(new Date(fechaAlta)) && m <= mesAbsFecha(hoy)
 }
 
+// Mes posterior al actual: solo se puede marcar como pagado (pago por adelantado)
+export const mesFuturo = (anio: number, mes: number, hoy = new Date()) => mesAbs(anio, mes) > mesAbsFecha(hoy)
+
 // Moroso: algún mes de su periodo marcado como pago no realizado
 export function esMoroso(fechaAlta: string, pagos: PagoMes[], hoy = new Date()) {
   return pagos.some((p) => p.estado === 'sin_pagar' && mesEnPeriodo(fechaAlta, p.anio, p.mes, hoy))

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { requireRoles, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { CuotasService } from '../services/cuotas.service'
-import { marcarCuotaSchema, listarCuotasSchema } from '../schemas/cuota.schema'
+import { marcarCuotaSchema, listarCuotasSchema, adelantarCuotaSchema } from '../schemas/cuota.schema'
 
 const router = Router()
 const cuotasService = new CuotasService(prisma)
@@ -11,6 +11,12 @@ const cuotasService = new CuotasService(prisma)
 router.get('/', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { anio } = listarCuotasSchema.parse(req.query)
   res.json({ data: await cuotasService.listar(anio) })
+})
+
+// POST /api/cuotas/:socioId/adelantado — marca como pagados varios meses seguidos (pago por adelantado)
+router.post('/:socioId/adelantado', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const datos = adelantarCuotaSchema.parse(req.body)
+  res.json({ data: await cuotasService.adelantar(req.params.socioId, datos, req.user.id) })
 })
 
 // PUT /api/cuotas/:socioId/:anio/:mes — marca el estado de un mes (para todo el grupo si es conjunta)
