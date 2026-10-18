@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useConfig, useConfigNumero } from '@/hooks/useConfigValor'
@@ -17,6 +18,16 @@ import { juegosApi } from '@/services/api/juegos'
 import { QK, invalidarJuegos, invalidarPrestamos } from '@/lib/queryKeys'
 import { formatJugadores } from '@/lib/format'
 import type { Juego } from '@/types/api'
+
+function Propietario({ juego }: { juego: Juego }) {
+  return (
+    <p className="text-xs text-muted-foreground mt-1">
+      {juego.propietario
+        ? <>Cedido por <span className="font-display font-bold text-sm text-foreground">{juego.propietario.nombre} {juego.propietario.apellidos}</span></>
+        : <>Propiedad de <span className="font-display font-bold text-sm text-foreground">Dragón de Madera</span></>}
+    </p>
+  )
+}
 
 function JuegoOpcion({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) => void }) {
   const disponible = juego.estado === 'en_estanteria'
@@ -38,6 +49,7 @@ function JuegoOpcion({ juego, onSelect }: { juego: Juego; onSelect: (j: Juego) =
               {formatJugadores(juego)}
             </p>
           )}
+          <Propietario juego={juego} />
         </div>
         <Badge
           variant={disponible ? 'default' : 'secondary'}
@@ -67,6 +79,8 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
   const maxPrestamos = useConfigNumero('max_prestamos_activos', 3)
   const limiteAlcanzado = activos.length >= maxPrestamos
   const [notas, setNotas] = useState('')
+  // Juego cedido: el socio confirma que el propietario le ha dado permiso (para quien no lee las normas)
+  const [aceptadoPropietario, setAceptadoPropietario] = useState(false)
   const queryClient = useQueryClient()
 
   const diasPrestamo = useConfig('dias_prestamo', open).data ?? '14'
@@ -92,6 +106,7 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
     setSearch('')
     setJuegoSeleccionado(null)
     setNotas('')
+    setAceptadoPropietario(false)
     onClose()
   }
 
@@ -140,12 +155,19 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
                   variant="ghost"
                   size="sm"
                   className="text-xs text-muted-foreground"
-                  onClick={() => setJuegoSeleccionado(null)}
+                  onClick={() => { setJuegoSeleccionado(null); setAceptadoPropietario(false) }}
                 >
                   Cambiar
                 </Button>
               </div>
+              <Propietario juego={juegoSeleccionado} />
             </div>
+            {juegoSeleccionado.propietario && (
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <Checkbox checked={aceptadoPropietario} onCheckedChange={(v) => setAceptadoPropietario(v === true)} className="mt-0.5" />
+                <span>El socio propietario me ha aceptado el préstamo</span>
+              </label>
+            )}
             {limiteAlcanzado && (
               <p className="text-sm text-destructive">
                 Ya tienes {maxPrestamos} préstamos activos, el máximo. Devuelve alguno para pedir otro.
@@ -165,7 +187,11 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
         <DialogFooter className="mt-2 gap-2">
           <Button variant="outline" onClick={handleClose} className="font-display">Cancelar</Button>
           {juegoSeleccionado && (
-            <Button onClick={() => solicitar()} disabled={isPending || limiteAlcanzado} className="font-display font-bold">
+            <Button
+              onClick={() => solicitar()}
+              disabled={isPending || limiteAlcanzado || (!!juegoSeleccionado.propietario && !aceptadoPropietario)}
+              className="font-display font-bold"
+            >
               {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Procesando...</> : 'Confirmar préstamo'}
             </Button>
           )}

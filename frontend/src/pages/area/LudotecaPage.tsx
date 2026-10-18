@@ -16,6 +16,7 @@ import type { Juego, SolicitudJuego, EstadoSolicitudJuego } from '@/types/api'
 import { formatJugadores } from '@/lib/format'
 import { SolicitarPrestamoDialog } from '@/components/organisms/SolicitarPrestamoDialog'
 import { CederJuegoDialog } from '@/components/organisms/CederJuegoDialog'
+import { DragonIcon } from '@/components/atoms/icons/DragonIcon'
 
 const estadoJuegoLabel: Record<string, string> = {
   en_estanteria: 'Disponible',
@@ -63,9 +64,15 @@ const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego
             </span>
           )}
         </div>
-        {juego.propietario && (
-          <p className="text-xs text-muted-foreground">
-            Cedido por {juego.propietario.nombre} {juego.propietario.apellidos}
+        {juego.propietario ? (
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Handshake className="h-3.5 w-3.5 text-secondary flex-shrink-0" />
+            <span>Cedido por <span className="font-display font-bold text-sm text-foreground">{juego.propietario.nombre} {juego.propietario.apellidos}</span></span>
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <DragonIcon className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+            <span>Propiedad de <span className="font-display font-bold text-sm text-foreground">Dragón de Madera</span></span>
           </p>
         )}
         {disponible && (
