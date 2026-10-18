@@ -59,18 +59,14 @@ export function AltaSolicitudCard({ socio, precioIndividual }: { socio: SocioLis
             {socio.apodo && <span className="text-xs text-muted-foreground">({socio.apodo})</span>}
           </div>
           <p className="text-sm text-muted-foreground">{socio.email}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
             <span>DNI: {socio.dni}</span>
-            {socio.telefono && <span>Tel: {socio.telefono}</span>}
-            {socio.fecha_nacimiento && <span>Nacimiento: {formatDate(socio.fecha_nacimiento)}</span>}
+            <span>Tel: {socio.telefono || '—'}</span>
+            <span>Nacimiento: {socio.fecha_nacimiento ? formatDate(socio.fecha_nacimiento) : '—'}</span>
             <span>Cuota: {tipoCuotaLabel(socio.tipo_cuota, precioIndividual)}</span>
             <span>Solicitud: {formatDate(socio.created_at)}</span>
+            <span>Telegram: {socio.alias_telegram || '—'}</span>
           </div>
-          {socio.alias_telegram && (
-            <div className="flex gap-3 text-xs text-muted-foreground">
-              <span>Telegram: {socio.alias_telegram}</span>
-            </div>
-          )}
         </div>
         <div className="flex flex-col gap-2 flex-shrink-0 items-end">
           {puedeEditar && <div className="flex gap-2">

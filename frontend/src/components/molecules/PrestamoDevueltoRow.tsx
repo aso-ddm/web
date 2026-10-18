@@ -13,20 +13,20 @@ export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestam
 
   return (
     <div className="py-2.5 border-b border-border last:border-0 flex items-start justify-between gap-3">
-      <div className="min-w-0">
+      <div className="flex-1 min-w-0">
         <p className="font-display font-bold text-sm">{p.juego?.nombre ?? '—'}</p>
         {conSocio && (
           <p className="text-xs text-muted-foreground truncate">
             {p.socio ? `${p.socio.nombre} ${p.socio.apellidos}${p.socio.apodo ? ` (${p.socio.apodo})` : ''} · ${p.socio.email}` : 'Socio desconocido'}
           </p>
         )}
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
           <span>Prestado: {formatDate(p.fecha_prestamo)}</span>
           <span>Límite: {formatDate(p.fecha_limite)}</span>
           <span className={retraso > 0 ? 'text-destructive font-medium' : ''}>
             Devuelto: {formatDate(p.fecha_devolucion)}{retraso > 0 && ` (${retraso}d tarde)`}
           </span>
-          {p.renovaciones > 0 && <span>Renovaciones: {p.renovaciones}</span>}
+          <span>Renovaciones: {p.renovaciones}</span>
         </div>
         {p.notas && <p className="text-xs text-muted-foreground italic mt-0.5">"{p.notas}"</p>}
       </div>

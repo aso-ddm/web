@@ -62,15 +62,11 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
       <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0">
           <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
             <span>Prestado: {formatDate(prestamo.fecha_prestamo)}</span>
             <FechaLimiteBadge fechaLimite={prestamo.fecha_limite} />
+            <span>Renovado {prestamo.renovaciones}/{maxRenovaciones}</span>
           </div>
-          {prestamo.renovaciones > 0 && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Renovado {prestamo.renovaciones}/{maxRenovaciones} veces
-            </p>
-          )}
           {prestamo.notas && (
             <p className="text-xs text-muted-foreground italic mt-1">"{prestamo.notas}"</p>
           )}

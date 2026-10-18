@@ -61,14 +61,14 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
             {nombreSocio(prestamo)}
             {prestamo.socio?.email && <span className="text-muted-foreground"> · {prestamo.socio.email}</span>}
           </p>
-          <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground mt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-1">
             <span>Desde: {formatDate(prestamo.fecha_prestamo)}</span>
             <span className={vencido ? 'text-destructive font-medium' : ''}>
               Límite: {formatDate(prestamo.fecha_limite)}
               {!vencido && dias <= 3 && <span className="text-amber-700"> ({dias === 0 ? 'hoy' : `${dias}d`})</span>}
               {vencido && <span> (hace {Math.abs(dias)}d)</span>}
             </span>
-            {prestamo.renovaciones > 0 && <span>Renovaciones: {prestamo.renovaciones}</span>}
+            <span>Renovaciones: {prestamo.renovaciones}</span>
           </div>
           {prestamo.notas && (
             <p className="text-xs text-muted-foreground italic mt-1">"{prestamo.notas}"</p>
