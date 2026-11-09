@@ -50,7 +50,7 @@ export function ClubPage() {
     <div className="min-h-screen flex flex-col">
       <SEOHead
         title="El Club"
-        description="Conoce el club Dragón de Madera en Granada. Más de 800 juegos de mesa, partidas semanales y eventos especiales."
+        description="Conoce el club Dragón de Madera en Granada. Más de 900 juegos de mesa, partidas semanales y eventos especiales."
         path="/club"
       />
       <Header />

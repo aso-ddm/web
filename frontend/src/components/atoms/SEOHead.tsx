@@ -9,7 +9,7 @@ interface SEOHeadProps {
 
 const SITE_NAME = 'Dragón de Madera'
 const BASE_URL = 'https://dragondemadera.com'
-const DEFAULT_DESCRIPTION = 'Tu club de juegos de mesa en Granada. Descubre, juega y conoce gente con tu misma afición. Más de 800 juegos, partidas semanales y un ambiente familiar.'
+const DEFAULT_DESCRIPTION = 'Tu club de juegos de mesa en Granada. Descubre, juega y conoce gente con tu misma afición. Más de 900 juegos, partidas semanales y un ambiente familiar.'
 
 /** Actualiza <tag key="id"> de <head> (lo crea si no existe); value null lo quita */
 function setHead(tag: 'meta' | 'link', key: 'name' | 'property' | 'rel', id: string, attr: 'content' | 'href', value: string | null) {

@@ -24,7 +24,7 @@
       "title": "TU CLUB DE JUEGOS DE MESA EN GRANADA",
       "heading": "Únete a nuestra comunidad",
       "subtitle": "Un lugar para jugar, disfrutar y conocer gente con tu misma afición.",
-      "description": "En nuestra sede de La Chana te esperamos con más de 800 juegos clásicos y modernos, partidas todas las semanas y un ambiente cercano y familiar.",
+      "description": "En nuestra sede de La Chana te esperamos con más de 900 juegos clásicos y modernos, partidas todas las semanas y un ambiente cercano y familiar.",
       "features": [
         "3 invitaciones gratis para concernos.",
         "Muchos eventos y jornadas abiertas.",
@@ -151,7 +151,7 @@
     },
     "library": {
       "title": "Ludoteca",
-      "subtitle": "Más de 800 juegos clásicos y modernos, y creciendo gracias a aportaciones de socios y editoriales.",
+      "subtitle": "Más de 900 juegos clásicos y modernos, y creciendo gracias a aportaciones de socios y editoriales.",
       "description": "En el club tenemos de todo y jugamos a todo tipo de juegos.",
       "tableNote": "En esta tabla puedes explorar nuestra ludoteca:",
       "moreGames": {
@@ -168,11 +168,11 @@
   "member": {
     "hero": {
       "title": "¡TU NUEVA FAMILIA JUGONA!",
-      "subtitle": "Únete a una comunidad activa que juega cada semana en nuestro Club de juegos de mesa de Granada. Más de 800 juegos, buen ambiente y ganas de compartir afición."
+      "subtitle": "Únete a una comunidad activa que juega cada semana en nuestro Club de juegos de mesa de Granada. Más de 900 juegos, buen ambiente y ganas de compartir afición."
     },
     "howToJoin": {
       "text1": "Únete a una comunidad activa que juega cada semana en nuestro Club de juegos de mesa de Granada.",
-      "text2": "Más de 800 juegos, buen ambiente y ganas de compartir afición.",
+      "text2": "Más de 900 juegos, buen ambiente y ganas de compartir afición.",
       "title": "¿Cómo unirte al club?",
       "steps": [
         {

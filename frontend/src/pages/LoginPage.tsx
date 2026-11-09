@@ -87,7 +87,7 @@ export function LoginPage() {
               Tu club de<br />juegos de mesa<br />en Granada
             </p>
             <p className="text-primary-foreground/80 text-lg font-display leading-relaxed max-w-xs">
-              Más de 800 juegos, partidas semanales y una comunidad que comparte tu afición.
+              Más de 900 juegos, partidas semanales y una comunidad que comparte tu afición.
             </p>
           </div>
 
