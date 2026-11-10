@@ -9,6 +9,7 @@ import { HttpError } from '../lib/httpError'
 import { igualesSeguro } from '../lib/seguridad'
 import { eventos } from '../lib/eventos'
 import { telegram } from '../lib/telegram'
+import { alertar } from '../lib/alertas'
 
 function verifyTelegramData(data: TelegramAuthInput, botToken: string): boolean {
   const { hash, ...rest } = data
@@ -34,26 +35,6 @@ function checkTelegram(data: TelegramAuthInput): bigint {
 
 const SALT_ROUNDS = 12
 
-const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-// Envía un mensaje HTML a los secretarios activos con Telegram vinculado. Con `archivo`, lo adjunta
-// como documento y el texto va de pie (máx. 1024 caracteres). Devuelve si llegó a alguno
-async function avisarSecretarios(prisma: PrismaClient, contexto: string, texto: string, archivo?: string): Promise<boolean> {
-  if (!process.env.BOT_TOKEN) throw new Error('BOT_TOKEN no configurado')
-
-  const secretarios = await prisma.usuario.findMany({
-    where: { roles: { has: Rol.secretario }, estado: EstadoSocio.activo, telegram_chat_id: { not: null } },
-    select: { telegram_chat_id: true },
-  })
-
-  const resultados = await Promise.all(secretarios.map((s) => {
-    const chat_id = s.telegram_chat_id!.toString()
-    return archivo
-      ? telegram(prisma, 'sendDocument', { chat_id, caption: texto, parse_mode: 'HTML' }, contexto, { archivo })
-      : telegram(prisma, 'sendMessage', { chat_id, text: texto, parse_mode: 'HTML' }, contexto)
-  }))
-  return resultados.some((r) => r.ok)
-}
 export const MESES_PARA_LLAVES = 6
 
 /** Fecha a partir de la cual el socio puede pedir llaves (fecha de alta + 6 meses) */
@@ -100,18 +81,12 @@ export class AuthService {
 
     // Aviso al secretario sin bloquear ni hacer fallar el alta si Telegram no responde
     const miembros = data.tipo_cuota === 'conjunta' ? data.miembros_adicionales.length : 0
-    const texto =
-      `📝 <b>Nueva solicitud de alta</b>
-
-` +
-      `${esc(`${data.nombre} ${data.apellidos}`)} (${esc(data.email)})
-` +
-      `Cuota: ${data.tipo_cuota}${miembros ? ` (+${miembros} miembro${miembros > 1 ? 's' : ''})` : ''}
-
-` +
-      `Revísala en Directiva → Solicitudes.`
     const comprobante = path.resolve(process.cwd(), 'uploads/transferencias', comprobanteFilename)
-    avisarSecretarios(this.prisma, 'aviso_alta', texto, comprobante).catch((err) => console.error('Aviso de alta por Telegram:', err))
+    void alertar(this.prisma, 'alerta_alta', {
+      nombre: `${data.nombre} ${data.apellidos}`,
+      email: data.email,
+      cuota: `${data.tipo_cuota}${miembros ? ` (+${miembros} miembro${miembros > 1 ? 's' : ''})` : ''}`,
+    }, comprobante)
 
     return resultado
   }
@@ -411,20 +386,7 @@ export class AuthService {
       throw new HttpError(409, 'Ya has pedido las llaves. Espera a que el secretario se ponga en contacto contigo por Telegram.')
     }
 
-    const nombre = `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`
-    const texto =
-      `🔑 <b>Solicitud de llaves</b>
-
-` +
-      `${esc(nombre)} quiere pedir las llaves del club.
-` +
-      `Email: ${esc(socio.email)}` +
-      (socio.alias_telegram ? `
-Telegram: ${esc(socio.alias_telegram)}` : '')
-
-    if (!(await avisarSecretarios(this.prisma, 'solicitud_llaves', texto))) {
-      throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
-    }
+    await this.avisarSecretaria('alerta_llaves', socio)
 
     await this.prisma.usuario.update({ where: { id: userId }, data: { llaves_solicitadas_at: new Date() } })
   }
@@ -437,16 +399,21 @@ Telegram: ${esc(socio.alias_telegram)}` : '')
     })
     if (!socio || socio.estado !== EstadoSocio.activo) throw new HttpError(403, 'Solo los socios activos pueden pedir la baja')
 
-    const nombre = `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`
-    const texto =
-      `🚪 <b>Solicitud de baja</b>\n\n` +
-      `${esc(nombre)} quiere darse de baja del club.\n` +
-      `Cuota: ${esc(socio.tipo_cuota)}\n` +
-      `Email: ${esc(socio.email)}` +
-      (socio.alias_telegram ? `\nTelegram: ${esc(socio.alias_telegram)}` : '')
+    await this.avisarSecretaria('alerta_baja', socio)
+  }
 
-    if (!(await avisarSecretarios(this.prisma, 'solicitud_baja', texto))) {
-      throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
-    }
+  // Llaves y baja solo llegan a la directiva por esta alerta: si no sale, el socio tiene que saberlo
+  private async avisarSecretaria(
+    clave: 'alerta_llaves' | 'alerta_baja',
+    socio: { nombre: string; apellidos: string; apodo: string | null; email: string; alias_telegram: string | null; tipo_cuota?: string },
+  ) {
+    const enviada = await alertar(this.prisma, clave, {
+      nombre: `${socio.nombre} ${socio.apellidos}${socio.apodo ? ` (${socio.apodo})` : ''}`,
+      email: socio.email,
+      telegram: socio.alias_telegram ?? 'sin vincular',
+      cuota: socio.tipo_cuota ?? '',
+    })
+    if (enviada === null) throw new HttpError(409, 'Esta solicitud no está disponible por la web. Contacta con la directiva.')
+    if (!enviada) throw new HttpError(502, 'No hemos podido avisar al secretario por Telegram. Contacta con la directiva.')
   }
 }

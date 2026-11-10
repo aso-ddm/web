@@ -142,6 +142,30 @@ describe('PrestamosService.renovar', () => {
     )
   })
 
+  it('éxito → avisa por Telegram a los ludotecarios activos con Telegram', async () => {
+    process.env.BOT_TOKEN = 'x'
+    const fetchMock = vi.fn().mockResolvedValue({ json: async () => ({ ok: true }) })
+    vi.stubGlobal('fetch', fetchMock)
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...prestamoActivo, renovaciones: 1, juego: { nombre: 'Catan' }, socio: { nombre: 'Ana', apellidos: 'Pérez' },
+    })
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+    ;(prisma.prestamo.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([{ telegram_chat_id: 42n }])
+
+    await service.renovar('p1', 'u1')
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled())
+
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ roles: { has: 'ludotecario' }, estado: 'activo' }),
+    }))
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).toMatchObject({ chat_id: '42' })
+    expect(body.text).toContain('Ana Pérez ha renovado «Catan»')
+    vi.unstubAllGlobals()
+    delete process.env.BOT_TOKEN
+  })
+
   it('renovación simultánea → throws', async () => {
     ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(prestamoActivo)
     ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null)

@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { Prisma, PrismaClient } from '@prisma/client'
+import { EstadoSocio, Rol, type Prisma, type PrismaClient } from '@prisma/client'
 
 const RETENCION_DIAS = 90
 
@@ -68,4 +68,24 @@ export async function telegram(
     })
   }
   return respuesta
+}
+
+/** Manda un texto plano (o un documento con ese pie) a los socios activos con `rol` y Telegram. Nunca lanza; devuelve si llegó a alguno */
+export async function avisarRol(prisma: PrismaClient, rol: Rol, contexto: string, text: string, archivo?: string): Promise<boolean> {
+  try {
+    const destinatarios = await prisma.usuario.findMany({
+      where: { roles: { has: rol }, estado: EstadoSocio.activo, telegram_chat_id: { not: null } },
+      select: { telegram_chat_id: true },
+    })
+    const resultados = await Promise.all(destinatarios.map((d) => {
+      const chat_id = d.telegram_chat_id!.toString()
+      return archivo
+        ? telegram(prisma, 'sendDocument', { chat_id, caption: text }, contexto, { archivo })
+        : telegram(prisma, 'sendMessage', { chat_id, text }, contexto)
+    }))
+    return resultados.some((r) => r.ok)
+  } catch (err) {
+    console.error(`No se pudo avisar a ${rol} (${contexto}):`, err)
+    return false
+  }
 }

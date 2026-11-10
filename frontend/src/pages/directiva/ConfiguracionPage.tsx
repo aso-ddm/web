@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Settings, FileText, Link, Loader2, Save, Plus, Trash2, MessageCircle } from 'lucide-react'
+import { Settings, FileText, Link, Loader2, Save, Plus, Trash2, MessageCircle, Bell } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import { RichTextEditor } from '@/components/molecules/RichTextEditor'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { configuracionApi, enlacesInteresApi, type ConfigItem, type EnlaceInteres } from '@/services/api/configuracion'
 import { invalidarConfig, QK } from '@/lib/queryKeys'
+import { AlertasConfig } from './configuracion/AlertasConfig'
 
 const configLabels: Record<string, { label: string; description: string; suffix?: string }> = {
   precio_cuota_individual: {
@@ -338,6 +339,10 @@ export function ConfiguracionPage() {
         <Seccion icono={<Settings className="h-4 w-4" />} titulo="Comunicaciones y bot" descripcion="Bot de Telegram y avisos a los socios">
           {isLoading ? cargando(2) : porClave(['telegram_bot_username', 'texto_baja_confirmada']).map((c) => <ConfigField key={c.clave} config={c} />)}
           {textoLargo('texto_baja_socio', 'Aviso de baja', 'Se muestra en el popup de confirmación del botón «Darme de baja»', 'h-48')}
+        </Seccion>
+
+        <Seccion icono={<Bell className="h-4 w-4" />} titulo="Alertas de Telegram" descripcion="Avisos que reciben por Telegram los secretarios y ludotecarios activos con Telegram vinculado. Las {variables} se cambian por sus datos">
+          {isLoading ? cargando(6, 'h-32') : <AlertasConfig configs={configs} />}
         </Seccion>
 
         <Seccion icono={<Link className="h-4 w-4" />} titulo="Documentos públicos">

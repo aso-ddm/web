@@ -1,4 +1,5 @@
 import { PrismaClient, EstadoPrestamo, TipoLogJuego, EstadoJuego } from '@prisma/client'
+import { alertar } from '../lib/alertas'
 import type { SolicitarPrestamoInput, FiltrosPrestamosInput, FiltrosGestionPrestamosInput } from '../schemas/prestamo.schema'
 import type { LogsJuegoService } from './logs_juego.service'
 import { finDelDiaMadrid } from '../lib/fechas'
@@ -65,6 +66,9 @@ export class PrestamosService {
       })
       await this.logsService.crearSistema(input.juego_id, TipoLogJuego.prestamo_activo, `${juego.nombre} prestado`, socioId, tx)
       return prestamo
+    }).then((prestamo) => {
+      void this.avisarLudotecarios(prestamo.id, 'prestamo')
+      return prestamo
     })
   }
 
@@ -98,6 +102,7 @@ export class PrestamosService {
       },
     })
     if (count !== 1) throw new HttpError(409, 'El préstamo ha cambiado, recarga e inténtalo de nuevo')
+    void this.avisarLudotecarios(prestamoId, 'renovacion')
     return this.prisma.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })
   }
 
@@ -129,7 +134,36 @@ export class PrestamosService {
       })
       await this.logsService.crearSistema(prestamo.juego_id, TipoLogJuego.prestamo_devuelto, `${juego?.nombre ?? 'Juego'} devuelto`, usuarioId, tx)
       return tx.prestamo.findUniqueOrThrow({ where: { id: prestamoId } })
+    }).then((devuelto) => {
+      void this.avisarLudotecarios(prestamoId, 'devolucion')
+      return devuelto
     })
+  }
+
+  // Aviso por Telegram a los ludotecarios, después de confirmar la operación. Nunca lanza
+  private async avisarLudotecarios(prestamoId: string, tipo: 'prestamo' | 'renovacion' | 'devolucion') {
+    try {
+      const p = await this.prisma.prestamo.findUnique({
+        where: { id: prestamoId },
+        select: {
+          fecha_limite: true,
+          renovaciones: true,
+          juego: { select: { nombre: true } },
+          socio: { select: { nombre: true, apellidos: true } },
+        },
+      })
+      if (!p) return
+      await alertar(this.prisma, `alerta_${tipo}`, {
+        socio: `${p.socio.nombre} ${p.socio.apellidos}`.trim(),
+        juego: p.juego.nombre,
+        renovaciones: String(p.renovaciones),
+        fecha_limite: p.fecha_limite
+          ? `hasta el ${p.fecha_limite.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}`
+          : 'sin fecha límite',
+      })
+    } catch (err) {
+      console.error('No se pudo avisar a los ludotecarios:', err)
+    }
   }
 
   // ── Ludotecario / Directiva ───────────────────────────────────────────────
