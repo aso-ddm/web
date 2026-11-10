@@ -4,7 +4,7 @@ import type { Prestamo } from '@/types/api'
 
 const DIA_MS = 1000 * 60 * 60 * 24
 
-/** Fila del historial de préstamos (devueltos). conSocio: quién se lo llevó (gestión de la ludoteca). */
+/** Fila del historial de préstamos (devueltos o en curso). conSocio: quién se lo llevó (gestión de la ludoteca). */
 export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestamo: Prestamo; conSocio?: boolean }) {
   // fecha_limite es el final del día (Madrid): cualquier devolución posterior ya es otro día
   const retraso = p.fecha_devolucion && p.fecha_limite
@@ -23,9 +23,11 @@ export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestam
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
           <span>Pedido: {formatDate(p.fecha_prestamo)}</span>
           <span>Límite: {p.fecha_limite ? formatDate(p.fecha_limite) : 'sin límite'}</span>
-          <span className={retraso > 0 ? 'text-destructive font-medium' : ''}>
-            Devuelto: {formatDate(p.fecha_devolucion)}{retraso > 0 && ` (${retraso}d tarde)`}
-          </span>
+          {p.fecha_devolucion && (
+            <span className={retraso > 0 ? 'text-destructive font-medium' : ''}>
+              Devuelto: {formatDate(p.fecha_devolucion)}{retraso > 0 && ` (${retraso}d tarde)`}
+            </span>
+          )}
           <span>Renovaciones: {p.renovaciones}</span>
         </div>
         {!!p.fechas_renovacion?.length && (
@@ -35,8 +37,8 @@ export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestam
         )}
         {p.notas && <p className="text-xs text-muted-foreground italic mt-0.5">"{p.notas}"</p>}
       </div>
-      <Badge variant={retraso > 0 ? 'destructive' : 'outline'} className="font-display text-xs flex-shrink-0">
-        {retraso > 0 ? 'Con retraso' : 'Devuelto'}
+      <Badge variant={retraso > 0 ? 'destructive' : p.fecha_devolucion ? 'outline' : 'secondary'} className="font-display text-xs flex-shrink-0">
+        {retraso > 0 ? 'Con retraso' : p.fecha_devolucion ? 'Devuelto' : 'En curso'}
       </Badge>
     </div>
   )

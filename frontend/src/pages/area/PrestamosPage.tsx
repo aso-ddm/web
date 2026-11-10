@@ -116,7 +116,7 @@ export function PrestamosPage() {
   const { data: activos = [], isLoading: loadingActivos, isError: errorActivos, refetch: recargarActivos } = useMisPrestamosActivos()
   const historialQuery = useInfiniteQuery({
     queryKey: QK.MIS_PRESTAMOS_HISTORIAL,
-    queryFn: ({ pageParam }) => prestamosApi.misPrestamos({ estado: 'devuelto', page: pageParam, limit: 20 }),
+    queryFn: ({ pageParam }) => prestamosApi.misPrestamos({ page: pageParam, limit: 20 }), // todos: también los que siguen en curso,
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
