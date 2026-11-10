@@ -19,3 +19,6 @@ export function formatJugadores(j: { num_jugadores_min?: number | null; num_juga
   if (!min && !max) return null
   return `${min ?? '?'}${max && max !== min ? `–${max}` : ''} jugadores`
 }
+
+/** Para buscar: sin mayúsculas, tildes ni nada que no sea letra o número. Igual que `coincide` del backend */
+export const normalizarBusqueda = (s: string) => s.normalize('NFD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()

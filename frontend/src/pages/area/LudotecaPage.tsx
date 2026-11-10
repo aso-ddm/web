@@ -66,9 +66,8 @@ const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego
           )}
         </div>
         {prestadoA && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <BookOpen className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>Lo tiene <span className="font-display font-bold text-sm text-foreground">{prestadoA.nombre} {prestadoA.apellidos}</span></span>
+          <p className="text-xs text-muted-foreground">
+            Lo tiene {prestadoA.nombre} {prestadoA.apellidos}
           </p>
         )}
         {juego.propietario ? (

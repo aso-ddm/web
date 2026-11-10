@@ -8,6 +8,8 @@ import { PrismaClient, EstadoSocio, Rol } from '@prisma/client'
 import { PrestamosService } from '../services/prestamos.service'
 import { LogsJuegoService } from '../services/logs_juego.service'
 import { VisitasService } from '../services/visitas.service'
+import { JuegosService } from '../services/juegos.service'
+import { buscarIdsUsuarios } from '../lib/search'
 import { salirDeCuotaConjunta } from '../services/cuotaConjunta'
 
 const url = process.env.DATABASE_URL_TEST
@@ -85,6 +87,20 @@ describe.skipIf(!url)('integración con Postgres', () => {
     const { data } = await visitas.buscar(`visitante ${run}`)
     expect(data).toHaveLength(1)
     expect(data[0]).toMatchObject({ total_visitas: 2 })
+  })
+
+  it('las búsquedas ignoran mayúsculas, tildes y signos', async () => {
+    const socio = await crearSocio({ nombre: `Íñigo-${run}`, apellidos: "O'Dónnell" })
+    await visitas.registrar({ nombre_completo: `José, María ${run}`, socio_registro_id: socio.id })
+    const j = await prisma.juego.create({ data: { nombre: `Catán: Ciudades ${run}` } })
+    juegos.push(j.id)
+
+    expect((await visitas.buscar(`jose maria${run}`)).data).toHaveLength(1)
+    expect((await visitas.getAll({ page: 1, limit: 10, search: `JOSÉ MARÍA ${run}` })).total).toBe(1)
+    const juegosSvc = new JuegosService(prisma, new LogsJuegoService(prisma))
+    expect((await juegosSvc.getAll({ page: 1, limit: 10, search: `catan ciudades ${run}` })).total).toBe(1)
+    const { ids } = await buscarIdsUsuarios(prisma, { search: `inigo ${run} odonnell`, limit: 10, skip: 0 })
+    expect(ids).toEqual([socio.id])
   })
 
   it('dos miembros salen a la vez de una cuota conjunta de tres: el grupo se disuelve, no queda de uno', async () => {

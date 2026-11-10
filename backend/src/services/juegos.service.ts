@@ -2,7 +2,7 @@ import { PrismaClient, TipoLogJuego, Prisma, EstadoJuego, EstadoPrestamo } from 
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 import { textoAltaJuego, type LogsJuegoService } from './logs_juego.service'
 import { HttpError } from '../lib/httpError'
-import { likePattern } from '../lib/search'
+import { coincide } from '../lib/search'
 import { paginado } from '../lib/paginacion'
 
 const propietarioSelect = { select: { id: true, nombre: true, apellidos: true } }
@@ -33,7 +33,6 @@ export class JuegosService {
     const skip = (page - 1) * limit
 
     if (search) {
-      const pattern = likePattern(search)
       const estadoClause = estado
         ? Prisma.sql`AND estado::text = ${estado}`
         : Prisma.sql``
@@ -42,9 +41,9 @@ export class JuegosService {
         this.prisma.$queryRaw<{ id: string }[]>`
           SELECT id FROM "Juego"
           WHERE (
-            unaccent(nombre) ILIKE unaccent(${pattern})
-            OR localizacion ILIKE ${pattern}
-            OR notas ILIKE ${pattern}
+            ${coincide('nombre', search)}
+            OR ${coincide('localizacion', search)}
+            OR ${coincide('notas', search)}
           )
           ${estadoClause}
           ORDER BY nombre ASC
@@ -53,9 +52,9 @@ export class JuegosService {
         this.prisma.$queryRaw<{ count: bigint }[]>`
           SELECT COUNT(*) as count FROM "Juego"
           WHERE (
-            unaccent(nombre) ILIKE unaccent(${pattern})
-            OR localizacion ILIKE ${pattern}
-            OR notas ILIKE ${pattern}
+            ${coincide('nombre', search)}
+            OR ${coincide('localizacion', search)}
+            OR ${coincide('notas', search)}
           )
           ${estadoClause}
         `,

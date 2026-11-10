@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { diasRestantes, formatJugadores } from './format'
+import { diasRestantes, formatJugadores, normalizarBusqueda } from './format'
 
 afterEach(() => vi.useRealTimers())
 
@@ -22,5 +22,11 @@ describe('formatJugadores', () => {
     expect(formatJugadores({ num_jugadores_min: 3, num_jugadores_max: 3 })).toBe('3 jugadores')
     expect(formatJugadores({ num_jugadores_min: null, num_jugadores_max: 6 })).toBe('?–6 jugadores')
     expect(formatJugadores({ num_jugadores_min: null, num_jugadores_max: null })).toBeNull()
+  })
+})
+
+describe('normalizarBusqueda', () => {
+  it('quita mayúsculas, tildes y signos', () => {
+    expect(normalizarBusqueda("Catán: Ciudades, O'Dónnell Ñ-1")).toBe('catanciudadesodonnelln1')
   })
 })

@@ -14,6 +14,7 @@ import { SEOHead } from '@/components/atoms/SEOHead'
 import { telegramApi } from '@/services/api/telegram'
 import { sociosApi } from '@/services/api/socios'
 import { QK } from '@/lib/queryKeys'
+import { normalizarBusqueda } from '@/lib/format'
 
 export function AnunciosPage() {
   const [mensaje, setMensaje] = useState('')
@@ -35,13 +36,10 @@ export function AnunciosPage() {
   )
 
   const sociosFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return sociosConTelegram
-    const q = busqueda.toLowerCase()
-    return sociosConTelegram.filter(
-      (s) =>
-        `${s.nombre} ${s.apellidos}`.toLowerCase().includes(q) ||
-        (s.apodo && s.apodo.toLowerCase().includes(q)) ||
-        s.email.toLowerCase().includes(q),
+    const q = normalizarBusqueda(busqueda)
+    if (!q) return sociosConTelegram
+    return sociosConTelegram.filter((s) =>
+      [`${s.nombre} ${s.apellidos}`, s.apodo ?? '', s.email].some((c) => normalizarBusqueda(c).includes(q)),
     )
   }, [sociosConTelegram, busqueda])
 

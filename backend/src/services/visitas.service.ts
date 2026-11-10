@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 import { configNumero } from '../lib/config'
-import { likePattern } from '../lib/search'
+import { coincide } from '../lib/search'
 import { paginado } from '../lib/paginacion'
 
 const normalizarNombre = (s: string) => s.trim().replace(/\s+/g, ' ')
@@ -41,7 +41,7 @@ export class VisitasService {
              COUNT(*)::int AS total_visitas,
              MAX(fecha_visita) AS ultima_visita
       FROM "Visita"
-      WHERE nombre_completo ILIKE ${likePattern(normalizarNombre(nombre))}
+      WHERE ${coincide('nombre_completo', nombre)}
       GROUP BY lower(regexp_replace(trim(nombre_completo), '\\s+', ' ', 'g'))
       ORDER BY MAX(fecha_visita) DESC
       LIMIT ${MAX_SUGERENCIAS}`
@@ -83,21 +83,27 @@ export class VisitasService {
   async getAll(filtros: { page: number; limit: number; search?: string }) {
     const { page, limit, search } = filtros
     const skip = (page - 1) * limit
-    const where = search
-      ? { nombre_completo: { contains: search, mode: 'insensitive' as const } }
-      : {}
+    const include = { socio_registro: { select: { id: true, nombre: true, apellidos: true } } }
 
-    const [visitas, total] = await Promise.all([
-      this.prisma.visita.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { fecha_visita: 'desc' },
-        include: { socio_registro: { select: { id: true, nombre: true, apellidos: true } } },
-      }),
-      this.prisma.visita.count({ where }),
+    if (!search) {
+      const [visitas, total] = await Promise.all([
+        this.prisma.visita.findMany({ skip, take: limit, orderBy: { fecha_visita: 'desc' }, include }),
+        this.prisma.visita.count(),
+      ])
+      return paginado(visitas, total, filtros)
+    }
+
+    // Prisma no sabe ignorar tildes ni signos: los ids salen del SQL y los campos de findMany
+    const where = Prisma.sql`WHERE ${coincide('nombre_completo', search)}`
+    const [rows, countRows] = await Promise.all([
+      this.prisma.$queryRaw<{ id: string }[]>`SELECT id FROM "Visita" ${where} ORDER BY fecha_visita DESC LIMIT ${limit} OFFSET ${skip}`,
+      this.prisma.$queryRaw<{ count: bigint }[]>`SELECT COUNT(*) as count FROM "Visita" ${where}`,
     ])
-
-    return paginado(visitas, total, filtros)
+    const visitas = await this.prisma.visita.findMany({
+      where: { id: { in: rows.map((r) => r.id) } },
+      orderBy: { fecha_visita: 'desc' },
+      include,
+    })
+    return paginado(visitas, Number(countRows[0]?.count ?? 0), filtros)
   }
 }

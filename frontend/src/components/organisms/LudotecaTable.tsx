@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { GOOGLE_SHEETS, SPACING } from '@/lib/constants'
 import texts from '@/data/texts.json'
+import { normalizarBusqueda } from '@/lib/format'
 
 // Columnas de una línea CSV respetando comillas ("Catan, el juego") y comillas escapadas ("").
 // ponytail: no admite saltos de línea dentro de comillas; papaparse si la hoja llega a tenerlos
@@ -39,7 +40,8 @@ export function LudotecaTable() {
   // El filtrado de cientos de filas no bloquea lo que se escribe en el buscador
   const busqueda = useDeferredValue(searchTerm)
 
-  const filteredGames = games.filter((game) => game.includes(busqueda.toUpperCase()))
+  const q = normalizarBusqueda(busqueda)
+  const filteredGames = games.filter((game) => normalizarBusqueda(game).includes(q))
 
   if (loading) {
     return (

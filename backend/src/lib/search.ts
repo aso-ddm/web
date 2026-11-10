@@ -1,12 +1,18 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 
-/** Patrón ILIKE "contiene": escapa % y _ para que el usuario no pueda usarlos como comodines */
-export function likePattern(search: string) {
-  return `%${search.replace(/[\\%_]/g, '\\$&')}%`
+/** Texto sin tildes ni nada que no sea letra o número (espacios, puntuación…); ILIKE ignora mayúsculas */
+const sinSignos = (sql: Prisma.Sql) => Prisma.sql`regexp_replace(unaccent(${sql}), '[^[:alnum:]]+', '', 'g')`
+
+/**
+ * `columna` contiene `search` sin distinguir mayúsculas, tildes ni signos: "catan ciudades" encuentra "Catán: Ciudades".
+ * Como la búsqueda se queda sin signos, % y _ desaparecen y no hace falta escaparlos.
+ */
+export function coincide(columna: string, search: string) {
+  return Prisma.sql`${sinSignos(Prisma.raw(columna))} ILIKE '%' || ${sinSignos(Prisma.sql`${search}`)} || '%'`
 }
 
 /**
- * Busca usuarios por nombre, apellidos, apodo (sin tildes), email o DNI.
+ * Busca usuarios por nombre y apellidos, apodo, email o DNI (ver `coincide`).
  * Devuelve los ids de la página pedida y el total; cada llamante carga sus campos con findMany.
  */
 export async function buscarIdsUsuarios(
@@ -14,14 +20,12 @@ export async function buscarIdsUsuarios(
   { search, estado, tieneLlaves, conTelegram, sinBajas, limit, skip }:
     { search: string; estado?: string; tieneLlaves?: boolean; conTelegram?: boolean; sinBajas?: boolean; limit: number; skip: number },
 ) {
-  const pattern = likePattern(search)
   const where = Prisma.sql`
     WHERE (
-      unaccent(nombre) ILIKE unaccent(${pattern})
-      OR unaccent(apellidos) ILIKE unaccent(${pattern})
-      OR email ILIKE ${pattern}
-      OR dni ILIKE ${pattern}
-      OR unaccent(apodo) ILIKE unaccent(${pattern})
+      ${coincide(`concat_ws(' ', nombre, apellidos)`, search)}
+      OR ${coincide('email', search)}
+      OR ${coincide('dni', search)}
+      OR ${coincide('apodo', search)}
     )
     ${estado ? Prisma.sql`AND estado::text = ${estado}` : Prisma.empty}
     ${sinBajas ? Prisma.sql`AND estado::text <> 'baja'` : Prisma.empty}
