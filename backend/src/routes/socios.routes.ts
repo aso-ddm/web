@@ -43,6 +43,11 @@ router.get('/opciones', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES, ...ROLES.DIRE
   res.json({ data: await sociosService.getOpciones() })
 })
 
+// GET /api/socios/directiva — cargos de la junta y su contacto (cualquier socio)
+router.get('/directiva', authenticate, async (_req, res) => {
+  res.json({ data: await sociosService.getDirectiva() })
+})
+
 // GET /api/socios/pendientes — directiva + vocales (vocales solo lectura)
 router.get('/pendientes', requireRoles(...ROLES.DIRECTIVA_Y_VOCALES), async (_req, res) => {
   const pendientes = await sociosService.getPendientes()

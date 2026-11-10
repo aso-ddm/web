@@ -20,6 +20,8 @@ function borrarComprobantes(nombres: (string | null)[]) {
 }
 
 // Listados y respuestas de mutaciones: sin historial ni trazabilidad (solo se ven en la ficha)
+const CARGOS_DIRECTIVA: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal]
+
 const SOCIO_LIST_SELECT = {
   id: true,
   email: true,
@@ -136,6 +138,19 @@ export class SociosService {
       select: { id: true, nombre: true, apellidos: true, apodo: true },
       orderBy: [{ nombre: 'asc' }, { apellidos: 'asc' }],
     })
+  }
+
+  /** Cargos de la junta con su contacto, para que cualquier socio sepa a quién preguntar. Orden: presidente, secretario, tesorero, vocales */
+  async getDirectiva() {
+    const socios = await this.prisma.usuario.findMany({
+      where: { estado: EstadoSocio.activo, roles: { hasSome: CARGOS_DIRECTIVA } },
+      select: { id: true, nombre: true, apellidos: true, apodo: true, roles: true, alias_telegram: true, email: true },
+      orderBy: [{ nombre: 'asc' }, { apellidos: 'asc' }],
+    })
+    const orden = (roles: Rol[]) => CARGOS_DIRECTIVA.findIndex((c) => roles.includes(c))
+    return socios
+      .map((s) => ({ ...s, cargo: CARGOS_DIRECTIVA[orden(s.roles)], roles: undefined }))
+      .sort((a, b) => CARGOS_DIRECTIVA.indexOf(a.cargo) - CARGOS_DIRECTIVA.indexOf(b.cargo))
   }
 
   async getPendientes() {

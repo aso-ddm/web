@@ -12,6 +12,16 @@ export interface UpdateSocioPayload {
   consentimiento_tiendas?: boolean
 }
 
+export interface ContactoDirectiva {
+  id: string
+  nombre: string
+  apellidos: string
+  apodo: string | null
+  cargo: Rol
+  alias_telegram: string | null
+  email: string
+}
+
 // Socio con campos extra que devuelve la API de gestión
 export type SocioAdmin = Usuario & {
   dni: string
@@ -63,6 +73,7 @@ export const sociosApi = {
 
   getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 
+  getDirectiva: () => api.get<{ data: ContactoDirectiva[] }>('/socios/directiva'),
   getOpciones: () => api.get<{ data: { id: string; nombre: string; apellidos: string; apodo: string | null }[] }>('/socios/opciones'),
 
   getPendientes: () => api.get<{ data: { individuales: SocioListado[]; grupos: SolicitudGrupal[] } }>('/socios/pendientes'),

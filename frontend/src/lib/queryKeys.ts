@@ -38,6 +38,7 @@ export const QK = {
   SOCIO: (id: string) => ['socio', id] as const, // ficha
   SOCIOS_LLAVES: ['socios-llaves'] as const,
   SOCIOS_OPCIONES: ['socios-opciones'] as const,
+  SOCIOS_DIRECTIVA: ['socios-directiva'] as const,
   SOCIOS_DESTINATARIOS: ['socios-destinatarios'] as const,
   // El backend emite 'pendientes' por SSE (SolicitudesPage invalida [evento]): no cambiar
   PENDIENTES: ['pendientes'] as const,
@@ -89,7 +90,7 @@ export function invalidarPrestamos(qc: QueryClient) {
 export function invalidarSocios(qc: QueryClient) {
   for (const queryKey of [
     QK.PENDIENTES, QK.SOCIOS_GESTION, ['socio'], QK.SOCIOS_LLAVES,
-    QK.SOCIOS_OPCIONES, QK.SOCIOS_DESTINATARIOS, QK.CUOTAS, QK.ADMIN_USUARIOS, QK.ME,
+    QK.SOCIOS_OPCIONES, QK.SOCIOS_DIRECTIVA, QK.SOCIOS_DESTINATARIOS, QK.CUOTAS, QK.ADMIN_USUARIOS, QK.ME,
   ]) {
     qc.invalidateQueries({ queryKey })
   }

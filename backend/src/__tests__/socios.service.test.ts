@@ -477,3 +477,16 @@ describe('SociosService.getAll — los vocales no ven bajas', () => {
     expect(prisma.usuario.findMany).not.toHaveBeenCalled()
   })
 })
+
+describe('SociosService.getDirectiva', () => {
+  it('ordena por cargo (presidente, secretario, tesorero, vocales) y no expone los roles', async () => {
+    vi.mocked(prisma.usuario.findMany).mockResolvedValue([
+      { id: 'v', nombre: 'Ana', roles: [Rol.vocal, Rol.ludotecario] },
+      { id: 't', nombre: 'Bea', roles: [Rol.tesorero] },
+      { id: 'p', nombre: 'Carla', roles: [Rol.presidente, Rol.administrador] },
+    ] as never)
+    const junta = await service.getDirectiva()
+    expect(junta.map((m) => [m.id, m.cargo])).toEqual([['p', 'presidente'], ['t', 'tesorero'], ['v', 'vocal']])
+    expect(junta[0].roles).toBeUndefined()
+  })
+})

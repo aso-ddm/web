@@ -22,6 +22,7 @@ import { useMe } from '@/hooks/useMe'
 import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
 import { CarnetTiendasCard } from './dashboard/CarnetTiendasCard'
 import { EnlacesClubCard } from './dashboard/EnlacesClubCard'
+import { ContactoDirectivaCard } from './dashboard/ContactoDirectivaCard'
 import { JuegosCedidosCard } from './dashboard/JuegosCedidosCard'
 
 const estadoLabels: Record<EstadoSocio, string> = {
@@ -336,6 +337,7 @@ export function DashboardPage() {
               </CardContent>
             </Card>
             <JuegosCedidosCard />
+            <ContactoDirectivaCard />
             <EnlacesClubCard />
           </div>
         </div>
