@@ -172,7 +172,7 @@ model Prestamo {
   socio_id                String
   usuario_confirmo_dev_id String?
   fecha_prestamo          DateTime       @default(now())
-  fecha_limite            DateTime
+  fecha_limite            DateTime? // null = sin fecha límite (dias_prestamo o dias_renovacion a 0)
   fecha_devolucion        DateTime?
   estado                  EstadoPrestamo @default(activo)
   renovaciones            Int            @default(0)

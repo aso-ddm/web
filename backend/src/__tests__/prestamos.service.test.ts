@@ -148,6 +148,24 @@ describe('PrestamosService.renovar', () => {
 
     await expect(service.renovar('p1', 'u1')).rejects.toThrow('ha cambiado')
   })
+
+  it('max_renovaciones y dias_renovacion a 0 → renueva sin tope y deja el préstamo sin fecha límite', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...prestamoActivo, renovaciones: 50 })
+    ;(prisma.configuracion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ valor: '0' })
+    ;(prisma.prestamo.updateMany as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 })
+
+    await service.renovar('p1', 'u1')
+
+    expect(prisma.prestamo.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { fecha_limite: null, renovaciones: { increment: 1 } } }),
+    )
+  })
+
+  it('préstamo sin fecha límite → no se renueva', async () => {
+    ;(prisma.prestamo.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...prestamoActivo, fecha_limite: null })
+
+    await expect(service.renovar('p1', 'u1')).rejects.toThrow('no tiene fecha límite')
+  })
 })
 
 describe('PrestamosService.devolucion', () => {

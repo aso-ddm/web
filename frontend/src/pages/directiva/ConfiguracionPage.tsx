@@ -40,17 +40,17 @@ const configLabels: Record<string, { label: string; description: string; suffix?
   },
   dias_prestamo: {
     label: 'Duración del préstamo',
-    description: 'Días que dura un préstamo desde que el socio se lleva el juego',
+    description: 'Días que dura un préstamo desde que el socio se lleva el juego. 0 = sin límite: el préstamo no tiene fecha de devolución',
     suffix: 'días',
   },
   dias_renovacion: {
     label: 'Días por renovación',
-    description: 'Días que añade cada renovación a la fecha límite',
+    description: 'Días que añade cada renovación a la fecha límite. 0 = sin límite: al renovar, el préstamo se queda sin fecha de devolución',
     suffix: 'días',
   },
   max_renovaciones: {
     label: 'Renovaciones máximas',
-    description: 'Veces que un socio puede renovar el mismo préstamo',
+    description: 'Veces que un socio puede renovar el mismo préstamo. 0 = sin límite de renovaciones',
     suffix: 'veces',
   },
   url_estatutos: {
@@ -280,7 +280,7 @@ function Seccion({ icono, titulo, descripcion, children }: {
 const SECCIONES_NUMERICAS = [
   { titulo: 'Configuración de cuotas', descripcion: 'Precios mensuales aplicados a los socios', claves: ['precio_cuota_individual', 'precio_cuota_adicional'] },
   { titulo: 'Configuración de visitas', descripcion: 'Parámetros para el control de visitas de no socios', claves: ['visitas_gratuitas', 'precio_visita_pago'] },
-  { titulo: 'Configuración de préstamos', descripcion: 'Plazos y renovaciones de los préstamos de la ludoteca', claves: ['dias_prestamo', 'dias_renovacion', 'max_renovaciones'] },
+  { titulo: 'Configuración de préstamos', descripcion: 'Plazos y renovaciones de los préstamos de la ludoteca. En cualquiera de los tres campos, 0 significa sin límite', claves: ['dias_prestamo', 'dias_renovacion', 'max_renovaciones'] },
 ]
 
 const TEXTOS_LARGOS = [

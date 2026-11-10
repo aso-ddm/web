@@ -17,7 +17,8 @@ import { useConfigNumero } from '@/hooks/useConfigValor'
 import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
 import { SolicitarPrestamoDialog } from '@/components/organisms/SolicitarPrestamoDialog'
 
-function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
+function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string | null }) {
+  if (!fechaLimite) return <span className="text-xs text-muted-foreground">Sin fecha límite</span>
   const dias = diasRestantes(fechaLimite)
   if (dias < 0) return (
     <span className="flex items-center gap-1 text-xs text-destructive font-medium">
@@ -34,7 +35,8 @@ function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string }) {
 
 function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRenovaciones: number }) {
   const queryClient = useQueryClient()
-  const puedeRenovar = prestamo.renovaciones < maxRenovaciones
+  // max 0 = sin tope; sin fecha límite no hay nada que renovar
+  const puedeRenovar = !!prestamo.fecha_limite && (maxRenovaciones === 0 || prestamo.renovaciones < maxRenovaciones)
 
   const { mutate: renovar, isPending: renovando } = useMutation({
     mutationFn: () => prestamosApi.renovar(prestamo.id),
@@ -65,7 +67,7 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
             <span>Prestado: {formatDate(prestamo.fecha_prestamo)}</span>
             <FechaLimiteBadge fechaLimite={prestamo.fecha_limite} />
-            <span>Renovado {prestamo.renovaciones}/{maxRenovaciones}</span>
+            <span>Renovado {prestamo.renovaciones}{maxRenovaciones > 0 && `/${maxRenovaciones}`}</span>
           </div>
           {prestamo.notas && (
             <p className="text-xs text-muted-foreground italic mt-1">"{prestamo.notas}"</p>

@@ -89,7 +89,7 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
   const { mutate: solicitar, isPending } = useMutation({
     mutationFn: () => prestamosApi.solicitar(juegoSeleccionado!.id, notas || undefined),
     onSuccess: () => {
-      toast.success(`Préstamo de "${juegoSeleccionado?.nombre}" creado — tienes ${diasPrestamo} días`)
+      toast.success(`Préstamo de "${juegoSeleccionado?.nombre}" creado — ${Number(diasPrestamo) > 0 ? `tienes ${diasPrestamo} días` : 'sin fecha límite'}`)
       invalidarPrestamos(queryClient)
       invalidarJuegos(queryClient)
       handleClose()
@@ -111,7 +111,7 @@ export function SolicitarPrestamoDialog({ open, onClose, juegoInicial = null }: 
         <DialogHeader>
           <DialogTitle className="font-display text-primary">Pedir un juego prestado</DialogTitle>
           <DialogDescription>
-            Selecciona un juego disponible. El préstamo dura {diasPrestamo} días y puedes renovarlo desde aquí.
+            Selecciona un juego disponible. {Number(diasPrestamo) > 0 ? `El préstamo dura ${diasPrestamo} días y puedes renovarlo desde aquí.` : 'El préstamo no tiene fecha límite.'}
           </DialogDescription>
         </DialogHeader>
 

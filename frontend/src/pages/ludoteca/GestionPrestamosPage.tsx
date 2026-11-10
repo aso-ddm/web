@@ -64,7 +64,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-1">
             <span>Desde: {formatDate(prestamo.fecha_prestamo)}</span>
             <span className={vencido ? 'text-destructive font-medium' : ''}>
-              Límite: {formatDate(prestamo.fecha_limite)}
+              Límite: {prestamo.fecha_limite ? formatDate(prestamo.fecha_limite) : 'sin límite'}
               {!vencido && dias <= 3 && <span className="text-amber-700"> ({dias === 0 ? 'hoy' : `${dias}d`})</span>}
               {vencido && <span> (hace {Math.abs(dias)}d)</span>}
             </span>

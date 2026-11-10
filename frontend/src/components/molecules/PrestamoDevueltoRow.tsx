@@ -7,7 +7,7 @@ const DIA_MS = 1000 * 60 * 60 * 24
 /** Fila del historial de préstamos (devueltos). conSocio: quién se lo llevó (gestión de la ludoteca). */
 export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestamo: Prestamo; conSocio?: boolean }) {
   // fecha_limite es el final del día (Madrid): cualquier devolución posterior ya es otro día
-  const retraso = p.fecha_devolucion
+  const retraso = p.fecha_devolucion && p.fecha_limite
     ? Math.ceil((new Date(p.fecha_devolucion).getTime() - new Date(p.fecha_limite).getTime()) / DIA_MS)
     : 0
 
@@ -22,7 +22,7 @@ export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestam
         )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
           <span>Prestado: {formatDate(p.fecha_prestamo)}</span>
-          <span>Límite: {formatDate(p.fecha_limite)}</span>
+          <span>Límite: {p.fecha_limite ? formatDate(p.fecha_limite) : 'sin límite'}</span>
           <span className={retraso > 0 ? 'text-destructive font-medium' : ''}>
             Devuelto: {formatDate(p.fecha_devolucion)}{retraso > 0 && ` (${retraso}d tarde)`}
           </span>

@@ -121,7 +121,7 @@ export interface Prestamo {
   socio_id: string
   estado: EstadoPrestamo
   fecha_prestamo: string
-  fecha_limite: string
+  fecha_limite: string | null
   fecha_devolucion?: string | null
   renovaciones: number
   notas?: string | null

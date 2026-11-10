@@ -42,7 +42,8 @@ export class PrestamosService {
 
     const diasPrestamo = await configNumero(this.prisma, 'dias_prestamo', 14)
     const ahora = new Date()
-    const fechaLimite = finDelDiaMadrid(ahora, diasPrestamo) // vence al acabar el día
+    // Vence al acabar el día; 0 = sin fecha límite
+    const fechaLimite = diasPrestamo > 0 ? finDelDiaMadrid(ahora, diasPrestamo) : null
 
     return this.prisma.$transaction(async (tx) => {
       // Reserva atómica: si dos socios piden el mismo juego a la vez, solo uno lo consigue
@@ -72,17 +73,20 @@ export class PrestamosService {
     if (!prestamo) throw new HttpError(404, 'Préstamo no encontrado')
     if (prestamo.socio_id !== socioId) throw new HttpError(403, 'No tienes permiso para renovar este préstamo')
     if (prestamo.estado !== EstadoPrestamo.activo) throw new HttpError(409, 'Solo se pueden renovar préstamos activos')
+    if (!prestamo.fecha_limite) throw new HttpError(409, 'Este préstamo no tiene fecha límite: no hace falta renovarlo')
 
     const [maxRenovaciones, diasRenovacion] = await Promise.all([
       configNumero(this.prisma, 'max_renovaciones', 2),
       configNumero(this.prisma, 'dias_renovacion', 14),
     ])
 
-    if (prestamo.renovaciones >= maxRenovaciones) {
+    // 0 = renovaciones sin límite
+    if (maxRenovaciones > 0 && prestamo.renovaciones >= maxRenovaciones) {
       throw new HttpError(409, `Máximo de renovaciones alcanzado (${maxRenovaciones})`)
     }
 
-    const nuevaFechaLimite = finDelDiaMadrid(prestamo.fecha_limite, diasRenovacion)
+    // 0 = la renovación deja el préstamo sin fecha límite
+    const nuevaFechaLimite = diasRenovacion > 0 ? finDelDiaMadrid(prestamo.fecha_limite, diasRenovacion) : null
 
     // Condición en el where: dos renovaciones simultáneas no pueden pasar del máximo
     const { count } = await this.prisma.prestamo.updateMany({
