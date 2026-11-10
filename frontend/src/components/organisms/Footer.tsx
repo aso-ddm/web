@@ -45,6 +45,10 @@ export function Footer() {
             <Link to="/rgpd" className="text-background/70 hover:text-background text-sm underline-offset-2 hover:underline transition-colors">
               Política de privacidad
             </Link>
+            {' · '}
+            <Link to="/cookies" className="text-background/70 hover:text-background text-sm underline-offset-2 hover:underline transition-colors">
+              Cookies
+            </Link>
           </p>
         </div>
       </div>

@@ -43,6 +43,7 @@ function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType>
 
 const RegistroPage = lazyPage(() => import('@/pages/RegistroPage'), 'RegistroPage')
 const RgpdPage = lazyPage(() => import('@/pages/RgpdPage'), 'RgpdPage')
+const CookiesPage = lazyPage(() => import('@/pages/CookiesPage'), 'CookiesPage')
 const MiSolicitudPage = lazyPage(() => import('@/pages/MiSolicitudPage'), 'MiSolicitudPage')
 const RecuperarPasswordPage = lazyPage(() => import('@/pages/RecuperarPasswordPage'), 'RecuperarPasswordPage')
 const VerificarCarnetPage = lazyPage(() => import('@/pages/VerificarCarnetPage'), 'VerificarCarnetPage')
@@ -80,6 +81,7 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/registro" element={<RegistroPage />} />
       <Route path="/rgpd" element={<RgpdPage />} />
+      <Route path="/cookies" element={<CookiesPage />} />
       <Route path="/recuperar-password" element={<RecuperarPasswordPage />} />
       <Route path="/mi-solicitud" element={<MiSolicitudPage />} />
       <Route path="/verificar/:token" element={<VerificarCarnetPage />} />

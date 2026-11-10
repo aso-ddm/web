@@ -5,10 +5,19 @@ import { MeepleIcon } from '@/components/atoms/icons'
 import { Button } from '@/components/ui/button'
 import { SPACING, SOCIAL_URLS } from '@/lib/constants'
 import { SEOHead } from '@/components/atoms/SEOHead'
+import { EmbedTerceros } from '@/components/molecules/EmbedTerceros'
 import texts from '@/data/texts.json'
 import images from '@/data/images.json'
 
 function MapEmbed() {
+  return (
+    <EmbedTerceros servicio="El mapa" enlace="https://www.google.com/maps/search/?api=1&query=Drag%C3%B3n%20de%20Madera%20Granada" className="aspect-video">
+      <MapaGoogle />
+    </EmbedTerceros>
+  )
+}
+
+function MapaGoogle() {
   const [loaded, setLoaded] = useState(false)
 
   return (

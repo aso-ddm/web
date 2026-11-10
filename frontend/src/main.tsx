@@ -6,6 +6,7 @@ import { queryClient } from '@/lib/queryClient'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from 'next-themes'
 import App from './App'
+import { CookieBanner } from '@/components/organisms/CookieBanner'
 import '@/styles/globals.css'
 
 console.log('%c🐉 Dragón de Madera%c v' + __APP_VERSION__ + ' · ' + __BUILD_DATE__, 'color:#e85d04;font-weight:bold;font-size:14px', 'color:#888;font-size:14px')
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <App />
+          <CookieBanner />
           <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
       </QueryClientProvider>

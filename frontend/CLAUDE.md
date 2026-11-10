@@ -77,7 +77,12 @@ Las aplica el backend (ver `../CLAUDE.md`); el frontend no las sortea ni ofrece 
 - **`tipo_cuota` no se edita** en formularios: cambia al unir o sacar de una cuota conjunta.
 - **Recuperar contraseña** muestra siempre el mismo mensaje, exista o no la cuenta.
 - **Datos personales de socios solo con sesión**: la ludoteca pública lee de Google Sheets, no de `/juegos`.
-- Cualquier cambio de estas reglas que afecte a datos personales se refleja también en `pages/RgpdPage.tsx`.
+- Cualquier cambio de estas reglas que afecte a datos personales se refleja también en la política de privacidad:
+  su texto es la configuración `texto_rgpd` (la edita la directiva en Configuración; `RgpdPage` solo la pinta), así
+  que hay que avisar a la directiva o cambiarlo con una migración. El alta exige aceptarla (`acepta_rgpd`, también en el backend).
+- **Cookies**: lo que se guarde en el navegador o cargue un tercero se lista en `pages/CookiesPage.tsx`. Los iframes
+  de terceros con cookies (Google Maps, Calendar) van dentro de `molecules/EmbedTerceros` y no se cargan hasta aceptar
+  (`lib/cookies.ts`; el banner es `organisms/CookieBanner`).
 
 ## Convenciones
 
