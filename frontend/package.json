@@ -11,6 +11,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource-variable/frank-ruhl-libre": "^5.3.0",
+    "@fontsource-variable/gemunu-libre": "^5.3.0",
+    "@fontsource-variable/quicksand": "^5.3.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",

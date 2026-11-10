@@ -7,6 +7,9 @@ import { Toaster } from 'sonner'
 import { ThemeProvider } from 'next-themes'
 import App from './App'
 import { CookieBanner } from '@/components/organisms/CookieBanner'
+import '@fontsource-variable/frank-ruhl-libre'
+import '@fontsource-variable/gemunu-libre'
+import '@fontsource-variable/quicksand'
 import '@/styles/globals.css'
 
 console.log('%c🐉 Dragón de Madera%c v' + __APP_VERSION__ + ' · ' + __BUILD_DATE__, 'color:#e85d04;font-weight:bold;font-size:14px', 'color:#888;font-size:14px')

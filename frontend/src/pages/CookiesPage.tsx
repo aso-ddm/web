@@ -49,8 +49,8 @@ export function CookiesPage() {
                 instala sus cookies solo cuando lo usas, porque lo pides tú.
               </li>
               <li>
-                <strong>Google Fonts</strong> (tipografías) y la hoja de Google con el catálogo público de la ludoteca no instalan cookies,
-                pero tu navegador se conecta a Google para descargarlos.
+                La hoja de Google con el catálogo público de la ludoteca no instala cookies, pero tu navegador se conecta a Google
+                para descargarla. Las tipografías se sirven desde nuestro servidor.
               </li>
             </ul>
             <p>

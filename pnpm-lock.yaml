@@ -97,6 +97,15 @@ importers:
 
   frontend:
     dependencies:
+      '@fontsource-variable/frank-ruhl-libre':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/gemunu-libre':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/quicksand':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.76.0(react@19.2.0))
@@ -229,7 +238,7 @@ importers:
         version: 19.2.3(@types/react@19.2.15)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.7.0(vite@6.4.2(@types/node@22.19.19)(jiti@2.7.0)(lightningcss@1.32.0))
+        version: 4.7.0(supports-color@5.5.0)(vite@6.4.2(@types/node@22.19.19)(jiti@2.7.0)(lightningcss@1.32.0))
       jsdom:
         specifier: ^29.0.2
         version: 29.1.1
@@ -586,6 +595,15 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@fontsource-variable/frank-ruhl-libre@5.3.0':
+    resolution: {integrity: sha512-BgE4pEPDSXfg7741yQYdxB7XShRgdMTYoP4sdoRXfo0FCDWlQdDUm+o1xPcISC8+TTmC6ytvq+u/QmnpQ+EhpQ==}
+
+  '@fontsource-variable/gemunu-libre@5.3.0':
+    resolution: {integrity: sha512-fV4eb3nfgI0T38u08Xdw9urAoIqN+Z7EQ/DZZTYRctnvyr3Zsladw3iODpUHuppapbqGbAd8Ks0oE8tgxDv6iw==}
+
+  '@fontsource-variable/quicksand@5.3.0':
+    resolution: {integrity: sha512-EMyoXnGC0uIbjyHDB01MTJoQuODsMo7Q/4XLEwN97YJEeV1WIVFI0QBiW2exGnxvhnMHb+IwQ9E5QZDgGMWCHw==}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -3127,7 +3145,7 @@ snapshots:
 
   '@babel/compat-data@7.29.3': {}
 
-  '@babel/core@7.29.0':
+  '@babel/core@7.29.0(supports-color@5.5.0)':
     dependencies:
       '@babel/code-frame': 7.29.0
       '@babel/generator': 7.29.1
@@ -3136,7 +3154,7 @@ snapshots:
       '@babel/helpers': 7.29.2
       '@babel/parser': 7.29.3
       '@babel/template': 7.28.6
-      '@babel/traverse': 7.29.0
+      '@babel/traverse': 7.29.0(supports-color@5.5.0)
       '@babel/types': 7.29.0
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
@@ -3167,17 +3185,17 @@ snapshots:
 
   '@babel/helper-module-imports@7.28.6':
     dependencies:
-      '@babel/traverse': 7.29.0
+      '@babel/traverse': 7.29.0(supports-color@5.5.0)
       '@babel/types': 7.29.0
     transitivePeerDependencies:
       - supports-color
 
   '@babel/helper-module-transforms@7.28.6(@babel/core@7.29.0)':
     dependencies:
-      '@babel/core': 7.29.0
+      '@babel/core': 7.29.0(supports-color@5.5.0)
       '@babel/helper-module-imports': 7.28.6
       '@babel/helper-validator-identifier': 7.28.5
-      '@babel/traverse': 7.29.0
+      '@babel/traverse': 7.29.0(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -3198,14 +3216,14 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.0
 
-  '@babel/plugin-transform-react-jsx-self@7.27.1(@babel/core@7.29.0)':
+  '@babel/plugin-transform-react-jsx-self@7.27.1(@babel/core@7.29.0(supports-color@5.5.0))':
     dependencies:
-      '@babel/core': 7.29.0
+      '@babel/core': 7.29.0(supports-color@5.5.0)
       '@babel/helper-plugin-utils': 7.28.6
 
-  '@babel/plugin-transform-react-jsx-source@7.27.1(@babel/core@7.29.0)':
+  '@babel/plugin-transform-react-jsx-source@7.27.1(@babel/core@7.29.0(supports-color@5.5.0))':
     dependencies:
-      '@babel/core': 7.29.0
+      '@babel/core': 7.29.0(supports-color@5.5.0)
       '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/runtime@7.29.2': {}
@@ -3216,7 +3234,7 @@ snapshots:
       '@babel/parser': 7.29.3
       '@babel/types': 7.29.0
 
-  '@babel/traverse@7.29.0':
+  '@babel/traverse@7.29.0(supports-color@5.5.0)':
     dependencies:
       '@babel/code-frame': 7.29.0
       '@babel/generator': 7.29.1
@@ -3361,6 +3379,12 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
 
   '@floating-ui/utils@0.2.11': {}
+
+  '@fontsource-variable/frank-ruhl-libre@5.3.0': {}
+
+  '@fontsource-variable/gemunu-libre@5.3.0': {}
+
+  '@fontsource-variable/quicksand@5.3.0': {}
 
   '@hookform/resolvers@3.10.0(react-hook-form@7.76.0(react@19.2.0))':
     dependencies:
@@ -4494,11 +4518,11 @@ snapshots:
 
   '@types/use-sync-external-store@0.0.6': {}
 
-  '@vitejs/plugin-react@4.7.0(vite@6.4.2(@types/node@22.19.19)(jiti@2.7.0)(lightningcss@1.32.0))':
+  '@vitejs/plugin-react@4.7.0(supports-color@5.5.0)(vite@6.4.2(@types/node@22.19.19)(jiti@2.7.0)(lightningcss@1.32.0))':
     dependencies:
-      '@babel/core': 7.29.0
-      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
-      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.29.0)
+      '@babel/core': 7.29.0(supports-color@5.5.0)
+      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0(supports-color@5.5.0))
+      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.29.0(supports-color@5.5.0))
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0

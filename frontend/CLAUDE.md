@@ -101,4 +101,4 @@ Las aplica el backend (ver `../CLAUDE.md`); el frontend no las sortea ni ofrece 
   (en `onError` déjalo abierto para reintentar).
 - Búsquedas: `useDebouncedValue` + `placeholderData: keepPreviousData` (o `useInfiniteQuery` con "Cargar más").
 - Paginación con `molecules/Paginacion`.
-- Alias `@/*` → `./src/*`. Fuentes (Gemunu Libre, Quicksand, Frank Ruhl Libre) en `index.html`.
+- Alias `@/*` → `./src/*`. Fuentes (Gemunu Libre, Quicksand, Frank Ruhl Libre) autoalojadas con `@fontsource-variable/*`, importadas en `main.tsx`.
