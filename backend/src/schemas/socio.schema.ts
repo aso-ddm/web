@@ -18,6 +18,10 @@ export const updateRolesSchema = z.object({
   roles: z.array(z.nativeEnum(Rol)).min(1, 'Al menos un rol es obligatorio'),
 })
 
+export const anotacionesSchema = z.object({
+  anotaciones: z.string().max(5000).transform((v) => v.trim() || null),
+})
+
 export const llavesSchema = z.object({
   tiene_llaves: z.boolean(),
 })
@@ -33,6 +37,8 @@ export const filtrosSociosSchema = z.object({
   // Llaves y Anuncios filtran en el servidor (z.coerce.boolean convertiría "false" en true)
   tiene_llaves: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   con_telegram: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  // Exportación CSV: todos los campos del socio (el listado normal va ligero)
+  completo: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   ...paginacion(20, 500),
 })
 

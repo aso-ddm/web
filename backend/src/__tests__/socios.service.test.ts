@@ -373,6 +373,37 @@ describe('SociosService.getAll (filtros de Llaves y Anuncios)', () => {
       where: { estado: 'activo', tiene_llaves: true, telegram_chat_id: { not: null } },
     }))
   })
+
+  it('completo (exportación CSV) trae todos los campos, nunca la contraseña ni el token de reset', async () => {
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(prisma.usuario.count as ReturnType<typeof vi.fn>).mockResolvedValue(0)
+
+    await service.getAll({ completo: true, page: 1, limit: 500 })
+    const { select } = (prisma.usuario.findMany as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0]
+    expect(select).toMatchObject({ direccion: true, consentimiento_tiendas: true, aprobado_por: expect.anything() })
+    expect(select).not.toHaveProperty('password_hash')
+    expect(select).not.toHaveProperty('reset_token')
+
+    await service.getAll({ page: 1, limit: 20 })
+    expect((prisma.usuario.findMany as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0].select).not.toHaveProperty('direccion')
+  })
+
+  it('las anotaciones solo salen para la directiva (exportación y ficha)', async () => {
+    ;(prisma.usuario.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(prisma.usuario.count as ReturnType<typeof vi.fn>).mockResolvedValue(0)
+    const ultimoSelect = (fn: unknown) => (fn as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0].select
+
+    await service.getAll({ completo: true, page: 1, limit: 500 }, true)
+    expect(ultimoSelect(prisma.usuario.findMany).anotaciones).toBe(true)
+    await service.getAll({ completo: true, page: 1, limit: 500 }, false)
+    expect(ultimoSelect(prisma.usuario.findMany).anotaciones).toBe(false)
+
+    ;(prisma.usuario.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'u1' })
+    await service.getById('u1')
+    expect(ultimoSelect(prisma.usuario.findUnique).anotaciones).toBe(false)
+    await service.getById('u1', true)
+    expect(ultimoSelect(prisma.usuario.findUnique).anotaciones).toBe(true)
+  })
 })
 
 describe('aprobaciones simultáneas', () => {

@@ -98,6 +98,8 @@ model Usuario {
   fecha_baja                DateTime?
   tiene_llaves              Boolean     @default(false)
   llaves_solicitadas_at     DateTime?
+  // Notas internas de la directiva sobre el socio (ni el socio ni los vocales las ven)
+  anotaciones               String?
 
   // Trazabilidad — quién aprobó el alta, quién dio de baja
   aprobado_por_id String?

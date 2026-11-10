@@ -15,6 +15,7 @@ import type { Rol } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { CuotaConjunta } from './CuotaConjunta'
+import { AnotacionesSocio } from './AnotacionesSocio'
 import { JuegosCedidosBaja, type DestinoJuego } from './JuegosCedidosBaja'
 
 const CAMBIO_LABEL = {
@@ -232,6 +233,14 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
         </div>
 
         <Separator />
+
+        {/* Solo la directiva: el backend no manda las anotaciones a nadie más */}
+        {puedeEditar && (
+          <>
+            <AnotacionesSocio key={socio.anotaciones ?? ''} socioId={socio.id} anotaciones={socio.anotaciones ?? null} />
+            <Separator />
+          </>
+        )}
 
         {pendiente && puedeEditar && <div className="space-y-2">
           <p className="text-sm text-muted-foreground">Solicitud pendiente de revisar.</p>

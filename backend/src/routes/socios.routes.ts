@@ -7,6 +7,7 @@ import {
   updateRolesSchema,
   filtrosSociosSchema,
   llavesSchema,
+  anotacionesSchema,
   unirCuotaConjuntaSchema,
   bajaSocioSchema,
 } from '../schemas/socio.schema'
@@ -93,7 +94,7 @@ router.get('/:id', authenticate, async (req, res) => {
     return
   }
   if (req.user.id !== id) await comprobarAccesoBaja(id, req.user.roles)
-  const socio = await sociosService.getById(id)
+  const socio = await sociosService.getById(id, esDirectiva(req.user.roles))
   res.json({ data: socio })
 })
 
@@ -168,6 +169,17 @@ router.post('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req,
 router.delete('/:id/cuota-conjunta', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const socio = await sociosService.salirCuotaConjunta(req.params.id, req.user.id)
   res.json({ data: socio })
+})
+
+// PUT /api/socios/:id/anotaciones — notas internas de la directiva sobre el socio
+router.put('/:id/anotaciones', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const parsed = anotacionesSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+    return
+  }
+  await sociosService.setAnotaciones(req.params.id, parsed.data.anotaciones)
+  res.json({ data: { anotaciones: parsed.data.anotaciones } })
 })
 
 // PUT /api/socios/:id/llaves — directiva registra si el socio tiene llaves

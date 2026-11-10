@@ -47,6 +47,7 @@ export type SocioAdmin = Usuario & {
   // Solo en la ficha (getById): lo que hace falta para decidir la baja
   juegos_en_propiedad?: { id: string; nombre: string; estado: 'en_estanteria' | 'prestado' }[]
   _count?: { prestamos: number } // préstamos activos
+  anotaciones?: string | null // solo llega a la directiva
 }
 
 // Socio de los listados: sin historial ni trazabilidad (están en la ficha, getById)
@@ -54,11 +55,24 @@ export type SocioListado = Omit<SocioAdmin, 'aprobado_por' | 'baja_por' | 'histo
   solicitud_grupal: { id: string } | null
 }
 
+// GET /socios?completo=true: todos los datos del socio, para exportar a CSV
+export type SocioExport = SocioListado & {
+  direccion: string | null
+  consentimiento_tiendas: boolean
+  telegram_linked_at: string | null
+  llaves_solicitadas_at: string | null
+  updated_at: string
+  solicitud_grupal: { id: string; miembros: { nombre: string; apellidos: string }[] } | null
+  aprobado_por: { nombre: string; apellidos: string } | null
+  baja_por: { nombre: string; apellidos: string } | null
+}
+
 export interface GetSociosParams {
   estado?: EstadoSocio
   search?: string
   tiene_llaves?: boolean
   con_telegram?: boolean
+  completo?: boolean // todos los campos (exportación CSV): ver SocioExport
   page?: number
   limit?: number
 }
@@ -70,6 +84,9 @@ export const sociosApi = {
   // Directiva — gestión
   getAll: (params: GetSociosParams = {}) =>
     api.get<PaginatedResponse<SocioListado>>(`/socios${buildQuery({ ...params })}`),
+
+  getAllCompleto: (params: Omit<GetSociosParams, 'completo'> = {}) =>
+    api.get<PaginatedResponse<SocioExport>>(`/socios${buildQuery({ ...params, completo: true })}`),
 
   getById: (id: string) => api.get<{ data: SocioAdmin }>(`/socios/${id}`),
 
@@ -110,6 +127,9 @@ export const sociosApi = {
   unirCuotaConjunta: (id: string, socio_id: string) =>
     api.post<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`, { socio_id }),
   salirCuotaConjunta: (id: string) => api.delete<{ data: SocioAdmin }>(`/socios/${id}/cuota-conjunta`),
+
+  setAnotaciones: (id: string, anotaciones: string) =>
+    api.put<{ data: { anotaciones: string | null } }>(`/socios/${id}/anotaciones`, { anotaciones }),
 
   setLlaves: (id: string, tiene_llaves: boolean) =>
     api.put<{ data: SocioAdmin }>(`/socios/${id}/llaves`, { tiene_llaves }),

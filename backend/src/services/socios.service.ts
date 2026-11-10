@@ -45,6 +45,19 @@ const SOCIO_LIST_SELECT = {
   solicitud_grupal: { select: { id: true } }, // null = cuota individual
 } as const
 
+// Exportación CSV (GET /socios?completo=true): todos los datos del socio salvo contraseña y token de reset
+const SOCIO_EXPORT_SELECT = {
+  ...SOCIO_LIST_SELECT,
+  direccion: true,
+  consentimiento_tiendas: true,
+  telegram_linked_at: true,
+  llaves_solicitadas_at: true,
+  updated_at: true,
+  solicitud_grupal: { select: { id: true, miembros: { select: { nombre: true, apellidos: true }, orderBy: { created_at: 'asc' } } } },
+  aprobado_por: { select: { nombre: true, apellidos: true } },
+  baja_por: { select: { nombre: true, apellidos: true } },
+} as const
+
 // Ficha del socio (GET /socios/:id)
 const SOCIO_DETAIL_SELECT = {
   ...SOCIO_LIST_SELECT,
@@ -92,7 +105,9 @@ export class SociosService {
 
   /** `verBajas`: solo la directiva ve a los socios de baja (protección de datos: los vocales no lo necesitan) */
   async getAll(filtros: FiltrosSociosInput, verBajas = true) {
-    const { estado, search, tiene_llaves, con_telegram, page, limit } = filtros
+    const { estado, search, tiene_llaves, con_telegram, completo, page, limit } = filtros
+    // Las anotaciones, como las bajas, solo para la directiva
+    const select = completo ? { ...SOCIO_EXPORT_SELECT, anotaciones: verBajas } : SOCIO_LIST_SELECT
     if (!verBajas && estado === EstadoSocio.baja) return paginado([], 0, filtros)
     const skip = (page - 1) * limit
 
@@ -104,7 +119,7 @@ export class SociosService {
       const socios = ids.length > 0
         ? await this.prisma.usuario.findMany({
             where: { id: { in: ids } },
-            select: SOCIO_LIST_SELECT,
+            select,
             orderBy: { created_at: 'desc' },
           })
         : []
@@ -121,7 +136,7 @@ export class SociosService {
     const [socios, total] = await Promise.all([
       this.prisma.usuario.findMany({
         where,
-        select: SOCIO_LIST_SELECT,
+        select,
         orderBy: { created_at: 'desc' },
         skip,
         take: limit,
@@ -254,8 +269,9 @@ export class SociosService {
     eventos.emit('cambio', 'pendientes')
   }
 
-  async getById(id: string) {
-    const socio = await this.prisma.usuario.findUnique({ where: { id }, select: SOCIO_DETAIL_SELECT })
+  /** `verAnotaciones`: solo la directiva (ni el propio socio ni los vocales) */
+  async getById(id: string, verAnotaciones = false) {
+    const socio = await this.prisma.usuario.findUnique({ where: { id }, select: { ...SOCIO_DETAIL_SELECT, anotaciones: verAnotaciones } })
     if (!socio) throw new HttpError(404, 'Socio no encontrado')
     return socio
   }
@@ -486,6 +502,11 @@ export class SociosService {
   }
 
   // Llaves: solo se registra si el socio las tiene o no.
+  async setAnotaciones(id: string, anotaciones: string | null) {
+    const { count } = await this.prisma.usuario.updateMany({ where: { id }, data: { anotaciones } })
+    if (count === 0) throw new HttpError(404, 'Socio no encontrado')
+  }
+
   async setLlaves(socioId: string, tieneLlaves: boolean, porId: string) {
     const socio = await this.prisma.usuario.findUnique({ where: { id: socioId } })
     if (!socio) throw new HttpError(404, 'Socio no encontrado')

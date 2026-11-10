@@ -17,6 +17,7 @@ import type { EstadoSocio } from '@/types/api'
 import { ESTADO_SOCIO_VARIANT } from '@/lib/estados'
 import { RolBadge } from '@/components/atoms/RolBadge'
 import { SocioDetalle } from './socios/SocioDetalle'
+import { ExportarSociosCsv } from './socios/ExportarSociosCsv'
 import { QueryError } from '@/components/molecules/QueryError'
 import { Paginacion } from '@/components/molecules/Paginacion'
 import { useAuthStore } from '@/store/authStore'
@@ -94,6 +95,12 @@ export function GestionSociosPage() {
               {esDirectiva && <SelectItem value="baja">Baja</SelectItem>}
             </SelectContent>
           </Select>
+          <ExportarSociosCsv
+            filtros={{
+              search: debouncedSearch || undefined,
+              estado: estadoFiltro !== 'todos' ? (estadoFiltro as EstadoSocio) : undefined,
+            }}
+          />
         </div>
 
         {/* Lista */}

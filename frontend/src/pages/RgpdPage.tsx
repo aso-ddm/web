@@ -63,6 +63,7 @@ export function RgpdPage() {
               <li>Datos de contacto: dirección, teléfono, correo electrónico.</li>
               <li>Datos bancarios mínimos: comprobante de transferencia de cuota.</li>
               <li>Datos de actividad en el club: préstamos, visitas, solicitud de llaves.</li>
+              <li>Anotaciones internas de la junta directiva relacionadas con su condición de socio.</li>
               <li>Alias e identificador de Telegram (si el socio vincula voluntariamente su cuenta con el bot del club).</li>
             </ul>
           </section>
