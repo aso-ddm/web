@@ -124,6 +124,7 @@ export interface Prestamo {
   fecha_limite: string | null
   fecha_devolucion?: string | null
   renovaciones: number
+  fechas_renovacion?: string[]
   notas?: string | null
   juego?: Pick<Juego, 'id' | 'nombre'>
   socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }

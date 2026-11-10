@@ -94,6 +94,7 @@ export class PrestamosService {
       data: {
         fecha_limite: nuevaFechaLimite,
         renovaciones: { increment: 1 },
+        fechas_renovacion: { push: new Date() },
       },
     })
     if (count !== 1) throw new HttpError(409, 'El préstamo ha cambiado, recarga e inténtalo de nuevo')

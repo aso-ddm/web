@@ -176,6 +176,7 @@ model Prestamo {
   fecha_devolucion        DateTime?
   estado                  EstadoPrestamo @default(activo)
   renovaciones            Int            @default(0)
+  fechas_renovacion       DateTime[]     @default([]) // vacío en renovaciones anteriores a este campo
   notas                   String?
 
   juego                       Juego    @relation(fields: [juego_id], references: [id])

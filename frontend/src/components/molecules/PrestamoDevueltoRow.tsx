@@ -21,13 +21,18 @@ export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestam
           </p>
         )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-          <span>Prestado: {formatDate(p.fecha_prestamo)}</span>
+          <span>Pedido: {formatDate(p.fecha_prestamo)}</span>
           <span>Límite: {p.fecha_limite ? formatDate(p.fecha_limite) : 'sin límite'}</span>
           <span className={retraso > 0 ? 'text-destructive font-medium' : ''}>
             Devuelto: {formatDate(p.fecha_devolucion)}{retraso > 0 && ` (${retraso}d tarde)`}
           </span>
           <span>Renovaciones: {p.renovaciones}</span>
         </div>
+        {!!p.fechas_renovacion?.length && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Renovado: {p.fechas_renovacion.map((f) => formatDate(f)).join(' · ')}
+          </p>
+        )}
         {p.notas && <p className="text-xs text-muted-foreground italic mt-0.5">"{p.notas}"</p>}
       </div>
       <Badge variant={retraso > 0 ? 'destructive' : 'outline'} className="font-display text-xs flex-shrink-0">

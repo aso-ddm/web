@@ -136,6 +136,7 @@ describe('PrestamosService.renovar', () => {
         data: expect.objectContaining({
           fecha_limite: expect.any(Date),
           renovaciones: { increment: 1 },
+          fechas_renovacion: { push: expect.any(Date) },
         }),
       }),
     )
@@ -157,7 +158,7 @@ describe('PrestamosService.renovar', () => {
     await service.renovar('p1', 'u1')
 
     expect(prisma.prestamo.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { fecha_limite: null, renovaciones: { increment: 1 } } }),
+      expect.objectContaining({ data: { fecha_limite: null, renovaciones: { increment: 1 }, fechas_renovacion: { push: expect.any(Date) } } }),
     )
   })
 
