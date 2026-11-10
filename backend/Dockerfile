@@ -35,6 +35,6 @@ COPY backend/package.json ./backend/
 
 EXPOSE 3001
 
-# Seed (configuración + admin + datos de prueba; BORRA todo salvo configuración y admin, solo en servidores de pruebas):
+# Seed (configuración + admin + datos de prueba; no borra ni modifica nada, solo crea lo que falta; solo en servidores de pruebas):
 #   docker exec -e PERMITIR_SEED_DEV=si -e SEED_ADMIN_PASSWORD=... -e UPLOADS_DIR=/app/uploads/transferencias dragondemadera_backend sh -c "NODE_PATH=/app/backend/node_modules node prisma/seed.js"
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node backend/dist/server.js"]

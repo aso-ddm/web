@@ -1,8 +1,12 @@
 /**
  * Seed: configuración inicial, usuario administrador y un club de prueba completo.
- * Ejecutar: pnpm prisma:seed (o pnpm db:setup). BORRA todos los datos salvo Configuración y el admin.
+ * Ejecutar: pnpm prisma:seed (o pnpm db:setup). NO borra ni modifica nada: solo crea lo que falta, así que
+ * se puede relanzar sobre una base con datos (p. ej. para añadir lo nuevo del seed).
  *
- * - Configuración: solo se crea la que falta, salvo texto_bienvenida_alta, que se pisa siempre.
+ * - Configuración: solo se crea la que falta.
+ * - Usuarios (por email), juegos (por nombre), solicitudes de cesión (por socio + nombre) y visitas (por visitante):
+ *   si ya existen se dejan como están. Préstamos, logs, historial y cuotas solo se crean para lo creado en esta pasada,
+ *   así no se duplican ni chocan con el estado real de lo que ya había.
  * - Admin (admin@dragondemadera.com): si existe no se modifica; si no, solo se crea si SEED_ADMIN_PASSWORD está definida.
  * - Usuarios de prueba: contraseña Dragon1234. El secretario usa la suya del servidor de pruebas.
  */
@@ -12,11 +16,11 @@ import bcrypt from 'bcryptjs'
 import fs from 'fs'
 import path from 'path'
 
-// Borra datos reales si se lanza contra la BD equivocada: fuera de local hay que pedirlo explícitamente
+// Mete usuarios y datos de prueba: fuera de local hay que pedirlo explícitamente
 const url = process.env.DATABASE_URL ?? ''
 const esLocal = process.env.NODE_ENV !== 'production' && /@(localhost|127\.0\.0\.1)[:/]/.test(url)
 if (!esLocal && process.env.PERMITIR_SEED_DEV !== 'si') {
-  console.error('✗ el seed borra los datos: solo corre contra una BD local. En un servidor de pruebas: PERMITIR_SEED_DEV=si')
+  console.error('✗ el seed crea datos de prueba: solo corre contra una BD local. En un servidor de pruebas: PERMITIR_SEED_DEV=si')
   process.exit(1)
 }
 
@@ -167,7 +171,7 @@ async function main() {
   for (const config of configsIniciales) {
     await prisma.configuracion.upsert({
       where: { clave: config.clave },
-      update: config.clave === 'texto_bienvenida_alta' ? { valor: config.valor } : {}, // el texto de bienvenida se pisa siempre
+      update: {}, // lo que ya existe no se toca
       create: config,
     })
     console.log(`✓ Config "${config.clave}" asegurada`)
@@ -204,28 +208,20 @@ async function main() {
     console.log(`  ⚠️  Cambia la contraseña tras el primer login`)
   }
 
-  // ── Limpieza (orden por claves foráneas) ────────────────────────────────
-  await prisma.$transaction([
-    prisma.logJuego.deleteMany(),
-    prisma.prestamo.deleteMany(),
-    prisma.solicitudJuego.deleteMany(),
-    prisma.juego.deleteMany(),
-    prisma.visita.deleteMany(),
-    prisma.pagoCuota.deleteMany(),
-    prisma.historialEstadoSocio.deleteMany(),
-    prisma.usuario.updateMany({ data: { solicitud_grupal_id: null, aprobado_por_id: null, baja_por_id: null } }),
-    prisma.solicitudGrupal.deleteMany(),
-    prisma.usuario.deleteMany({ where: { email: { not: ADMIN_EMAIL } } }),
-  ])
-
   const password_hash = await bcrypt.hash(PASSWORD, 10)
 
   type Datos = Partial<Prisma.UsuarioUncheckedCreateInput> & { email: string; nombre: string; apellidos: string }
-  const crear = (d: Datos) =>
-    prisma.usuario.create({
+  const nuevos = new Set<string>() // ids de usuarios y juegos creados en esta pasada
+  const esNuevo = (x: { id: string }) => nuevos.has(x.id)
+  // Si el email ya existe se devuelve tal cual (sin modificarlo). El DNI avanza igual para que cada usuario tenga siempre el mismo
+  const crear = async (d: Datos) => {
+    const dniUsuario = dni(dniSeq++)
+    const existente = await prisma.usuario.findUnique({ where: { email: d.email } })
+    if (existente) return existente
+    const u = await prisma.usuario.create({
       data: {
         password_hash,
-        dni: dni(dniSeq++),
+        dni: dniUsuario,
         roles: [Rol.socio_basico],
         estado: EstadoSocio.activo,
         telefono: `6${String(dniSeq).slice(-8)}`,
@@ -235,6 +231,9 @@ async function main() {
         ...d,
       },
     })
+    nuevos.add(u.id)
+    return u
+  }
 
   // ── Junta directiva y staff ─────────────────────────────────────────────
   const admin = await prisma.usuario.findUnique({ where: { email: ADMIN_EMAIL } })
@@ -271,7 +270,11 @@ async function main() {
   }
 
   // ── Cuota conjunta aprobada (madre + pareja + hijo) ─────────────────────
-  const grupoOk = await prisma.solicitudGrupal.create({ data: { estado: 'aprobada', comprobante_transferencia: COMPROBANTE } })
+  const grupoDe = async (email: string, data: Prisma.SolicitudGrupalCreateInput) => {
+    const id = (await prisma.usuario.findUnique({ where: { email } }))?.solicitud_grupal_id
+    return id ? { id } : prisma.solicitudGrupal.create({ data })
+  }
+  const grupoOk = await grupoDe('familia.madre@test.com', { estado: 'aprobada', comprobante_transferencia: COMPROBANTE })
   const famMadre = await crear({ email: 'familia.madre@test.com', nombre: 'Rosa', apellidos: 'Domínguez Soler', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), aprobado_por_id: presi.id })
   const famPareja = await crear({ email: 'familia.pareja@test.com', nombre: 'Tomás', apellidos: 'Reyes Pastor', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), aprobado_por_id: presi.id })
   const famHijo = await crear({ email: 'familia.hijo@test.com', nombre: 'Mario', apellidos: 'Reyes Domínguez', tipo_cuota: TipoCuota.conjunta, solicitud_grupal_id: grupoOk.id, fecha_alta: haceDias(400), fecha_nacimiento: new Date(2006, 4, 12), aprobado_por_id: presi.id })
@@ -279,7 +282,7 @@ async function main() {
   // ── Solicitudes pendientes (individuales + una conjunta) ────────────────
   await crear({ email: 'pendiente1@test.com', nombre: 'Alba', apellidos: 'Santos Ferrer', estado: EstadoSocio.pendiente, comprobante_transferencia: COMPROBANTE, alias_telegram: 'alba_sf' })
   await crear({ email: 'pendiente2@test.com', nombre: 'Gonzalo', apellidos: 'Vicente Arias', dni: 'X1234567L', estado: EstadoSocio.pendiente, comprobante_transferencia: COMPROBANTE })
-  const grupoPend = await prisma.solicitudGrupal.create({ data: { comprobante_transferencia: COMPROBANTE } })
+  const grupoPend = await grupoDe('pendiente.conjunta@test.com', { comprobante_transferencia: COMPROBANTE })
   await crear({ email: 'pendiente.conjunta@test.com', nombre: 'Beatriz', apellidos: 'Crespo Lara', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, solicitud_grupal_id: grupoPend.id })
   await crear({ email: 'pendiente.pareja@test.com', nombre: 'Rubén', apellidos: 'Ortiz Gallego', tipo_cuota: TipoCuota.conjunta, estado: EstadoSocio.pendiente, solicitud_grupal_id: grupoPend.id })
 
@@ -292,15 +295,15 @@ async function main() {
   // ── Historial de altas y bajas ──────────────────────────────────────────
   const activos = [presi, secre, teso, vocal, ludo, socio, ...basicos, famMadre, famPareja, famHijo]
   await prisma.historialEstadoSocio.createMany({ data: [
-    ...[...activos, ...bajas].map((u) => ({ socio_id: u.id, tipo: 'alta' as const, por_id: u.aprobado_por_id, created_at: u.fecha_alta! })),
-    ...bajas.map((u) => ({ socio_id: u.id, tipo: 'baja' as const, por_id: u.baja_por_id, created_at: u.fecha_baja! })),
+    ...[...activos, ...bajas].filter(esNuevo).map((u) => ({ socio_id: u.id, tipo: 'alta' as const, por_id: u.aprobado_por_id, created_at: u.fecha_alta! })),
+    ...bajas.filter(esNuevo).map((u) => ({ socio_id: u.id, tipo: 'baja' as const, por_id: u.baja_por_id, created_at: u.fecha_baja! })),
   ] })
 
   // ── Cuotas: últimos 6 meses (la conjunta, una vez para el grupo) ────────
   const pagos: Prisma.PagoCuotaCreateManyInput[] = []
   const hoy = new Date()
   for (const [i, u] of activos.entries()) {
-    if (u.solicitud_grupal_id && u.id !== famMadre.id) continue
+    if (!esNuevo(u) || (u.solicitud_grupal_id && u.id !== famMadre.id)) continue
     for (let m = 0; m < 6; m++) {
       const f = new Date(hoy.getFullYear(), hoy.getMonth() - m, 1)
       if (f < new Date(u.fecha_alta!.getFullYear(), u.fecha_alta!.getMonth(), 1)) break
@@ -310,7 +313,7 @@ async function main() {
       pagos.push({ ...de, anio: f.getFullYear(), mes: f.getMonth() + 1, estado: impago ? 'sin_pagar' : 'pagado', revisado_por_id: teso.id })
     }
   }
-  await prisma.pagoCuota.createMany({ data: pagos })
+  await prisma.pagoCuota.createMany({ data: pagos, skipDuplicates: true })
 
   // ── Ludoteca ────────────────────────────────────────────────────────────
   const catalogo: [string, number, number, string?][] = [
@@ -326,21 +329,30 @@ async function main() {
   ]
   const propietarios = [ludo, basicos[2], basicos[7], famMadre]
   const juegos = []
+  // Si ya hay un juego con ese nombre se usa el existente (sin tocarlo); si no, se crea con su log de alta
+  const crearJuego = async (data: Prisma.JuegoUncheckedCreateInput) => {
+    const existente = await prisma.juego.findFirst({ where: { nombre: data.nombre } })
+    if (existente) return existente
+    const juego = await prisma.juego.create({ data })
+    nuevos.add(juego.id)
+    return juego
+  }
   for (const [i, [nombre, min, max, notas]] of catalogo.entries()) {
     const propietario = i % 7 === 3 ? propietarios[(i / 7) | 0] : null // algunos son cesiones de socios
     const retirado = i === 38 || i === 39
-    const juego = await prisma.juego.create({ data: {
+    const juego = await crearJuego({
       nombre, num_jugadores_min: min, num_jugadores_max: max, notas,
       localizacion: `Estantería ${'ABCD'[i % 4]}${1 + (i % 5)}`,
       propietario_id: propietario?.id,
       estado: retirado ? 'retirado' : 'en_estanteria',
       created_at: haceDias(1000 - i * 20),
-    } })
+    })
     juegos.push(juego)
+    if (!esNuevo(juego)) continue
     await prisma.logJuego.create({ data: { juego_id: juego.id, tipo: TipoLogJuego.donado, texto: `${nombre} donado al Dragón`, usuario_id: propietario?.id ?? ludo.id, created_at: juego.created_at } })
     if (retirado) await prisma.logJuego.create({ data: { juego_id: juego.id, tipo: TipoLogJuego.retirado, texto: `${nombre} retirado: piezas perdidas`, usuario_id: ludo.id, created_at: haceDias(60) } })
   }
-  await prisma.logJuego.create({ data: { juego_id: juegos[14].id, tipo: TipoLogJuego.nota_manual, texto: 'Revisado inventario: faltan 2 cartas de batalla del Bruto', usuario_id: ludo.id, created_at: haceDias(10) } })
+  if (esNuevo(juegos[14])) await prisma.logJuego.create({ data: { juego_id: juegos[14].id, tipo: TipoLogJuego.nota_manual, texto: 'Revisado inventario: faltan 2 cartas de batalla del Bruto', usuario_id: ludo.id, created_at: haceDias(10) } })
 
   // ── Biblioteca: libros de rol y cómics (van detrás: los índices de préstamos de juegos no cambian) ──
   const biblioteca: [string, string?][] = [
@@ -355,14 +367,15 @@ async function main() {
   for (const [i, [nombre, notas]] of biblioteca.entries()) {
     const propietario = i % 6 === 2 ? propietarios[(i / 6) | 0] : null
     const retirado = i === 15
-    const libro = await prisma.juego.create({ data: {
+    const libro = await crearJuego({
       nombre, notas, tipo: 'libro',
       localizacion: `Biblioteca ${'EF'[i % 2]}${1 + (i % 4)}`,
       propietario_id: propietario?.id,
       estado: retirado ? 'retirado' : 'en_estanteria',
       created_at: haceDias(700 - i * 20),
-    } })
+    })
     juegos.push(libro)
+    if (!esNuevo(libro)) continue
     await prisma.logJuego.create({ data: { juego_id: libro.id, tipo: TipoLogJuego.donado, texto: `${nombre} donado al Dragón`, usuario_id: propietario?.id ?? ludo.id, created_at: libro.created_at } })
     if (retirado) await prisma.logJuego.create({ data: { juego_id: libro.id, tipo: TipoLogJuego.retirado, texto: `${nombre} retirado: páginas sueltas`, usuario_id: ludo.id, created_at: haceDias(30) } })
   }
@@ -384,6 +397,7 @@ async function main() {
   ]
   for (const [j, s, hace, renov, devuelto] of prestamos) {
     const juego = juegos[j]
+    if (!esNuevo(juego)) continue // un juego que ya existía conserva su estado y sus préstamos reales
     const fecha_prestamo = haceDias(hace)
     const fecha_limite = finDia(new Date(+fecha_prestamo + (14 + renov * 14) * DIA))
     const fecha_devolucion = devuelto === null ? null : haceDias(devuelto)
@@ -402,16 +416,21 @@ async function main() {
   }
 
   // ── Solicitudes de cesión de juegos ─────────────────────────────────────
-  await prisma.solicitudJuego.createMany({ data: [
+  const solicitudes: Prisma.SolicitudJuegoCreateManyInput[] = [
     { socio_id: socio.id, nombre: 'Lost Ruins of Arnak', notas: 'Completo, con fundas', created_at: haceDias(2) },
     { socio_id: basicos[4].id, nombre: 'Clank!', created_at: haceDias(5) },
     { socio_id: famMadre.id, nombre: 'Kingdomino', notas: 'Ideal para jugar con peques', created_at: haceDias(1) },
     { socio_id: basicos[3].id, nombre: 'Cyberpunk RED', tipo: 'libro', notas: 'Libro básico, como nuevo', created_at: haceDias(3) },
     { socio_id: socio.id, nombre: 'Berserk vol. 1-5', tipo: 'libro', created_at: haceDias(4) },
     { socio_id: basicos[11].id, nombre: 'Monopoly', estado: 'rechazada', motivo_rechazo: 'Ya tenemos dos copias en la ludoteca', created_at: haceDias(40) },
-  ] })
+  ]
+  for (const sol of solicitudes) {
+    if (!(await prisma.solicitudJuego.findFirst({ where: { socio_id: sol.socio_id, nombre: sol.nombre } }))) {
+      await prisma.solicitudJuego.create({ data: sol })
+    }
+  }
   for (const [s, j] of [[basicos[2], 8], [ludo, 3]] as const) {
-    await prisma.solicitudJuego.create({ data: { socio_id: s.id, nombre: juegos[j].nombre, estado: 'aprobada', juego_id: juegos[j].id, created_at: juegos[j].created_at } })
+    if (esNuevo(juegos[j])) await prisma.solicitudJuego.create({ data: { socio_id: s.id, nombre: juegos[j].nombre, estado: 'aprobada', juego_id: juegos[j].id, created_at: juegos[j].created_at } })
   }
 
   // ── Visitas (gratuitas y de pago tras superar el límite) ────────────────
@@ -422,6 +441,7 @@ async function main() {
   const visitantes: [string, number][] = [['Miguel Ángel Prieto', 5], ['Cristina Bermejo', 3], ['Álex Fuentes', 1], ['Noelia Carrasco', 2], ['Jorge Esteban', 4]]
   const registradores = [socio, presi, basicos[0], ludo, basicos[5]]
   for (const [i, [nombre_completo, veces]] of visitantes.entries()) {
+    if (await prisma.visita.findFirst({ where: { nombre_completo } })) continue
     for (let n = 1; n <= veces; n++) {
       const es_pago = n > gratis
       await prisma.visita.create({ data: {
@@ -432,7 +452,7 @@ async function main() {
   }
 
 
-  console.log(`✓ Datos de prueba cargados. Contraseña de los usuarios de prueba: ${PASSWORD} (el admin conserva la suya)`)
+  console.log(`✓ Datos de prueba asegurados (${nuevos.size} usuarios/juegos nuevos). Contraseña de los usuarios de prueba: ${PASSWORD} (el admin conserva la suya)`)
   console.table([
     ['presidente@test.com', 'presidente'], ['19matu91@gmail.com', 'secretario (contraseña propia)'],
     ['tesorero@test.com', 'tesorero'], ['vocal@test.com', 'vocal'], ['ludotecario@test.com', 'ludotecario'],
