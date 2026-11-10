@@ -23,7 +23,7 @@ export function CederJuegoDialog({ open, onClose }: { open: boolean; onClose: ()
   const { mutate, isPending } = useMutation({
     mutationFn: () => solicitudesJuegoApi.crear({ nombre: nombre.trim(), notas: notas.trim() || undefined, tipo }),
     onSuccess: () => {
-      toast.success('Solicitud de cesión enviada al ludotecario')
+      toast.success('Solicitud de cesión enviada al ludotecario. Puedes seguirla en Mis préstamos y cesiones')
       queryClient.invalidateQueries({ queryKey: QK.MIS_SOLICITUDES_JUEGO })
       onClose()
       setNombre('')

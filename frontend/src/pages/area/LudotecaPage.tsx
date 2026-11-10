@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { Search, BookOpen, MapPin, Users, Loader2, Handshake } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -11,10 +11,8 @@ import { SEOHead } from '@/components/atoms/SEOHead'
 import { QueryError } from '@/components/molecules/QueryError'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
-import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
 import { QK } from '@/lib/queryKeys'
-import type { Juego, SolicitudJuego, EstadoSolicitudJuego, TipoJuego } from '@/types/api'
-import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
+import type { Juego, TipoJuego } from '@/types/api'
 import { formatJugadores } from '@/lib/format'
 import { SolicitarPrestamoDialog } from '@/components/organisms/SolicitarPrestamoDialog'
 import { CederJuegoDialog } from '@/components/organisms/CederJuegoDialog'
@@ -26,17 +24,6 @@ const estadoJuegoLabel: Record<string, string> = {
   retirado: 'Retirado',
 }
 
-const estadoSolicitudLabel: Record<EstadoSolicitudJuego, string> = {
-  pendiente: 'Pendiente de revisión',
-  aprobada: 'Aprobada',
-  rechazada: 'Rechazada',
-}
-
-const estadoSolicitudVariant: Record<EstadoSolicitudJuego, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  pendiente: 'secondary',
-  aprobada: 'default',
-  rechazada: 'destructive',
-}
 
 // memo: onSolicitar es un setter estable; escribir en el buscador no repinta todas las tarjetas
 const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Juego) => void }) {
@@ -98,40 +85,6 @@ const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego
   )
 })
 
-function MisSolicitudes() {
-  const { data, isLoading } = useQuery({
-    queryKey: QK.MIS_SOLICITUDES_JUEGO,
-    queryFn: () => solicitudesJuegoApi.getMias(),
-  })
-
-  const solicitudes = data?.data ?? []
-
-  if (isLoading) return <Skeleton className="h-20 w-full" />
-  if (solicitudes.length === 0) return null
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="font-display text-base text-primary">Mis solicitudes de cesión</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {solicitudes.map((s: SolicitudJuego) => (
-          <div key={s.id} className="flex items-center justify-between gap-3 py-1 border-b border-border last:border-0">
-            <div>
-              <p className="font-display font-bold text-sm">{s.nombre}<TipoJuegoBadge tipo={s.tipo} /></p>
-              {s.motivo_rechazo && (
-                <p className="text-xs text-muted-foreground italic">"{s.motivo_rechazo}"</p>
-              )}
-            </div>
-            <Badge variant={estadoSolicitudVariant[s.estado]} className="font-display text-xs flex-shrink-0">
-              {estadoSolicitudLabel[s.estado]}
-            </Badge>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  )
-}
 
 export function LudotecaPage() {
   const [search, setSearch] = useState('')
@@ -235,8 +188,6 @@ export function LudotecaPage() {
             )}
           </>
         )}
-
-        <MisSolicitudes />
       </div>
 
       {/* key: cada juego abre el diálogo limpio (sin las notas del anterior) */}

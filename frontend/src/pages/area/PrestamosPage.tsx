@@ -17,6 +17,7 @@ import { formatDate, diasRestantes } from '@/lib/format'
 import { useConfigNumero } from '@/hooks/useConfigValor'
 import { useMisPrestamosActivos } from '@/hooks/useMisPrestamosActivos'
 import { SolicitarPrestamoDialog } from '@/components/organisms/SolicitarPrestamoDialog'
+import { MisCesiones } from './prestamos/MisCesiones'
 
 function FechaLimiteBadge({ fechaLimite }: { fechaLimite: string | null }) {
   if (!fechaLimite) return <span className="text-xs text-muted-foreground">Sin fecha límite</span>
@@ -131,19 +132,22 @@ export function PrestamosPage() {
 
   return (
     <>
-      <SEOHead title="Mis préstamos" description="Historial y gestión de préstamos" path="/area/prestamos" noindex />
+      <SEOHead title="Mis préstamos y cesiones" description="Tus préstamos y lo que has cedido al club" path="/area/prestamos" noindex />
 
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Mis préstamos</h1>
-            <p className="text-muted-foreground mt-1">Gestiona tus préstamos activos y devoluciones</p>
+            <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Mis préstamos y cesiones</h1>
+            <p className="text-muted-foreground mt-1">Gestiona tus préstamos y sigue lo que has cedido al club</p>
           </div>
           <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
             <Plus className="h-4 w-4" /> Pedir juego prestado
           </Button>
         </div>
 
+        {/* Préstamos a la izquierda, cesiones a la derecha (una columna en móvil) */}
+        <div className="grid gap-6 lg:grid-cols-[3fr_2fr] items-start">
+        <div className="space-y-6 min-w-0">
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
@@ -202,6 +206,9 @@ export function PrestamosPage() {
             )}
           </div>
         )}
+        </div>
+        <MisCesiones />
+        </div>
       </div>
 
       <SolicitarPrestamoDialog key={String(dialogOpen)} open={dialogOpen} onClose={() => setDialogOpen(false)} />
