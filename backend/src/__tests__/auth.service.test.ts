@@ -52,6 +52,7 @@ describe('AuthService.register (individual)', () => {
     fecha_nacimiento: '1990-01-01',
     direccion: 'Calle Mayor 1',
     consentimiento_tiendas: false,
+    acepta_rgpd: true,
     password: 'Password123!',
   }
 
@@ -93,6 +94,9 @@ describe('AuthService.register (individual)', () => {
     expect(result).toEqual(created)
     expect(result).not.toHaveProperty('password_hash')
     expect(result).toMatchObject({ estado: 'pendiente', roles: ['socio_basico'] })
+    // acepta_rgpd no es columna: si llegara a Prisma el alta fallaría
+    const { data } = (prisma.usuario.create as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(data).not.toHaveProperty('acepta_rgpd')
   })
 })
 
@@ -293,7 +297,7 @@ describe('AuthService.register (conjunta)', () => {
     password: 'Password123!', fecha_nacimiento: '1990-01-01',
   })
   const input = {
-    ...persona(1), tipo_cuota: 'conjunta' as const, consentimiento_tiendas: false,
+    ...persona(1), tipo_cuota: 'conjunta' as const, consentimiento_tiendas: false, acepta_rgpd: true,
     miembros_adicionales: [persona(2), persona(3)],
   }
   const findMany = () => prisma.usuario.findMany as ReturnType<typeof vi.fn>

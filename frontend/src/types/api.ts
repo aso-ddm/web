@@ -66,6 +66,7 @@ export type RegisterPayload =
       direccion?: string
       apodo?: string
       consentimiento_tiendas: boolean
+      acepta_rgpd: boolean
     }
   | {
       tipo_cuota: 'conjunta'
@@ -79,6 +80,7 @@ export type RegisterPayload =
       direccion?: string
       apodo?: string
       consentimiento_tiendas: boolean
+      acepta_rgpd: boolean
       miembros_adicionales: MiembroAdicionalPayload[]
     }
 

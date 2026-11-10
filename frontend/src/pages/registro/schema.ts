@@ -66,6 +66,7 @@ const camposPersona = {
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
   confirmPassword: z.string(),
+  acepta_rgpd: z.boolean().refine((v) => v, 'Debes aceptar la política de privacidad'), // como el backend
 }
 
 export const registroSchema = z.union([

@@ -299,6 +299,13 @@ const TEXTOS_LARGOS = [
     label: 'Texto de consentimiento',
     ayuda: 'Se muestra como etiqueta del checkbox de consentimiento en el formulario de alta',
   },
+  {
+    clave: 'texto_rgpd',
+    titulo: 'Política de privacidad (RGPD)',
+    descripcion: 'Texto completo de la página pública /rgpd, que el formulario de alta obliga a aceptar. Actualiza la fecha del final al cambiarlo.',
+    label: 'Política de privacidad',
+    ayuda: 'Se publica en /rgpd tal cual',
+  },
 ]
 
 export function ConfiguracionPage() {

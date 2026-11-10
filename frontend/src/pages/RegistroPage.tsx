@@ -31,7 +31,7 @@ export function RegistroPage() {
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isSubmitting } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
-    defaultValues: { tipo_cuota: 'individual', consentimiento_tiendas: false },
+    defaultValues: { tipo_cuota: 'individual', consentimiento_tiendas: false, acepta_rgpd: false },
   })
 
   const { fields, append, remove } = useFieldArray({
@@ -41,6 +41,7 @@ export function RegistroPage() {
 
   const tipoCuota = watch('tipo_cuota') as 'individual' | 'conjunta'
   const consentimientoTiendas = watch('consentimiento_tiendas')
+  const aceptaRgpd = watch('acepta_rgpd')
 
   const { data: textoBienvenida, isPending: isBienvenidaLoading } = useConfig('texto_bienvenida_alta')
   const urlEstatutos = useConfigValor('url_estatutos', '')
@@ -398,10 +399,28 @@ export function RegistroPage() {
                   <RichTextContent html={textoConsentimiento || 'Acepto que se compartan mis datos con las tiendas colaboradoras para obtener descuentos.'} className="text-sm leading-relaxed" />
                 </label>
                 <Separator />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Al enviar esta solicitud aceptas la normativa interna de la asociación Dragón de Madera.
-                  Tus datos serán tratados conforme al RGPD y solo se usarán para la gestión de la asociación.
-                </p>
+                {/* Obligatoria: el backend rechaza el alta sin ella */}
+                <div>
+                  <label htmlFor="acepta_rgpd" className="flex items-start gap-3 rounded-lg border border-border p-4 cursor-pointer hover:bg-muted/30 transition-colors">
+                    <Checkbox
+                      id="acepta_rgpd"
+                      checked={aceptaRgpd}
+                      onCheckedChange={(v) => setValue('acepta_rgpd', Boolean(v), { shouldValidate: true })}
+                      aria-invalid={!!errors.acepta_rgpd}
+                      className="mt-0.5 flex-shrink-0"
+                    />
+                    <span className="text-sm leading-relaxed">
+                      He leído y acepto la{' '}
+                      <Link to="/rgpd" target="_blank" rel="noopener noreferrer" className="text-secondary font-bold underline">
+                        política de privacidad
+                      </Link>{' '}
+                      y la normativa interna de la asociación.
+                      {tipoCuota === 'conjunta' && ' Declaro que he informado de ella a los demás miembros de la cuota conjunta.'}
+                      {' '}<span className="text-destructive">*</span>
+                    </span>
+                  </label>
+                  <FieldError message={errMsg(errors.acepta_rgpd)} />
+                </div>
               </div>
             </FormSection>
 

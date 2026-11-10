@@ -107,7 +107,7 @@ export class AuthService {
     }
 
     const password_hash = await bcrypt.hash(data.password, SALT_ROUNDS)
-    const { password: _, ...rest } = data
+    const { password: _, acepta_rgpd: _r, ...rest } = data
 
     const usuario = await this.prisma.usuario.create({
       data: {
@@ -133,7 +133,7 @@ export class AuthService {
   }
 
   private async registerConjunta(data: Extract<RegisterInput, { tipo_cuota: 'conjunta' }>, comprobanteFilename: string) {
-    const { miembros_adicionales, tipo_cuota: _t, ...primero } = data
+    const { miembros_adicionales, tipo_cuota: _t, acepta_rgpd: _r, ...primero } = data
     const personas = [primero, ...miembros_adicionales]
 
     // Duplicados dentro del propio formulario

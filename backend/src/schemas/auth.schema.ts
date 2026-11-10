@@ -66,6 +66,8 @@ const camposPersona = {
   apodo: apodoSchema,
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
+  // Solo quien rellena el formulario: acepta por él y declara haber informado a los demás miembros
+  acepta_rgpd: z.boolean().refine((v) => v, 'Debes aceptar la política de privacidad'),
 }
 
 // ─── Miembro adicional ───────────────────────────────────────────────────────

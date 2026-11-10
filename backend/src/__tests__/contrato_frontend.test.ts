@@ -27,9 +27,10 @@ describe('registro: el formulario y la API aceptan y rechazan lo mismo', () => {
   const persona = {
     nombre: 'Ana', apellidos: 'García', dni: '12345678Z', email: 'ana@example.com', telefono: '600000000',
     fecha_nacimiento: '1990-05-01', direccion: 'Calle Mayor 1', apodo: 'Anita', consentimiento_tiendas: false,
-    password: 'Password1',
+    password: 'Password1', acepta_rgpd: true,
   }
-  const miembro = { ...persona, nombre: 'Luis', dni: '00000000T', email: 'luis@example.com', apodo: 'Luisito' }
+  const { acepta_rgpd: _r, ...sinRgpd } = persona
+  const miembro = { ...sinRgpd, nombre: 'Luis', dni: '00000000T', email: 'luis@example.com', apodo: 'Luisito' }
   const individual = { tipo_cuota: 'individual', ...persona }
   const conjunta = { tipo_cuota: 'conjunta', ...persona, miembros_adicionales: [miembro] }
 
@@ -47,6 +48,8 @@ describe('registro: el formulario y la API aceptan y rechazan lo mismo', () => {
     ['sin apodo (opcional)', { ...individual, apodo: '' }],
     ['miembro sin apodo', { ...conjunta, miembros_adicionales: [{ ...miembro, apodo: undefined }] }],
     ['sin miembros en conjunta', { ...conjunta, miembros_adicionales: [] }],
+    ['sin aceptar la política de privacidad', { ...individual, acepta_rgpd: false }],
+    ['sin el campo de la política', { tipo_cuota: 'individual', ...sinRgpd }],
   ]
 
   // El formulario añade confirmPassword (solo existe en el front)
