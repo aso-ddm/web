@@ -19,12 +19,14 @@ import { juegosApi, type JuegoPayload } from '@/services/api/juegos'
 import { QK, invalidarJuegos } from '@/lib/queryKeys'
 import { sociosApi } from '@/services/api/socios'
 import type { Juego } from '@/types/api'
+import { tipoJuegoLabel } from './constants'
 
 const etiquetaSocio = (s: { nombre: string; apellidos: string; apodo: string | null }) =>
   `${s.nombre} ${s.apellidos}${s.apodo ? ` (${s.apodo})` : ''}`
 
 const juegoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
+  tipo: z.enum(['juego', 'libro']),
   localizacion: z.string().optional(),
   num_jugadores_min: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor que 0').optional().or(z.literal('')),
   num_jugadores_max: z.coerce.number().int('Debe ser un número entero').positive('Debe ser mayor que 0').optional().or(z.literal('')),
@@ -39,8 +41,9 @@ const juegoSchema = z.object({
 })
 type JuegoForm = z.infer<typeof juegoSchema>
 
-const aFormulario = (juego?: Juego): JuegoForm => ({
+const aFormulario = (juego: Juego | undefined, tipoInicial: Juego['tipo']): JuegoForm => ({
   nombre: juego?.nombre ?? '',
+  tipo: juego?.tipo ?? tipoInicial,
   localizacion: juego?.localizacion ?? '',
   num_jugadores_min: juego?.num_jugadores_min ?? '',
   num_jugadores_max: juego?.num_jugadores_max ?? '',
@@ -51,7 +54,7 @@ const aFormulario = (juego?: Juego): JuegoForm => ({
 // ── Juego form dialog ─────────────────────────────────────────────────────────
 // Montarlo con key (id del juego o 'nuevo'): cada apertura empieza con los valores de ese juego
 
-export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClose: () => void; juego?: Juego }) {
+export function JuegoFormDialog({ open, onClose, juego, tipoInicial = 'juego' }: { open: boolean; onClose: () => void; juego?: Juego; tipoInicial?: Juego['tipo'] }) {
   const queryClient = useQueryClient()
   const isEdit = !!juego
 
@@ -64,10 +67,12 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<JuegoForm>({
     resolver: zodResolver(juegoSchema),
-    defaultValues: aFormulario(juego),
+    defaultValues: aFormulario(juego, tipoInicial),
   })
 
   const propietarioId = watch('propietario_id')
+  const tipo = watch('tipo')
+  const esLibro = tipo === 'libro'
   const propietario = socios.find((s) => s.id === propietarioId)
   const [propietarioAbierto, setPropietarioAbierto] = useState(false)
 
@@ -79,7 +84,9 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
   const { mutate, isPending } = useMutation({
     mutationFn: (data: JuegoForm) => {
       // Al editar, un campo vacío se envía como null para que el backend lo borre
-      const entries = Object.entries(data).filter(([, v]) => v !== undefined)
+      // Un libro no tiene nº de jugadores: se vacían por si se cambió el tipo de un juego que los tenía
+      const datos = esLibro ? { ...data, num_jugadores_min: '' as const, num_jugadores_max: '' as const } : data
+      const entries = Object.entries(datos).filter(([, v]) => v !== undefined)
       if (isEdit) {
         return juegosApi.update(juego.id, Object.fromEntries(entries.map(([k, v]) => [k, v === '' ? null : v])) as JuegoPayload)
       }
@@ -114,10 +121,27 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
             {errors.nombre && <p className="text-xs text-destructive">{errors.nombre.message}</p>}
           </div>
           <div className="space-y-1.5">
+            <Label className="font-display font-bold text-xs">Tipo</Label>
+            <div className="flex gap-2">
+              {(['juego', 'libro'] as const).map((t) => (
+                <Button
+                  key={t}
+                  type="button"
+                  size="sm"
+                  variant={tipo === t ? 'default' : 'outline'}
+                  className="font-display text-xs"
+                  onClick={() => setValue('tipo', t)}
+                >
+                  {tipoJuegoLabel[t]}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="localizacion" className="font-display font-bold text-xs">Estantería / Localización</Label>
             <Input id="localizacion" {...register('localizacion')} placeholder="Ej: A3, Estante superior..." />
           </div>
-          <div className="space-y-1.5">
+          {!esLibro && <div className="space-y-1.5">
             <Label className="font-display font-bold text-xs">Nº jugadores</Label>
             <div className="flex items-center gap-2">
               <Input type="number" {...register('num_jugadores_min')} placeholder="Mín" className={errors.num_jugadores_min ? 'border-destructive' : ''} />
@@ -127,7 +151,7 @@ export function JuegoFormDialog({ open, onClose, juego }: { open: boolean; onClo
             {(errors.num_jugadores_min || errors.num_jugadores_max) && (
               <p className="text-xs text-destructive">{(errors.num_jugadores_min ?? errors.num_jugadores_max)?.message}</p>
             )}
-          </div>
+          </div>}
           <div className="space-y-1.5">
             <Label htmlFor="propietario" className="font-display font-bold text-xs">Propietario</Label>
             <Popover open={propietarioAbierto} onOpenChange={setPropietarioAbierto} modal>

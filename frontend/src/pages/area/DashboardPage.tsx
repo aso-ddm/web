@@ -1,3 +1,4 @@
+import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -322,6 +323,7 @@ export function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-display font-bold truncate">
                             {p.juego?.nombre ?? 'Juego desconocido'}
+                            <TipoJuegoBadge tipo={p.juego?.tipo} />
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {formatDate(p.fecha_prestamo)}

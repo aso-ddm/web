@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SEOHead } from '@/components/atoms/SEOHead'
 import { QueryError } from '@/components/molecules/QueryError'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { juegosApi } from '@/services/api/juegos'
 import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
 import { QK } from '@/lib/queryKeys'
-import type { Juego, SolicitudJuego, EstadoSolicitudJuego } from '@/types/api'
+import type { Juego, SolicitudJuego, EstadoSolicitudJuego, TipoJuego } from '@/types/api'
+import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
 import { formatJugadores } from '@/lib/format'
 import { SolicitarPrestamoDialog } from '@/components/organisms/SolicitarPrestamoDialog'
 import { CederJuegoDialog } from '@/components/organisms/CederJuegoDialog'
@@ -116,7 +118,7 @@ function MisSolicitudes() {
         {solicitudes.map((s: SolicitudJuego) => (
           <div key={s.id} className="flex items-center justify-between gap-3 py-1 border-b border-border last:border-0">
             <div>
-              <p className="font-display font-bold text-sm">{s.nombre}</p>
+              <p className="font-display font-bold text-sm">{s.nombre}<TipoJuegoBadge tipo={s.tipo} /></p>
               {s.motivo_rechazo && (
                 <p className="text-xs text-muted-foreground italic">"{s.motivo_rechazo}"</p>
               )}
@@ -135,13 +137,15 @@ export function LudotecaPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [estadoFiltro, setEstadoFiltro] = useState<string>('')
+  const [tipo, setTipo] = useState<TipoJuego>('juego')
+  const esLibro = tipo === 'libro'
   const [selectedJuego, setSelectedJuego] = useState<Juego | null>(null)
   const [cederOpen, setCederOpen] = useState(false)
 
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: QK.LUDOTECA(debouncedSearch, estadoFiltro),
+    queryKey: QK.LUDOTECA(debouncedSearch, estadoFiltro, tipo),
     queryFn: ({ pageParam }) =>
-      juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro || undefined, page: pageParam, limit: 48 }),
+      juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro || undefined, tipo, page: pageParam, limit: 48 }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
@@ -151,13 +155,13 @@ export function LudotecaPage() {
 
   return (
     <>
-      <SEOHead title="Ludoteca" description="Catálogo de juegos del club" path="/area/ludoteca" noindex />
+      <SEOHead title="Ludoteca" description="Catálogo de juegos y biblioteca del club" path="/area/ludoteca" noindex />
 
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
           <div>
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Ludoteca</h1>
-            <p className="text-muted-foreground mt-1">Catálogo de juegos disponibles en el club</p>
+            <p className="text-muted-foreground mt-1">Juegos, libros y cómics disponibles en el club</p>
           </div>
           <Button
             variant="outline"
@@ -168,12 +172,19 @@ export function LudotecaPage() {
           </Button>
         </div>
 
+        <Tabs value={tipo} onValueChange={(v) => setTipo(v as TipoJuego)}>
+          <TabsList>
+            <TabsTrigger value="juego" className="font-display">Juegos</TabsTrigger>
+            <TabsTrigger value="libro" className="font-display">Biblioteca</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Filtros */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar juego..."
+              placeholder={esLibro ? 'Buscar libro o cómic...' : 'Buscar juego...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 font-display"
@@ -204,11 +215,11 @@ export function LudotecaPage() {
         ) : juegos.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">No se encontraron juegos</p>
+            <p className="text-sm">{esLibro ? 'No se encontraron libros ni cómics' : 'No se encontraron juegos'}</p>
           </div>
         ) : (
           <>
-            <p className="text-xs text-muted-foreground">{total} juego{total !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-muted-foreground">{total} {esLibro ? 'libro/cómic' : 'juego'}{total !== 1 ? 's' : ''}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {juegos.map((j) => (
                 <JuegoCard key={j.id} juego={j} onSolicitar={setSelectedJuego} />

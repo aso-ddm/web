@@ -15,7 +15,7 @@ import { solicitudesJuegoApi } from '@/services/api/solicitudes_juego'
 import { QK, invalidarJuegos } from '@/lib/queryKeys'
 import { useAuthStore } from '@/store/authStore'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import type { Juego, EstadoJuego } from '@/types/api'
+import type { Juego, EstadoJuego, TipoJuego } from '@/types/api'
 import { JuegoRow } from './juegos/JuegoRow'
 import { JuegoFormDialog } from './juegos/JuegoFormDialog'
 import { SolicitudesTab } from './juegos/SolicitudesTab'
@@ -27,6 +27,10 @@ import { QueryError } from '@/components/molecules/QueryError'
 export function GestionJuegosPage() {
   const [search, setSearch] = useState('')
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoJuego | 'todos'>('todos')
+  // Pestañas Juegos / Biblioteca comparten el catálogo; tipo recuerda la última al volver de Historial o Cesiones
+  const [tab, setTab] = useState<string>('juego')
+  const [tipo, setTipo] = useState<TipoJuego>('juego')
+  const cambiarTab = (v: string) => { setTab(v); if (v === 'juego' || v === 'libro') setTipo(v) }
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editando, setEditando] = useState<Juego | undefined>()
   const [eliminando, setEliminando] = useState<Juego | undefined>()
@@ -39,9 +43,9 @@ export function GestionJuegosPage() {
 
   const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: QK.JUEGOS_GESTION(debouncedSearch, estadoFiltro),
+    queryKey: QK.JUEGOS_GESTION(debouncedSearch, estadoFiltro, tipo),
     queryFn: ({ pageParam }) =>
-      juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, page: pageParam, limit: 50 }),
+      juegosApi.getAll({ search: debouncedSearch || undefined, estado: estadoFiltro !== 'todos' ? estadoFiltro : undefined, tipo, page: pageParam, limit: 50 }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   })
@@ -110,7 +114,7 @@ export function GestionJuegosPage() {
           <div>
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-primary">Catálogo de juegos</h1>
             <p className="text-muted-foreground mt-1">
-              {total} juego{total !== 1 ? 's' : ''} en el catálogo
+              {tipo === 'libro' ? `${total} libro${total !== 1 ? 's' : ''}/cómic${total !== 1 ? 's' : ''} en la biblioteca` : `${total} juego${total !== 1 ? 's' : ''} en el catálogo`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -118,14 +122,15 @@ export function GestionJuegosPage() {
               <Download className="h-4 w-4" /> CSV
             </Button>
             <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-              <Plus className="h-4 w-4" /> Añadir juego
+              <Plus className="h-4 w-4" /> {tipo === 'libro' ? 'Añadir libro/cómic' : 'Añadir juego'}
             </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="catalogo">
+        <Tabs value={tab} onValueChange={cambiarTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="catalogo" className="font-display">Catálogo</TabsTrigger>
+            <TabsTrigger value="juego" className="font-display">Juegos</TabsTrigger>
+            <TabsTrigger value="libro" className="font-display">Biblioteca</TabsTrigger>
             <TabsTrigger value="historial" className="font-display">Historial</TabsTrigger>
             <TabsTrigger value="solicitudes" className="font-display relative">
               Cesiones
@@ -137,7 +142,7 @@ export function GestionJuegosPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="catalogo">
+          <TabsContent value={tipo}>
             {/* Filtros */}
             <div className="flex gap-3 flex-wrap mb-4">
               <div className="relative flex-1 min-w-48">
@@ -174,12 +179,12 @@ export function GestionJuegosPage() {
                 ) : juegos.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <Library className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                    <h2 className="font-display font-bold text-lg text-primary mb-1">Sin juegos aún</h2>
+                    <h2 className="font-display font-bold text-lg text-primary mb-1">{tipo === 'libro' ? 'Sin libros ni cómics aún' : 'Sin juegos aún'}</h2>
                     <p className="text-muted-foreground text-sm mb-4">
-                      Empieza añadiendo los primeros juegos al catálogo
+                      {tipo === 'libro' ? 'Empieza añadiendo los primeros libros o cómics a la biblioteca' : 'Empieza añadiendo los primeros juegos al catálogo'}
                     </p>
                     <Button onClick={() => setDialogOpen(true)} className="font-display font-bold gap-2">
-                      <Plus className="h-4 w-4" /> Añadir primer juego
+                      <Plus className="h-4 w-4" /> Añadir el primero
                     </Button>
                   </div>
                 ) : (
@@ -225,6 +230,7 @@ export function GestionJuegosPage() {
         key={editando?.id ?? (dialogOpen ? 'nuevo' : 'cerrado')}
         open={dialogOpen}
         juego={editando}
+        tipoInicial={tipo}
         onClose={() => { setDialogOpen(false); setEditando(undefined) }}
       />
 

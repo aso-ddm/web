@@ -1,3 +1,4 @@
+import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -63,7 +64,7 @@ function PrestamoCard({ prestamo, maxRenovaciones }: { prestamo: Prestamo; maxRe
     <div className="py-3 border-b border-border last:border-0">
       <div className="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}</p>
+          <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}<TipoJuegoBadge tipo={prestamo.juego?.tipo} /></p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
             <span>Prestado: {formatDate(prestamo.fecha_prestamo)}</span>
             <FechaLimiteBadge fechaLimite={prestamo.fecha_limite} />

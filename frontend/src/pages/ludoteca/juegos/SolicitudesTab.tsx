@@ -1,3 +1,4 @@
+import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -76,7 +77,7 @@ export function SolicitudesTab() {
           {solicitudes.map((s: SolicitudJuego) => (
             <div key={s.id} className="px-4 py-3 flex items-start gap-3 flex-wrap sm:flex-nowrap">
               <div className="flex-1 min-w-0">
-                <p className="font-display font-bold text-sm">{s.nombre}</p>
+                <p className="font-display font-bold text-sm">{s.nombre}<TipoJuegoBadge tipo={s.tipo} /></p>
                 {s.socio && (
                   <p className="text-xs text-muted-foreground">
                     Lo cede {s.socio.nombre} {s.socio.apellidos}

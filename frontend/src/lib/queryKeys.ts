@@ -14,9 +14,9 @@ export const QK = {
 
   // Juegos: todo cuelga de ['juegos'], así una invalidación cubre catálogo, gestión, ludoteca y logs
   JUEGOS: ['juegos'] as const,
-  JUEGOS_GESTION: (search: string, estado: string) => ['juegos', 'gestion', search, estado] as const,
+  JUEGOS_GESTION: (search: string, estado: string, tipo: string) => ['juegos', 'gestion', search, estado, tipo] as const,
   JUEGOS_CATALOGO: (search: string) => ['juegos', 'catalogo', search] as const, // área socios – PrestamosPage
-  LUDOTECA: (search: string, estado: string) => ['juegos', 'ludoteca', search, estado] as const, // área socios – LudotecaPage
+  LUDOTECA: (search: string, estado: string, tipo: string) => ['juegos', 'ludoteca', search, estado, tipo] as const, // área socios – LudotecaPage
   MIS_JUEGOS: ['juegos', 'mios'] as const, // juegos cedidos por el socio – DashboardPage
   LOGS_JUEGO: (id: string) => ['juegos', 'logs', id] as const,
   LOGS_JUEGO_ALL: ['juegos', 'logs-todos'] as const,

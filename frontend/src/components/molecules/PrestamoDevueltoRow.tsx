@@ -1,3 +1,4 @@
+import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/format'
 import type { Prestamo } from '@/types/api'
@@ -14,7 +15,7 @@ export function PrestamoDevueltoRow({ prestamo: p, conSocio = false }: { prestam
   return (
     <div className="py-2.5 border-b border-border last:border-0 flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
-        <p className="font-display font-bold text-sm">{p.juego?.nombre ?? '—'}</p>
+        <p className="font-display font-bold text-sm">{p.juego?.nombre ?? '—'}<TipoJuegoBadge tipo={p.juego?.tipo} /></p>
         {conSocio && (
           <p className="text-xs text-muted-foreground truncate">
             {p.socio ? `${p.socio.nombre} ${p.socio.apellidos}${p.socio.apodo ? ` (${p.socio.apodo})` : ''} · ${p.socio.email}` : 'Socio desconocido'}

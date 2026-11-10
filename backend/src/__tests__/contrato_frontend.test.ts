@@ -1,12 +1,12 @@
 // Guardián del contrato frontend ↔ backend: roles, enums y reglas del registro están escritos en los dos lados
 // (sin paquete compartido). Si alguien cambia uno y no el otro, este test falla en CI antes de desplegar.
 import { describe, it, expect } from 'vitest'
-import { Rol, EstadoSocio, EstadoJuego } from '@prisma/client'
+import { Rol, EstadoSocio, EstadoJuego, TipoJuego } from '@prisma/client'
 import { ROLES } from '../middleware/auth'
 import { registerSchema } from '../schemas/auth.schema'
 import { ROL_LABELS, DIRECTIVA, DIRECTIVA_Y_VOCALES, DIRECTIVA_Y_LUDOTECARIO } from '../../../frontend/src/lib/roles'
 import { ESTADO_SOCIO_VARIANT } from '../../../frontend/src/lib/estados'
-import { estadoConfig } from '../../../frontend/src/pages/ludoteca/juegos/constants'
+import { estadoConfig, tipoJuegoLabel } from '../../../frontend/src/pages/ludoteca/juegos/constants'
 import { registroSchema } from '../../../frontend/src/pages/registro/schema'
 
 const ordenados = (xs: readonly string[]) => [...xs].sort()
@@ -15,6 +15,7 @@ describe('roles y enums: el frontend conoce los mismos valores que Prisma', () =
   it('Rol', () => expect(ordenados(Object.keys(ROL_LABELS))).toEqual(ordenados(Object.values(Rol))))
   it('EstadoSocio', () => expect(ordenados(Object.keys(ESTADO_SOCIO_VARIANT))).toEqual(ordenados(Object.values(EstadoSocio))))
   it('EstadoJuego', () => expect(ordenados(Object.keys(estadoConfig))).toEqual(ordenados(Object.values(EstadoJuego))))
+  it('TipoJuego', () => expect(ordenados(Object.keys(tipoJuegoLabel))).toEqual(ordenados(Object.values(TipoJuego))))
 })
 
 describe('grupos de roles: las rutas del frontend piden lo mismo que requireRoles', () => {

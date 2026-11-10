@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { EstadoJuego } from '@prisma/client'
+import { EstadoJuego, TipoJuego } from '@prisma/client'
 import { paginacion } from '../lib/paginacion'
 
 // null = vaciar el campo al editar (propietario null = del club)
@@ -7,6 +7,7 @@ const jugadores = z.union([z.null(), z.coerce.number().int().positive()]).option
 
 export const crearJuegoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio'),
+  tipo: z.nativeEnum(TipoJuego).optional(),
   localizacion: z.string().nullish(),
   num_jugadores_min: jugadores,
   num_jugadores_max: jugadores,
@@ -20,6 +21,7 @@ export const updateJuegoSchema = crearJuegoSchema.partial()
 export const filtrosJuegosSchema = z.object({
   search: z.string().optional(),
   estado: z.nativeEnum(EstadoJuego).optional(),
+  tipo: z.nativeEnum(TipoJuego).optional(),
   ...paginacion(20, 100),
 })
 

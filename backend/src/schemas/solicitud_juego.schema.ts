@@ -1,10 +1,11 @@
 import { z } from 'zod'
-import { EstadoSolicitudJuego } from '@prisma/client'
+import { EstadoSolicitudJuego, TipoJuego } from '@prisma/client'
 import { paginacion } from '../lib/paginacion'
 
 export const crearSolicitudJuegoSchema = z.object({
   nombre: z.string().min(1).max(200),
   notas:  z.string().max(1000).optional(),
+  tipo:   z.nativeEnum(TipoJuego).optional(),
 })
 
 export const rechazarSolicitudJuegoSchema = z.object({

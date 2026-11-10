@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { SolicitudJuego, PaginatedResponse } from '@/types/api'
+import type { SolicitudJuego, PaginatedResponse, TipoJuego } from '@/types/api'
 
 export const solicitudesJuegoApi = {
   getMias: (page = 1) =>
@@ -8,7 +8,7 @@ export const solicitudesJuegoApi = {
   getPendientes: (page = 1) =>
     api.get<PaginatedResponse<SolicitudJuego>>(`/solicitudes-juego/pendientes?page=${page}&limit=50`),
 
-  crear: (data: { nombre: string; notas?: string }) =>
+  crear: (data: { nombre: string; notas?: string; tipo: TipoJuego }) =>
     api.post<{ data: SolicitudJuego }>('/solicitudes-juego', data),
 
   aprobar: (id: string) =>

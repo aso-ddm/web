@@ -29,13 +29,12 @@ export class JuegosService {
   ) {}
 
   async getAll(filtros: FiltrosJuegosInput) {
-    const { page, limit, search, estado } = filtros
+    const { page, limit, search, estado, tipo } = filtros
     const skip = (page - 1) * limit
 
     if (search) {
-      const estadoClause = estado
-        ? Prisma.sql`AND estado::text = ${estado}`
-        : Prisma.sql``
+      const filtrosClause = Prisma.sql`${estado ? Prisma.sql`AND estado::text = ${estado}` : Prisma.empty}
+        ${tipo ? Prisma.sql`AND tipo::text = ${tipo}` : Prisma.empty}`
 
       const [rows, countRows] = await Promise.all([
         this.prisma.$queryRaw<{ id: string }[]>`
@@ -45,7 +44,7 @@ export class JuegosService {
             OR ${coincide('localizacion', search)}
             OR ${coincide('notas', search)}
           )
-          ${estadoClause}
+          ${filtrosClause}
           ORDER BY nombre ASC
           LIMIT ${limit} OFFSET ${skip}
         `,
@@ -56,7 +55,7 @@ export class JuegosService {
             OR ${coincide('localizacion', search)}
             OR ${coincide('notas', search)}
           )
-          ${estadoClause}
+          ${filtrosClause}
         `,
       ])
 
@@ -74,7 +73,7 @@ export class JuegosService {
       return paginado(juegos, total, filtros)
     }
 
-    const where = { ...(estado ? { estado } : {}) }
+    const where = { ...(estado ? { estado } : {}), ...(tipo ? { tipo } : {}) }
 
     const [juegos, total] = await Promise.all([
       this.prisma.juego.findMany({
@@ -202,10 +201,11 @@ export class JuegosService {
       return s
     }
 
-    const header = 'id,nombre,localizacion,num_jugadores_min,num_jugadores_max,estado,propietario,notas,created_at'
+    const header = 'id,nombre,tipo,localizacion,num_jugadores_min,num_jugadores_max,estado,propietario,notas,created_at'
     const rows = juegos.map((j) => [
       escape(j.id),
       escape(j.nombre),
+      escape(j.tipo),
       escape(j.localizacion),
       escape(j.num_jugadores_min != null ? String(j.num_jugadores_min) : null),
       escape(j.num_jugadores_max != null ? String(j.num_jugadores_max) : null),

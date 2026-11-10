@@ -102,6 +102,8 @@ export interface LoginResponse {
 // ── Juego ─────────────────────────────────────────────────────────────────────
 export type EstadoJuego = 'en_estanteria' | 'prestado' | 'retirado'
 
+export type TipoJuego = 'juego' | 'libro'
+
 export interface Juego {
   id: string
   nombre: string
@@ -110,6 +112,7 @@ export interface Juego {
   num_jugadores_max?: number | null
   notas?: string | null
   estado: EstadoJuego
+  tipo: TipoJuego
   propietario_id?: string | null
   propietario?: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> | null
   /** Solo en el catálogo (GET /juegos): el préstamo activo, si lo hay */
@@ -130,7 +133,7 @@ export interface Prestamo {
   renovaciones: number
   fechas_renovacion?: string[]
   notas?: string | null
-  juego?: Pick<Juego, 'id' | 'nombre'>
+  juego?: Pick<Juego, 'id' | 'nombre' | 'tipo'>
   socio?: Pick<Usuario, 'id' | 'nombre' | 'apellidos' | 'email'> & { apodo?: string | null }
 }
 
@@ -156,6 +159,7 @@ export interface SolicitudJuego {
   socio_id: string
   nombre: string
   notas?: string | null
+  tipo: TipoJuego
   estado: EstadoSolicitudJuego
   motivo_rechazo?: string | null
   juego_id?: string | null

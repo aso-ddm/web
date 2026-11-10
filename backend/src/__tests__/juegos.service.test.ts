@@ -32,3 +32,13 @@ describe('JuegosService nº de jugadores', () => {
     expect(prisma.juego.update).toHaveBeenCalled()
   })
 })
+
+describe('JuegosService filtro por tipo', () => {
+  it('getAll sin búsqueda filtra por tipo y estado en el where', async () => {
+    ;(prisma.juego.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(prisma.juego.count as ReturnType<typeof vi.fn>).mockResolvedValue(0)
+    await service.getAll({ tipo: 'libro', estado: 'prestado', page: 1, limit: 20 })
+    expect(prisma.juego.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { estado: 'prestado', tipo: 'libro' } }))
+    expect(prisma.juego.count).toHaveBeenCalledWith({ where: { estado: 'prestado', tipo: 'libro' } })
+  })
+})

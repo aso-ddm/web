@@ -1,3 +1,4 @@
+import { TipoJuegoBadge } from '@/components/atoms/TipoJuegoBadge'
 import { useState } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -50,7 +51,7 @@ function PrestamoRow({ prestamo }: { prestamo: Prestamo }) {
       <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}</p>
+            <p className="font-display font-bold text-sm">{prestamo.juego?.nombre ?? '—'}<TipoJuegoBadge tipo={prestamo.juego?.tipo} /></p>
             {vencido && (
               <Badge variant="destructive" className="font-display text-xs gap-1">
                 <AlertTriangle className="h-3 w-3" /> Vencido

@@ -14,6 +14,7 @@ const solicitudPendiente = {
   socio: { id: 'u1', nombre: 'Ana', apellidos: 'García', email: 'ana@test.com', apodo: null },
   nombre: 'Wingspan',
   notas: null,
+  tipo: 'libro' as const,
   estado: 'pendiente' as const,
   motivo_rechazo: null,
   juego_id: null,
@@ -113,7 +114,7 @@ describe('SolicitudesJuegoService.aprobar', () => {
 
     expect(txMock.juego.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ nombre: 'Wingspan', propietario_id: 'u1' }),
+        data: expect.objectContaining({ nombre: 'Wingspan', tipo: 'libro', propietario_id: 'u1' }),
       }),
     )
     expect(txMock.logJuego.create).toHaveBeenCalledWith(

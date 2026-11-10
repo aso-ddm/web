@@ -75,6 +75,7 @@ export class SolicitudesJuegoService {
         data: {
           nombre: solicitud.nombre,
           notas: solicitud.notas ?? null,
+          tipo: solicitud.tipo,
           propietario_id: solicitud.socio_id,
         },
       })

@@ -24,7 +24,7 @@ export class PrestamosService {
       this.prisma.prestamo.findMany({
         where,
         include: {
-          juego: { select: { id: true, nombre: true } },
+          juego: { select: { id: true, nombre: true, tipo: true } },
         },
         orderBy: { fecha_prestamo: 'desc' },
         skip,
@@ -62,7 +62,7 @@ export class PrestamosService {
           fecha_prestamo: ahora,
           fecha_limite: fechaLimite,
         },
-        include: { juego: { select: { id: true, nombre: true } } },
+        include: { juego: { select: { id: true, nombre: true, tipo: true } } },
       })
       await this.logsService.crearSistema(input.juego_id, TipoLogJuego.prestamo_activo, `${juego.nombre} prestado`, socioId, tx)
       return prestamo
@@ -183,7 +183,7 @@ export class PrestamosService {
       this.prisma.prestamo.findMany({
         where,
         include: {
-          juego: { select: { id: true, nombre: true } },
+          juego: { select: { id: true, nombre: true, tipo: true } },
           socio: { select: { id: true, nombre: true, apellidos: true, email: true, apodo: true } },
         },
         orderBy: { fecha_limite: 'asc' },

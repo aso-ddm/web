@@ -1,9 +1,14 @@
-import type { EstadoJuego } from '@/types/api'
+import type { EstadoJuego, TipoJuego } from '@/types/api'
 
 export const estadoConfig: Record<EstadoJuego, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   en_estanteria: { label: 'En estantería', variant: 'default' },
   prestado: { label: 'Prestado', variant: 'secondary' },
   retirado: { label: 'Retirado', variant: 'destructive' },
+}
+
+export const tipoJuegoLabel: Record<TipoJuego, string> = {
+  juego: 'Juego',
+  libro: 'Libro/cómic',
 }
 
 export const tipoLogLabel: Record<string, string> = {

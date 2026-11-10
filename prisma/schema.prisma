@@ -45,6 +45,12 @@ enum EstadoJuego {
   retirado
 }
 
+// Juego de mesa o libro/cómic: divide la ludoteca en Juegos y Biblioteca (mismas reglas de préstamo)
+enum TipoJuego {
+  juego
+  libro
+}
+
 enum EstadoPrestamo {
   activo
   devuelto
@@ -157,6 +163,7 @@ model Juego {
   num_jugadores_max Int?
   notas             String?
   estado            EstadoJuego @default(en_estanteria)
+  tipo              TipoJuego   @default(juego)
   propietario_id    String?
 
   propietario Usuario?         @relation("PropietarioJuego", fields: [propietario_id], references: [id], onDelete: SetNull)
@@ -269,6 +276,7 @@ model SolicitudJuego {
   socio_id       String
   nombre         String
   notas          String?
+  tipo           TipoJuego            @default(juego)
   estado         EstadoSolicitudJuego @default(pendiente)
   motivo_rechazo String?
   juego_id       String?

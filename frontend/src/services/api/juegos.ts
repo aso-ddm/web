@@ -1,9 +1,10 @@
 import { api, buildQuery } from './client'
-import type { Juego, PaginatedResponse } from '@/types/api'
+import type { Juego, PaginatedResponse, TipoJuego } from '@/types/api'
 
 export interface FiltrosJuegos {
   search?: string
   estado?: string
+  tipo?: TipoJuego
   page?: number
   limit?: number
 }
@@ -11,6 +12,7 @@ export interface FiltrosJuegos {
 /** Alta o edición: al editar, null borra el campo */
 export type JuegoPayload = {
   nombre?: string
+  tipo?: TipoJuego
   localizacion?: string | null
   num_jugadores_min?: number | null
   num_jugadores_max?: number | null
