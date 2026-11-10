@@ -21,6 +21,7 @@ import { ExportarSociosCsv } from './socios/ExportarSociosCsv'
 import { QueryError } from '@/components/molecules/QueryError'
 import { Paginacion } from '@/components/molecules/Paginacion'
 import { useAuthStore } from '@/store/authStore'
+import { formatDate } from '@/lib/format'
 
 export function GestionSociosPage() {
   const [search, setSearch] = useState('')
@@ -136,6 +137,12 @@ export function GestionSociosPage() {
                           <Badge variant={ESTADO_SOCIO_VARIANT[socio.estado]} className="text-xs font-display capitalize">
                             {socio.estado}
                           </Badge>
+                          {/* Las bajas solo las ve la directiva */}
+                          {esDirectiva && socio.baja_programada_at && (
+                            <Badge variant="destructive" className="text-xs font-display">
+                              En trámite de baja · {formatDate(socio.baja_programada_at)}
+                            </Badge>
+                          )}
                           {socio.solicitud_grupal && (
                             <Badge variant="outline" className="text-xs font-display">Cuota conjunta</Badge>
                           )}
