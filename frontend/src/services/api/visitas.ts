@@ -9,6 +9,8 @@ export const visitasApi = {
   registrar: (nombre_completo: string) =>
     api.post<{ data: Visita }>('/visitas', { nombre_completo }),
 
+  eliminar: (id: string) => api.delete<{ data: { id: string } }>(`/visitas/${id}`),
+
   getAll: (params: { page?: number; limit?: number; search?: string } = {}) =>
     api.get<PaginatedResponse<Visita>>(`/visitas${buildQuery(params)}`),
 }

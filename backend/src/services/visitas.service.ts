@@ -2,6 +2,7 @@ import { Prisma, PrismaClient } from '@prisma/client'
 import { configNumero } from '../lib/config'
 import { coincide } from '../lib/search'
 import { paginado } from '../lib/paginacion'
+import { HttpError } from '../lib/httpError'
 
 const normalizarNombre = (s: string) => s.trim().replace(/\s+/g, ' ')
 
@@ -78,6 +79,17 @@ export class VisitasService {
         },
       })
     })
+  }
+
+  /** Borra una visita registrada por error. Solo quien la registró o la directiva.
+   *  ponytail: no renumera numero_visita de las posteriores; el cobro cuenta filas, así que la siguiente visita sale bien. */
+  async eliminar(id: string, usuario: { id: string; esDirectiva: boolean }) {
+    const where = usuario.esDirectiva ? { id } : { id, socio_registro_id: usuario.id }
+    const { count } = await this.prisma.visita.deleteMany({ where })
+    if (count === 0) {
+      const existe = await this.prisma.visita.count({ where: { id } })
+      throw existe ? new HttpError(403, 'Solo quien registró la visita o la directiva puede borrarla') : new HttpError(404, 'Visita no encontrada')
+    }
   }
 
   async getAll(filtros: { page: number; limit: number; search?: string }) {

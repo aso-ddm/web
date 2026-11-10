@@ -141,3 +141,28 @@ describe('VisitasService.buscar', () => {
     ])
   })
 })
+
+describe('VisitasService.eliminar', () => {
+  const del = () => prisma.visita.deleteMany as ReturnType<typeof vi.fn>
+  const cnt = () => prisma.visita.count as ReturnType<typeof vi.fn>
+
+  it('quien la registró la borra (filtra por socio_registro_id)', async () => {
+    del().mockResolvedValue({ count: 1 })
+    await service.eliminar('v1', { id: 'u1', esDirectiva: false })
+    expect(del()).toHaveBeenCalledWith({ where: { id: 'v1', socio_registro_id: 'u1' } })
+  })
+
+  it('la directiva borra cualquiera', async () => {
+    del().mockResolvedValue({ count: 1 })
+    await service.eliminar('v1', { id: 'u2', esDirectiva: true })
+    expect(del()).toHaveBeenCalledWith({ where: { id: 'v1' } })
+  })
+
+  it('otro socio → 403; inexistente → 404', async () => {
+    del().mockResolvedValue({ count: 0 })
+    cnt().mockResolvedValueOnce(1)
+    await expect(service.eliminar('v1', { id: 'u2', esDirectiva: false })).rejects.toMatchObject({ status: 403 })
+    cnt().mockResolvedValueOnce(0)
+    await expect(service.eliminar('v9', { id: 'u2', esDirectiva: false })).rejects.toMatchObject({ status: 404 })
+  })
+})

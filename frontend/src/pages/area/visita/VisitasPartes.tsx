@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { Search, Euro, Gift, Loader2, RotateCcw, Users, CalendarDays } from 'lucide-react'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { Search, Euro, Gift, Loader2, RotateCcw, Users, CalendarDays, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +12,8 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Visita } from '@/types/api'
 import { formatDate } from '@/lib/format'
 import { QK } from '@/lib/queryKeys'
+import { useAuthStore } from '@/store/authStore'
+import { ConfirmDialog } from '@/components/organisms/ConfirmDialog'
 
 // Confirmación tras registrar una visita y listado de visitas
 
@@ -77,6 +80,22 @@ export function ListadoVisitas() {
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+  })
+
+  // Borrar una visita registrada por error: quien la registró o la directiva (el backend lo comprueba)
+  const usuarioId = useAuthStore((s) => s.usuario?.id)
+  const esDirectiva = useAuthStore((s) => s.isDirectiva())
+  const [aBorrar, setABorrar] = useState<Visita | null>(null)
+  const queryClient = useQueryClient()
+  const { mutate: eliminar, isPending: eliminando } = useMutation({
+    mutationFn: (id: string) => visitasApi.eliminar(id),
+    onSuccess: () => {
+      setABorrar(null)
+      toast.success('Visita eliminada')
+      queryClient.invalidateQueries({ queryKey: QK.VISITAS })
+      queryClient.invalidateQueries({ queryKey: QK.VISITAS_BUSCAR })
+    },
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const visitas = data?.pages.flatMap((p) => p.data) ?? []
@@ -146,6 +165,17 @@ export function ListadoVisitas() {
                         : <><Gift className="h-3 w-3" />Gratis</>
                       }
                     </Badge>
+                    {(esDirectiva || v.socio_registro_id === usuarioId) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        aria-label={`Eliminar visita de ${v.nombre_completo}`}
+                        onClick={() => setABorrar(v)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -153,6 +183,17 @@ export function ListadoVisitas() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={!!aBorrar}
+        onOpenChange={(o) => !o && setABorrar(null)}
+        title="Eliminar visita"
+        description={aBorrar && `Se borrará la visita de ${aBorrar.nombre_completo} del ${formatDate(aBorrar.fecha_visita)}. Úsalo solo si se registró por error.`}
+        confirmLabel="Eliminar"
+        destructive
+        pending={eliminando}
+        onConfirm={() => aBorrar && eliminar(aBorrar.id)}
+      />
 
       {hasNextPage && (
         <div className="flex justify-center">

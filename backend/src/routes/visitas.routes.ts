@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { VisitasService } from '../services/visitas.service'
-import { authenticate } from '../middleware/auth'
+import { authenticate, ROLES } from '../middleware/auth'
 import { prisma } from '../lib/prisma'
 import { paginacion } from '../lib/paginacion'
 
@@ -49,6 +49,13 @@ router.post('/', authenticate, async (req, res) => {
     socio_registro_id: req.user.id,
   })
   res.status(201).json({ data: visita })
+})
+
+// DELETE /api/visitas/:id — borrar una visita registrada por error (quien la registró o la directiva)
+router.delete('/:id', authenticate, async (req, res) => {
+  const esDirectiva = ROLES.DIRECTIVA.some((r) => req.user.roles.includes(r))
+  await visitasService.eliminar(req.params.id, { id: req.user.id, esDirectiva })
+  res.json({ data: { id: req.params.id } })
 })
 
 export default router
