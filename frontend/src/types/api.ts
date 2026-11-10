@@ -48,7 +48,7 @@ export interface MiembroAdicionalPayload {
   email: string
   telefono: string
   fecha_nacimiento: string
-  apodo: string
+  apodo?: string
   consentimiento_tiendas: boolean
   password: string
 }
@@ -64,7 +64,7 @@ export type RegisterPayload =
       telefono?: string
       fecha_nacimiento?: string
       direccion?: string
-      apodo: string
+      apodo?: string
       consentimiento_tiendas: boolean
     }
   | {
@@ -77,7 +77,7 @@ export type RegisterPayload =
       telefono?: string
       fecha_nacimiento?: string
       direccion?: string
-      apodo: string
+      apodo?: string
       consentimiento_tiendas: boolean
       miembros_adicionales: MiembroAdicionalPayload[]
     }

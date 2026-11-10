@@ -248,7 +248,7 @@ export function RegistroPage() {
                   <FieldError message={errMsg(errors.telefono)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="apodo" className="font-display font-bold text-sm">Apodo <span className="text-destructive">*</span> <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span></Label>
+                  <Label htmlFor="apodo" className="font-display font-bold text-sm">Apodo <span className="text-muted-foreground font-normal text-xs">(cómo te conoce la gente)</span></Label>
                   <Input id="apodo" placeholder="Ej: Carly, El Mago..." {...register('apodo')} />
                   <FieldError message={errMsg(errors.apodo)} />
                 </div>

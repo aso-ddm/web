@@ -29,7 +29,7 @@ const solicitudSchema = z.object({
   telefono: z.string().min(1, 'El teléfono es obligatorio'),
   fecha_nacimiento: fechaNacimientoSchema,
   direccion: z.string().optional(),
-  apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
+  apodo: z.string().trim().optional(),
   consentimiento_tiendas: z.boolean(),
 })
 

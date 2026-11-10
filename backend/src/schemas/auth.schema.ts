@@ -53,6 +53,7 @@ export const fechaNacimientoEdicionSchema = z
 const apellidosSchema = z.string().min(2, 'Los apellidos son obligatorios')
 const telefonoSchema = z.string().min(1, 'El teléfono es obligatorio')
 const direccionSchema = z.string().min(1, 'La dirección es obligatoria')
+const apodoSchema = z.string().trim().optional().transform((v) => v || null) // opcional: vacío se guarda como null
 
 const camposPersona = {
   nombre: z.string().min(1, 'El nombre es obligatorio'),
@@ -62,7 +63,7 @@ const camposPersona = {
   telefono: telefonoSchema,
   fecha_nacimiento: fechaNacimientoSchema,
   direccion: direccionSchema,
-  apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
+  apodo: apodoSchema,
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
 }
@@ -77,7 +78,7 @@ export const miembroAdicionalSchema = z.object({
   telefono: telefonoSchema,
   fecha_nacimiento: fechaNacimientoSchema,
   direccion: direccionSchema,
-  apodo: z.string().trim().min(1, 'El apodo es obligatorio'),
+  apodo: apodoSchema,
   consentimiento_tiendas: z.boolean().default(false),
   password: passwordSchema,
 })

@@ -18,7 +18,7 @@ export interface SolicitudAltaPayload {
   telefono?: string
   fecha_nacimiento: string
   direccion?: string
-  apodo: string
+  apodo?: string
   consentimiento_tiendas: boolean
 }
 

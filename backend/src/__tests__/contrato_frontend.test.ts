@@ -44,7 +44,8 @@ describe('registro: el formulario y la API aceptan y rechazan lo mismo', () => {
     ['letra del DNI incorrecta', { ...individual, dni: '12345678A' }],
     ['menor de edad', { ...individual, fecha_nacimiento: `${new Date().getFullYear() - 10}-01-01` }],
     ['contraseña sin mayúscula', { ...individual, password: 'password1' }],
-    ['sin apodo', { ...individual, apodo: ' ' }],
+    ['sin apodo (opcional)', { ...individual, apodo: '' }],
+    ['miembro sin apodo', { ...conjunta, miembros_adicionales: [{ ...miembro, apodo: undefined }] }],
     ['sin miembros en conjunta', { ...conjunta, miembros_adicionales: [] }],
   ]
 
