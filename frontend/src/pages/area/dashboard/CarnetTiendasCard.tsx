@@ -7,8 +7,8 @@ import { DragonIcon } from '@/components/atoms/icons'
 import { carnetApi } from '@/services/api/carnet'
 import { QK } from '@/lib/queryKeys'
 
-// El token caduca a los 5 min (backend): se pide uno nuevo antes, y al volver a la pestaña
-const RENOVAR_MS = 4 * 60 * 1000
+// El token caduca a las 24 h (backend): se renueva cada hora, así nunca se enseña uno a punto de caducar
+const RENOVAR_MS = 60 * 60 * 1000
 // Píxel transparente: la librería solo vacía el centro (excavate) si hay imagen; el logo va encima como DragonIcon
 const HUECO_LOGO = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
 
@@ -19,7 +19,6 @@ export function CarnetTiendasCard() {
     queryFn: carnetApi.emitir,
     staleTime: RENOVAR_MS,
     refetchInterval: RENOVAR_MS,
-    refetchOnWindowFocus: 'always',
   })
   const token = data?.data.token
 
@@ -60,8 +59,8 @@ export function CarnetTiendasCard() {
             <>
               <p>Enséñalo en las tiendas colaboradoras para obtener tu descuento.</p>
               <p className="text-xs">
-                La tienda solo verá tu nombre y apellidos. El código cambia cada pocos minutos: una captura de pantalla
-                no sirve, ábrelo desde aquí.
+                La tienda solo verá tu nombre y apellidos. El código vale 24 horas: pasado ese tiempo una captura de pantalla
+                deja de servir, ábrelo desde aquí.
               </p>
             </>
           )}

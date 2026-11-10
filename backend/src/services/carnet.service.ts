@@ -3,8 +3,8 @@ import { EstadoSocio, type PrismaClient } from '@prisma/client'
 import { HttpError } from '../lib/httpError'
 import { igualesSeguro } from '../lib/seguridad'
 
-// Corto: una captura del QR deja de servir enseguida. El Dashboard lo renueva antes de que caduque
-export const CARNET_VIGENCIA_MS = 5 * 60 * 1000
+// 24 h: una captura sirve durante el día y deja de valer al siguiente. El Dashboard lo renueva antes
+export const CARNET_VIGENCIA_MS = 24 * 60 * 60 * 1000
 
 // Prefijo propio en la firma: el token del carnet no vale como token de sesión ni al revés
 const firmar = (cuerpo: string) =>
