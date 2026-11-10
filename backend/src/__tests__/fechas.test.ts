@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { finDelDiaMadrid, anioMesMadrid } from '../lib/fechas'
+import { finDelDiaMadrid, anioMesMadrid, inicioDelDiaMadrid } from '../lib/fechas'
 
 describe('finDelDiaMadrid', () => {
   it('verano (UTC+2): 2 oct 18:30 + 14 días → 16 oct 23:59:59.999 Madrid', () => {
@@ -20,5 +20,12 @@ describe('anioMesMadrid', () => {
     // 2026-03-01 00:30 en Madrid (UTC+1) = 2026-02-28 23:30 UTC
     expect(anioMesMadrid(new Date('2026-02-28T23:30:00Z'))).toEqual({ anio: 2026, mes: 3 })
     expect(anioMesMadrid(new Date('2026-12-31T23:30:00Z'))).toEqual({ anio: 2027, mes: 1 })
+  })
+})
+
+describe('inicioDelDiaMadrid', () => {
+  it('medianoche de Madrid en horario de verano y de invierno', () => {
+    expect(inicioDelDiaMadrid('2026-07-01').toISOString()).toBe('2026-06-30T22:00:00.000Z')
+    expect(inicioDelDiaMadrid('2026-12-01').toISOString()).toBe('2026-11-30T23:00:00.000Z')
   })
 })

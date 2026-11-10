@@ -54,10 +54,23 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
   const prestamosActivos = socio._count?.prestamos ?? 0
   const [decisiones, setDecisiones] = useState<Record<string, DestinoJuego>>({})
   const faltanDecisiones = juegosCedidos.some((j) => !decisiones[j.id])
+  const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }) // YYYY-MM-DD
+  const [fechaEfectiva, setFechaEfectiva] = useState(hoy)
+  const inmediata = fechaEfectiva <= hoy
+  const programada = socio.baja_programada_at
 
   const { mutate: darBaja, isPending: bajando } = useMutation({
-    mutationFn: () => sociosApi.darDeBaja(socio.id, Object.entries(decisiones).map(([juego_id, destino]) => ({ juego_id, destino }))),
-    onSuccess: () => { toast.success(`${socio.nombre} dado de baja`); invalidar() },
+    mutationFn: () => sociosApi.darDeBaja(socio.id, Object.entries(decisiones).map(([juego_id, destino]) => ({ juego_id, destino })), fechaEfectiva),
+    onSuccess: () => {
+      toast.success(inmediata ? `${socio.nombre} dado de baja` : `Baja de ${socio.nombre} programada para el ${formatDate(fechaEfectiva)}`)
+      invalidar()
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const { mutate: anularBaja, isPending: anulando } = useMutation({
+    mutationFn: () => sociosApi.anularBaja(socio.id),
+    onSuccess: () => { toast.success('Baja programada anulada'); invalidar() },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -302,19 +315,32 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
           ) : (
             <>
               <p className="font-display font-bold text-sm text-destructive">Zona peligrosa</p>
+              {programada && (
+                <div className="flex items-center gap-2 flex-wrap text-sm">
+                  <span>Baja programada para el <strong>{formatDate(programada)}</strong></span>
+                  <Button size="sm" variant="ghost" onClick={() => anularBaja()} disabled={anulando} className="font-display text-xs">
+                    {anulando && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                    Anular
+                  </Button>
+                  {new Date(programada) <= new Date() && (
+                    <p className="w-full text-xs text-destructive">
+                      No se ha podido aplicar (préstamos sin devolver o juegos cedidos sin decidir): resuélvelo y vuelve a darle de baja.
+                    </p>
+                  )}
+                </div>
+              )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setConfirmBaja(true)}
-                disabled={prestamosActivos > 0}
                 className="font-display text-destructive border-destructive/30 hover:bg-destructive/10 gap-2"
               >
                 <UserX className="h-4 w-4" />
-                Dar de baja al socio
+                {programada ? 'Cambiar la baja' : 'Dar de baja al socio'}
               </Button>
               {prestamosActivos > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Tiene {prestamosActivos} préstamo{prestamosActivos > 1 ? 's' : ''} sin devolver: registra la devolución antes de darle de baja.
+                  Tiene {prestamosActivos} préstamo{prestamosActivos > 1 ? 's' : ''} sin devolver: para darle de baja hoy registra antes la devolución; con fecha futura tendrá que haberlos devuelto ese día.
                 </p>
               )}
             </>
@@ -328,15 +354,28 @@ export function SocioDetalle({ socio, onClose, onAbrirSocio }: {
         onOpenChange={setConfirmBaja}
         title={`¿Dar de baja a ${socio.nombre} ${socio.apellidos}?`}
         description={<>
-          <p>El socio quedará en estado "baja" y perderá acceso al área privada. Se desvincula su Telegram y se retira su consentimiento para tiendas.</p>
+          <label className="flex items-center gap-2 pb-2 text-sm text-foreground">
+            <span className="font-display font-bold">Fecha efectiva de la baja</span>
+            <input
+              type="date"
+              min={hoy}
+              value={fechaEfectiva}
+              onChange={(e) => setFechaEfectiva(e.target.value || hoy)}
+              className="rounded-md border border-input bg-background px-2 py-1"
+            />
+          </label>
+          <p>
+            {inmediata ? 'Desde hoy' : `Seguirá siendo socio, con acceso a la web, hasta el ${formatDate(fechaEfectiva)}. Ese día`}
+            {' '}quedará en estado "baja" y perderá acceso al área privada. Se desvincula su Telegram y se retira su consentimiento para tiendas.
+          </p>
           <JuegosCedidosBaja
             juegos={juegosCedidos}
             decisiones={decisiones}
             onChange={(id, destino) => setDecisiones((d) => ({ ...d, [id]: destino }))}
           />
         </>}
-        confirmLabel="Dar de baja"
-        confirmDisabled={faltanDecisiones}
+        confirmLabel={inmediata ? 'Dar de baja' : 'Programar baja'}
+        confirmDisabled={faltanDecisiones || (inmediata && prestamosActivos > 0)}
         destructive
         onConfirm={() => darBaja()}
         pending={bajando}

@@ -1,9 +1,9 @@
-import { Prisma, PrismaClient, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, EstadoJuego, EstadoPrestamo, TipoLogJuego } from '@prisma/client'
+import { Prisma, PrismaClient, Usuario, Rol, EstadoSocio, EstadoPago, EstadoSolicitud, TipoCambioEstado, EstadoJuego, EstadoPrestamo, TipoLogJuego } from '@prisma/client'
 import { UpdateSocioInput, FiltrosSociosInput, BajaSocioInput } from '../schemas/socio.schema'
 import { buscarIdsUsuarios } from '../lib/search'
 import { telegram } from '../lib/telegram'
 import { eventos } from '../lib/eventos'
-import { anioMesMadrid } from '../lib/fechas'
+import { anioMesMadrid, inicioDelDiaMadrid } from '../lib/fechas'
 import fs from 'fs'
 import path from 'path'
 import { HttpError } from '../lib/httpError'
@@ -39,6 +39,7 @@ const SOCIO_LIST_SELECT = {
   estado: true,
   fecha_alta: true,
   fecha_baja: true,
+  baja_programada_at: true,
   tiene_llaves: true,
   comprobante_transferencia: true,
   created_at: true,
@@ -342,7 +343,7 @@ export class SociosService {
    * hay que decidir si se lo lleva (queda retirado) o se queda en el club (pasa a ser del club).
    * Protección de datos: deja de tratarse lo que ya no tiene sentido (Telegram, consentimiento, token de reset).
    */
-  async darDeBaja(id: string, bajaPorId: string, { juegos: decisiones }: BajaSocioInput = { juegos: [] }) {
+  async darDeBaja(id: string, bajaPorId: string, { juegos: decisiones, fecha_efectiva }: BajaSocioInput = { juegos: [] }) {
     if (id === bajaPorId) throw new HttpError(403, 'No puedes darte de baja a ti mismo')
     const socio = await this.prisma.usuario.findUnique({ where: { id } })
     if (!socio) throw new HttpError(404, 'Socio no encontrado')
@@ -354,6 +355,44 @@ export class SociosService {
     }
     if (socio.estado === EstadoSocio.pendiente) throw new HttpError(409, PENDIENTE_EN_SOLICITUDES)
 
+    // Con fecha futura sigue siendo socio (y con acceso) hasta ese día; préstamos y juegos se comprueban al aplicarla
+    const efectiva = fecha_efectiva ? inicioDelDiaMadrid(fecha_efectiva) : null
+    if (efectiva && efectiva > new Date()) {
+      return this.prisma.usuario.update({
+        where: { id, estado: EstadoSocio.activo },
+        data: { baja_programada_at: efectiva, baja_programada_por_id: bajaPorId, baja_programada_juegos: decisiones },
+        select: SOCIO_LIST_SELECT,
+      }).catch(yaNoPendiente('El socio ya no está activo'))
+    }
+    return this.aplicarBaja(socio, bajaPorId, decisiones)
+  }
+
+  async anularBajaProgramada(id: string) {
+    return this.prisma.usuario.update({
+      where: { id, estado: EstadoSocio.activo },
+      data: { baja_programada_at: null, baja_programada_por_id: null, baja_programada_juegos: Prisma.DbNull },
+      select: SOCIO_LIST_SELECT,
+    }).catch(yaNoPendiente('El socio ya no está activo'))
+  }
+
+  /**
+   * Aplica las bajas programadas cuya fecha ya llegó (lo lanza server.ts cada hora).
+   * Si una no se puede (préstamos sin devolver, juegos cedidos después sin decidir) se queda programada y se
+   * reintenta; la ficha la muestra vencida para que la directiva lo resuelva.
+   */
+  async ejecutarBajasProgramadas() {
+    const vencidas = await this.prisma.usuario.findMany({
+      where: { estado: EstadoSocio.activo, baja_programada_at: { lte: new Date() } },
+    })
+    for (const socio of vencidas) {
+      const decisiones = (socio.baja_programada_juegos ?? []) as BajaSocioInput['juegos']
+      await this.aplicarBaja(socio, socio.baja_programada_por_id!, decisiones)
+        .catch((err) => console.error(`Baja programada de ${socio.id}:`, err instanceof Error ? err.message : err))
+    }
+  }
+
+  private async aplicarBaja(socio: Usuario, bajaPorId: string, decisiones: BajaSocioInput['juegos']) {
+    const id = socio.id
     const [prestamosActivos, cedidos] = await Promise.all([
       this.prisma.prestamo.count({ where: { socio_id: id, estado: EstadoPrestamo.activo } }),
       this.prisma.juego.findMany({ where: { propietario_id: id, estado: { not: EstadoJuego.retirado } }, select: { id: true, nombre: true, estado: true } }),
@@ -393,6 +432,9 @@ export class SociosService {
         data: {
           estado: EstadoSocio.baja,
           fecha_baja: new Date(),
+          baja_programada_at: null,
+          baja_programada_por_id: null,
+          baja_programada_juegos: Prisma.DbNull,
           // Telegram no se desvincula nunca salvo con la baja (el aviso de baja usa el chat leído antes)
           telegram_chat_id: null,
           telegram_linked_at: null,

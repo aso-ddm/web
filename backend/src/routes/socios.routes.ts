@@ -144,7 +144,13 @@ router.post('/:id/rechazar', requireRoles(...ROLES.DIRECTIVA), async (req, res) 
 router.post('/:id/baja', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
   const { id } = req.params
   const socio = await sociosService.darDeBaja(id, req.user.id, bajaSocioSchema.parse(req.body ?? {}))
-  res.json({ message: 'Socio dado de baja correctamente', data: socio })
+  res.json({ message: socio.baja_programada_at ? 'Baja programada' : 'Socio dado de baja correctamente', data: socio })
+})
+
+// DELETE /api/socios/:id/baja — anula una baja programada (aún no efectiva)
+router.delete('/:id/baja', requireRoles(...ROLES.DIRECTIVA), async (req, res) => {
+  const socio = await sociosService.anularBajaProgramada(req.params.id)
+  res.json({ message: 'Baja programada anulada', data: socio })
 })
 
 // POST /api/socios/:id/reactivar

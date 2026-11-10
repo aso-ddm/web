@@ -24,6 +24,8 @@ import cuotasRouter from './routes/cuotas.routes'
 import eventosRouter from './routes/eventos.routes'
 import carnetRouter from './routes/carnet.routes'
 import { notFound, errorHandler } from './middleware/errorHandler'
+import { prisma } from './lib/prisma'
+import { SociosService } from './services/socios.service'
 
 const app = express()
 
@@ -72,5 +74,12 @@ const host = process.env.HOST || '0.0.0.0'
 app.listen(port, host, () => {
   console.log(`Backend escuchando en http://${host}:${port}`)
 })
+
+// Bajas con fecha efectiva: al arrancar y cada hora (un solo contenedor de backend)
+// ponytail: setInterval en proceso; si algún día hay varias réplicas, pasar a un cron con pg_advisory_lock
+const bajas = new SociosService(prisma)
+const aplicarBajas = () => bajas.ejecutarBajasProgramadas().catch((err) => console.error('Bajas programadas:', err))
+aplicarBajas()
+setInterval(aplicarBajas, 60 * 60 * 1000).unref()
 
 export default app

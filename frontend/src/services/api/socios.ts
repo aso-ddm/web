@@ -28,6 +28,7 @@ export type SocioAdmin = Usuario & {
   telefono?: string | null
   direccion?: string | null
   fecha_baja?: string | null
+  baja_programada_at?: string | null // baja con fecha efectiva futura: hasta entonces sigue activo
   created_at: string
   comprobante_transferencia?: string | null
   aprobado_por?: { id: string; nombre: string; apellidos: string } | null
@@ -98,8 +99,10 @@ export const sociosApi = {
   aprobar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/aprobar`),
   rechazar: (id: string) => api.action(`/socios/${id}/rechazar`),
   // juegos: qué pasa con cada juego que cedió (obligatorio para todos los que tenga)
-  darDeBaja: (id: string, juegos: { juego_id: string; destino: 'se_lo_lleva' | 'club' }[] = []) =>
-    api.post<{ data: SocioAdmin }>(`/socios/${id}/baja`, { juegos }),
+  // fecha_efectiva 'YYYY-MM-DD': hoy = inmediata; futura = sigue activo hasta ese día
+  darDeBaja: (id: string, juegos: { juego_id: string; destino: 'se_lo_lleva' | 'club' }[] = [], fecha_efectiva?: string) =>
+    api.post<{ data: SocioAdmin }>(`/socios/${id}/baja`, { juegos, fecha_efectiva }),
+  anularBaja: (id: string) => api.delete<{ data: SocioAdmin }>(`/socios/${id}/baja`),
   reactivar: (id: string) => api.action<{ data: SocioAdmin }>(`/socios/${id}/reactivar`),
 
   getComprobante: async (id: string): Promise<void> => {

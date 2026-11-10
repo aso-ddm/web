@@ -24,3 +24,8 @@ export function finDelDiaMadrid(date: Date, sumarDias = 0): Date {
   const offset = Date.UTC(q.year, q.month - 1, q.day, q.hour, q.minute, q.second, 999) - objetivo
   return new Date(objetivo - offset)
 }
+
+/** 00:00 (hora de Madrid) del día `dia` ('YYYY-MM-DD'). Mediodía UTC cae siempre en ese mismo día en Madrid */
+export function inicioDelDiaMadrid(dia: string): Date {
+  return new Date(finDelDiaMadrid(new Date(`${dia}T12:00:00Z`), -1).getTime() + 1)
+}

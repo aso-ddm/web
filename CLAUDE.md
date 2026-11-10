@@ -197,6 +197,9 @@ docker build -t asoddm/dragondemadera-frontend:latest -f frontend/Dockerfile .
   (`siguiente_es_pago`, `importe_siguiente`, `nuevo`); el frontend no recalcula.
 - `tipo_cuota` no se edita a mano: lo fija la pertenencia a una cuota conjunta (`solicitud_grupal_id`).
 - **Telegram no se desvincula nunca** (ni el socio ni el admin): solo se borra la vinculación al dar de baja (`darDeBaja`).
+- **Baja con fecha efectiva**: con fecha futura `darDeBaja` solo la programa (`baja_programada_*`); el socio sigue activo y
+  con acceso hasta ese día, y `ejecutarBajasProgramadas` (cada hora desde `server.ts`) la aplica con quien la programó y
+  sus decisiones de juegos. Si no puede (préstamos, juegos nuevos sin decidir) se queda vencida y se reintenta. `DELETE /socios/:id/baja` la anula.
 - **Baja de un socio** (`darDeBaja`): se rechaza con préstamos sin devolver; para cada juego que cedió la directiva decide
   si se lo lleva (queda retirado) o se queda en el club (sin propietario), con log; se borran Telegram, consentimiento de
   tiendas y token de reset. Las bajas solo las ve la directiva (vocales no: listado, ficha ni comprobante).

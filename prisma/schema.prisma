@@ -96,6 +96,10 @@ model Usuario {
   estado                    EstadoSocio @default(pendiente)
   fecha_alta                DateTime?
   fecha_baja                DateTime?
+  // Baja con fecha efectiva futura: sigue activo hasta entonces; la aplica ejecutarBajasProgramadas
+  baja_programada_at        DateTime?
+  baja_programada_por_id    String?
+  baja_programada_juegos    Json?
   tiene_llaves              Boolean     @default(false)
   llaves_solicitadas_at     DateTime?
   // Notas internas de la directiva sobre el socio (ni el socio ni los vocales las ven)

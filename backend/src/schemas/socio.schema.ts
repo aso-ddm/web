@@ -48,6 +48,8 @@ export const bajaSocioSchema = z.object({
     juego_id: z.string().uuid(),
     destino: z.enum(['se_lo_lleva', 'club']),
   })).default([]),
+  // Día en que la baja es efectiva (hora de Madrid); hoy o sin fecha = inmediata
+  fecha_efectiva: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha no válida').optional(),
 })
 
 export type BajaSocioInput = z.infer<typeof bajaSocioSchema>

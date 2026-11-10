@@ -69,7 +69,8 @@ Las aplica el backend (ver `../CLAUDE.md`); el frontend no las sortea ni ofrece 
 - **Telegram no se desvincula nunca** desde la app (ni el socio ni el admin): solo lo borra la baja.
   No añadir botones de "desvincular".
 - **Las altas entran solo por registro + aprobación** en Solicitudes: no hay "nuevo usuario" en admin.
-- **Baja** (`directiva/socios/SocioDetalle` + `JuegosCedidosBaja`): botón desactivado si tiene préstamos sin devolver;
+- **Baja** (`directiva/socios/SocioDetalle` + `JuegosCedidosBaja`): el diálogo pide la fecha efectiva (hoy = inmediata,
+  futura = programada, con "Anular" en la ficha); con préstamos sin devolver solo se puede programar;
   el diálogo pide decidir qué pasa con cada juego cedido ("se lo lleva" / "se queda en el club") y no confirma
   hasta tenerlos todos (`ConfirmDialog` con `confirmDisabled`).
 - **Las bajas solo las ve la directiva**: a los vocales no se les ofrece el filtro "Baja" (el backend tampoco se las da).

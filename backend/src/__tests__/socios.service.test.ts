@@ -497,6 +497,54 @@ describe('SociosService.darDeBaja — protección de datos y juegos cedidos', ()
   })
 })
 
+describe('SociosService.darDeBaja — con fecha efectiva', () => {
+  const m = (f: unknown) => f as ReturnType<typeof vi.fn>
+  beforeEach(() => {
+    vi.stubEnv('BOT_TOKEN', '')
+    m(prisma.usuario.update).mockResolvedValue({})
+  })
+
+  it('fecha futura → la programa, sigue activo y no exige devolver préstamos todavía', async () => {
+    m(prisma.usuario.findUnique).mockResolvedValue(socioActivo)
+    m(prisma.prestamo.count).mockResolvedValue(1)
+    const juegos = [{ juego_id: 'j1', destino: 'club' as const }]
+
+    await service.darDeBaja('u1', 'admin1', { juegos, fecha_efectiva: '2999-01-01' })
+
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'u1', estado: 'activo' },
+      data: { baja_programada_at: new Date('2998-12-31T23:00:00Z'), baja_programada_por_id: 'admin1', baja_programada_juegos: juegos },
+    }))
+  })
+
+  it('fecha de hoy o pasada → baja inmediata', async () => {
+    m(prisma.usuario.findUnique).mockResolvedValue(socioActivo)
+    await service.darDeBaja('u1', 'admin1', { juegos: [], fecha_efectiva: '2020-01-01' })
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ estado: 'baja', baja_programada_at: null }),
+    }))
+  })
+
+  it('ejecutarBajasProgramadas aplica las vencidas con quien la programó y sus decisiones; un fallo no para las demás', async () => {
+    m(prisma.usuario.findMany).mockResolvedValue([
+      { ...socioActivo, id: 'u1', baja_programada_por_id: 'admin1', baja_programada_juegos: [] },
+      { ...socioActivo, id: 'u2', baja_programada_por_id: 'admin1', baja_programada_juegos: [{ juego_id: 'j1', destino: 'club' }] },
+    ])
+    m(prisma.prestamo.count).mockResolvedValueOnce(1).mockResolvedValue(0) // u1 aún tiene un préstamo
+    m(prisma.juego.findMany).mockResolvedValue([])
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await service.ejecutarBajasProgramadas()
+
+    expect(error).toHaveBeenCalledWith('Baja programada de u1:', expect.stringContaining('préstamo'))
+    expect(prisma.usuario.update).toHaveBeenCalledTimes(1)
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'u2' }, data: expect.objectContaining({ estado: 'baja', baja_por_id: 'admin1' }),
+    }))
+    error.mockRestore()
+  })
+})
+
 describe('SociosService.getAll — los vocales no ven bajas', () => {
   it('sin filtro de estado excluye las bajas; pidiendo bajas devuelve vacío sin consultar', async () => {
     await service.getAll({ page: 1, limit: 20 }, false)
