@@ -342,6 +342,32 @@ async function main() {
   }
   await prisma.logJuego.create({ data: { juego_id: juegos[14].id, tipo: TipoLogJuego.nota_manual, texto: 'Revisado inventario: faltan 2 cartas de batalla del Bruto', usuario_id: ludo.id, created_at: haceDias(10) } })
 
+  // ── Biblioteca: libros de rol y cómics (van detrás: los índices de préstamos de juegos no cambian) ──
+  const biblioteca: [string, string?][] = [
+    ['Dungeons & Dragons: Manual del Jugador'], ['Dungeons & Dragons: Guía del Dungeon Master'], ['Dungeons & Dragons: Manual de Monstruos'],
+    ['La llamada de Cthulhu 7ª edición'], ['Vampiro: La Mascarada V5'], ['Pathfinder 2ª edición: Libro básico'],
+    ['El Anillo Único 2ª edición', 'Incluye pantalla del Maestro del Saber'], ['Aquelarre'], ['Hitos', 'Edición en tapa blanda'],
+    ['Blades in the Dark'], ['Mörk Borg'], ['Ryuutama'],
+    ['Watchmen'], ['Maus'], ['Sandman vol. 1: Preludios y nocturnos'], ['Mortadelo y Filemón: El sulfato atómico'],
+    ['Astérix el galo'], ['Blacksad: Un lugar entre las sombras'], ['Arrugas'], ['Persépolis'],
+    ['One Piece vol. 1'], ['Akira vol. 1', 'Lomo algo gastado'], ['Saga vol. 1'], ['Los muertos vivientes vol. 1'],
+  ]
+  for (const [i, [nombre, notas]] of biblioteca.entries()) {
+    const propietario = i % 6 === 2 ? propietarios[(i / 6) | 0] : null
+    const retirado = i === 15
+    const libro = await prisma.juego.create({ data: {
+      nombre, notas, tipo: 'libro',
+      localizacion: `Biblioteca ${'EF'[i % 2]}${1 + (i % 4)}`,
+      propietario_id: propietario?.id,
+      estado: retirado ? 'retirado' : 'en_estanteria',
+      created_at: haceDias(700 - i * 20),
+    } })
+    juegos.push(libro)
+    await prisma.logJuego.create({ data: { juego_id: libro.id, tipo: TipoLogJuego.donado, texto: `${nombre} donado al Dragón`, usuario_id: propietario?.id ?? ludo.id, created_at: libro.created_at } })
+    if (retirado) await prisma.logJuego.create({ data: { juego_id: libro.id, tipo: TipoLogJuego.retirado, texto: `${nombre} retirado: páginas sueltas`, usuario_id: ludo.id, created_at: haceDias(30) } })
+  }
+  const L = catalogo.length // índice del primer libro en juegos[]
+
   // ── Préstamos ───────────────────────────────────────────────────────────
   // [juego, socio, días desde el préstamo, renovaciones, devuelto hace N días (null = activo)]
   const prestamos: [number, { id: string }, number, number, number | null][] = [
@@ -352,6 +378,9 @@ async function main() {
     [0, basicos[0], 120, 0, 105], [1, socio, 90, 1, 64], [3, basicos[4], 200, 0, 190], [4, presi, 60, 0, 50],
     [5, basicos[8], 45, 0, 33], [8, socio, 150, 2, 100], [11, famHijo, 80, 0, 70], [12, basicos[9], 300, 0, 287],
     [15, basicos[10], 35, 1, 9], [20, basicos[2], 25, 0, 15], [22, bajas[1], 160, 0, 150], [29, basicos[5], 70, 0, 60],
+    // Biblioteca: activos e históricos
+    [L + 0, basicos[1], 5, 0, null], [L + 3, socio, 18, 1, null], [L + 12, basicos[4], 2, 0, null],
+    [L + 1, basicos[0], 100, 0, 80], [L + 13, socio, 60, 0, 45], [L + 20, famHijo, 40, 1, 12],
   ]
   for (const [j, s, hace, renov, devuelto] of prestamos) {
     const juego = juegos[j]
@@ -377,6 +406,8 @@ async function main() {
     { socio_id: socio.id, nombre: 'Lost Ruins of Arnak', notas: 'Completo, con fundas', created_at: haceDias(2) },
     { socio_id: basicos[4].id, nombre: 'Clank!', created_at: haceDias(5) },
     { socio_id: famMadre.id, nombre: 'Kingdomino', notas: 'Ideal para jugar con peques', created_at: haceDias(1) },
+    { socio_id: basicos[3].id, nombre: 'Cyberpunk RED', tipo: 'libro', notas: 'Libro básico, como nuevo', created_at: haceDias(3) },
+    { socio_id: socio.id, nombre: 'Berserk vol. 1-5', tipo: 'libro', created_at: haceDias(4) },
     { socio_id: basicos[11].id, nombre: 'Monopoly', estado: 'rechazada', motivo_rechazo: 'Ya tenemos dos copias en la ludoteca', created_at: haceDias(40) },
   ] })
   for (const [s, j] of [[basicos[2], 8], [ludo, 3]] as const) {
