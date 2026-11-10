@@ -82,6 +82,3 @@ export const SOCIAL_URLS = {
   telegram: "https://t.me/+1Vs9bN_8LR42MTNk",
 } as const
 
-export const GOOGLE_SHEETS = {
-  ludotecaCSV: "https://docs.google.com/spreadsheets/d/1TNUpo2tDCpRxfIMk2k80wHJT5hQQNy8DgmyW0h0IBB0/export?format=csv",
-} as const

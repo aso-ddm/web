@@ -24,6 +24,9 @@ export const juegosApi = {
   getAll: (filtros: FiltrosJuegos = {}) =>
     api.get<PaginatedResponse<Juego>>(`/juegos${buildQuery({ ...filtros })}`),
 
+  /** Web pública, sin login: nombre y tipo de lo que no está retirado */
+  publico: () => api.get<{ data: Pick<Juego, 'nombre' | 'tipo'>[] }>('/juegos/publico'),
+
   /** Juegos de los que el socio autenticado es propietario */
   mios: () => api.get<{ data: Juego[] }>('/juegos/mios'),
 

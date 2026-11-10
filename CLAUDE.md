@@ -249,7 +249,7 @@ Convenciones detalladas en `frontend/CLAUDE.md`. Lo esencial:
 - **Sin paquete compartido front/back**: roles, enums y reglas del registro se escriben en los dos lados y
   `backend/src/__tests__/contrato_frontend.test.ts` falla en CI si divergen
 - **Despliegue actual en Docker** (`web2-feature` → VPS de pruebas); bare metal + PM2 (`deploy.yml`) preparado para producción
-- **La ludoteca pública lee de Google Sheets**, no de `/juegos` (que incluye datos personales y pide login)
+- **La ludoteca pública lee de `GET /juegos/publico`** (sin login, solo `nombre` y `tipo` de lo no retirado), no de `/juegos` (que incluye datos personales y pide login)
 - **Descartado por ahora** (ver "Reglas para migraciones"): enums de columnas de texto, fusión de enums de solicitud,
   emails a minúsculas e índice único parcial de préstamo activo (la reserva del juego ya es atómica)
 - `dias_aviso_devolucion` se conserva en configuración: está prevista para avisos de devolución

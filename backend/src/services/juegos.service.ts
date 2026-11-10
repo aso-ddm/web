@@ -89,6 +89,16 @@ export class JuegosService {
     return paginado(juegos, total, filtros)
   }
 
+  // Web pública (sin login): solo nombre y tipo, nada de propietarios ni de quién lo tiene prestado.
+  // ponytail: sin paginar, son ~1000 filas de dos columnas; paginar si la ludoteca crece mucho más
+  async getPublico() {
+    return this.prisma.juego.findMany({
+      where: { estado: { not: EstadoJuego.retirado } },
+      select: { nombre: true, tipo: true },
+      orderBy: { nombre: 'asc' },
+    })
+  }
+
   // ponytail: sin paginar, un socio cede pocos juegos
   async getDePropietario(propietario_id: string) {
     return this.prisma.juego.findMany({ where: { propietario_id }, orderBy: { nombre: 'asc' } })

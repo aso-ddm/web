@@ -42,3 +42,15 @@ describe('JuegosService filtro por tipo', () => {
     expect(prisma.juego.count).toHaveBeenCalledWith({ where: { estado: 'prestado', tipo: 'libro' } })
   })
 })
+
+describe('JuegosService catálogo público', () => {
+  it('getPublico solo pide nombre y tipo, sin retirados (nada de datos personales)', async () => {
+    ;(prisma.juego.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    await service.getPublico()
+    expect(prisma.juego.findMany).toHaveBeenCalledWith({
+      where: { estado: { not: 'retirado' } },
+      select: { nombre: true, tipo: true },
+      orderBy: { nombre: 'asc' },
+    })
+  })
+})

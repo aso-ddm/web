@@ -36,6 +36,12 @@ router.get('/', authenticate, async (req, res) => {
   res.json(result)
 })
 
+// GET /api/juegos/publico — ludoteca de la web pública, sin login (solo nombre y tipo)
+router.get('/publico', async (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300')
+  res.json({ data: await juegosService.getPublico() })
+})
+
 // GET /api/juegos/mios — juegos cedidos por el socio autenticado
 router.get('/mios', authenticate, async (req, res) => {
   res.json({ data: await juegosService.getDePropietario(req.user!.id) })

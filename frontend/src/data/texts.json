@@ -260,15 +260,16 @@
     "follow": "Síguenos"
   },
   "ludoteca": {
-    "tableTitle": "Listado de Juegos",
-    "loading": "Cargando juegos...",
-    "error": "No se pudieron cargar los juegos",
-    "searchPlaceholder": "Buscar juego...",
+    "tableTitle": "Ludoteca",
+    "tabs": { "juego": "Juegos", "libro": "Biblioteca" },
+    "loading": "Cargando la ludoteca...",
+    "error": "No se pudo cargar la ludoteca",
+    "searchPlaceholder": { "juego": "Buscar juego...", "libro": "Buscar libro o cómic..." },
     "clearSearch": "Limpiar búsqueda",
-    "noResults": "No se encontraron juegos que coincidan con \"{searchTerm}\"",
+    "noResults": "No se encontró nada que coincida con \"{searchTerm}\"",
+    "empty": "Todavía no hay nada en esta sección",
     "showing": "Mostrando",
     "of": "de",
-    "games": "juegos",
-    "total": "Total de juegos"
+    "total": "Total"
   }
 }

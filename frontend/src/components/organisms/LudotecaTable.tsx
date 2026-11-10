@@ -1,69 +1,42 @@
 import { useDeferredValue, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
-import { GOOGLE_SHEETS, SPACING } from '@/lib/constants'
+import { SPACING } from '@/lib/constants'
 import texts from '@/data/texts.json'
 import { normalizarBusqueda } from '@/lib/format'
+import { juegosApi } from '@/services/api/juegos'
+import type { TipoJuego } from '@/types/api'
 
-// Columnas de una línea CSV respetando comillas ("Catan, el juego") y comillas escapadas ("").
-// ponytail: no admite saltos de línea dentro de comillas; papaparse si la hoja llega a tenerlos
-export function columnasCsv(linea: string): string[] {
-  const columnas: string[] = []
-  for (const [, valor, separador] of linea.matchAll(/("(?:[^"]|"")*"|[^,]*)(,|$)/g)) {
-    columnas.push(valor.replace(/^"|"$/g, '').replace(/""/g, '"'))
-    if (separador === '') break // fin de línea
-  }
-  return columnas
-}
-
-/** Nombres de juego (columna 2 de la hoja pública), en mayúsculas y ordenados */
-async function cargarLudoteca(): Promise<string[]> {
-  const res = await fetch(GOOGLE_SHEETS.ludotecaCSV)
-  // Si la hoja deja de ser pública Google responde con HTML: no pintarlo como si fueran juegos
-  if (!res.ok) throw new Error(`Google Sheets respondió ${res.status}`)
-  return (await res.text())
-    .split('\n')
-    .slice(1)
-    .map((linea) => columnasCsv(linea.trim())[1]?.trim().toUpperCase())
-    .filter((nombre): nombre is string => !!nombre)
-    .sort((a, b) => a.localeCompare(b))
-}
+const TIPOS: TipoJuego[] = ['juego', 'libro']
 
 export function LudotecaTable() {
+  const [tipo, setTipo] = useState<TipoJuego>('juego')
   const [searchTerm, setSearchTerm] = useState('')
-  // Caché de sesión: volver a la página no descarga otra vez la hoja (unos 800 juegos)
-  const { data: games = [], isLoading: loading, isError: error } = useQuery({
+  // Una sola descarga para las dos pestañas; caché de sesión al volver a la página
+  const { data: todos = [], isLoading: loading, isError: error } = useQuery({
     queryKey: ['ludoteca-publica'],
-    queryFn: cargarLudoteca,
+    queryFn: async () => (await juegosApi.publico()).data,
     staleTime: Infinity,
   })
   // El filtrado de cientos de filas no bloquea lo que se escribe en el buscador
   const busqueda = useDeferredValue(searchTerm)
 
+  const games = todos.filter((j) => j.tipo === tipo)
   const q = normalizarBusqueda(busqueda)
-  const filteredGames = games.filter((game) => normalizarBusqueda(game).includes(q))
+  const filteredGames = games.filter((game) => normalizarBusqueda(game.nombre).includes(q))
 
-  if (loading) {
+  const cabecera = (
+    <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
+      <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-center">{texts.ludoteca.tableTitle}</h3>
+    </div>
+  )
+
+  if (loading || error) {
     return (
       <div className="w-full max-w-5xl border-2 border-muted rounded-lg overflow-hidden shadow-lg">
-        <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-center">{texts.ludoteca.tableTitle}</h3>
-        </div>
+        {cabecera}
         <div className={`${SPACING.padLg} text-center`}>
-          <p className="text-base sm:text-lg md:text-xl">{texts.ludoteca.loading}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || games.length === 0) {
-    return (
-      <div className="w-full max-w-5xl border-2 border-muted rounded-lg overflow-hidden shadow-lg">
-        <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-center">{texts.ludoteca.tableTitle}</h3>
-        </div>
-        <div className={`${SPACING.padLg} text-center`}>
-          <p className="text-base sm:text-lg md:text-xl">{texts.ludoteca.error}</p>
+          <p className="text-base sm:text-lg md:text-xl">{loading ? texts.ludoteca.loading : texts.ludoteca.error}</p>
         </div>
       </div>
     )
@@ -73,11 +46,25 @@ export function LudotecaTable() {
     <div className="w-full max-w-5xl border-2 border-muted rounded-lg overflow-hidden shadow-lg">
       <div className={`bg-primary text-primary-foreground ${SPACING.padMd}`}>
         <div className={`flex flex-col sm:flex-row items-center justify-between ${SPACING.gapSm}`}>
-          <h3 className="text-xl sm:text-2xl md:text-3xl font-bold">{texts.ludoteca.tableTitle}</h3>
+          <div role="tablist" aria-label={texts.ludoteca.tableTitle} className="flex gap-1">
+            {TIPOS.map((t) => (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={tipo === t}
+                onClick={() => setTipo(t)}
+                className={`px-3 py-1 rounded text-lg sm:text-xl md:text-2xl font-bold transition-colors ${
+                  tipo === t ? 'bg-primary-foreground text-primary' : 'hover:bg-primary-foreground/10'
+                }`}
+              >
+                {texts.ludoteca.tabs[t]}
+              </button>
+            ))}
+          </div>
           <div className="relative w-full sm:w-auto sm:min-w-[200px] md:min-w-[250px]">
             <input
               type="text"
-              placeholder={texts.ludoteca.searchPlaceholder}
+              placeholder={texts.ludoteca.searchPlaceholder[tipo]}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-1.5 pr-8 rounded text-sm text-foreground bg-card border border-primary-foreground/20 focus:border-primary-foreground/40 focus:outline-none transition-colors"
@@ -94,24 +81,24 @@ export function LudotecaTable() {
           </div>
         </div>
       </div>
-      <div className="max-h-[400px] sm:max-h-[500px] md:max-h-[600px] overflow-y-auto bg-background">
+      <div role="tabpanel" className="max-h-[400px] sm:max-h-[500px] md:max-h-[600px] overflow-y-auto bg-background">
         <table className="w-full">
           <tbody>
             {filteredGames.length > 0 ? (
               filteredGames.map((game, index) => (
                 <tr
-                  key={`${index}-${game}`} // la hoja puede repetir un nombre (varias copias del mismo juego)
+                  key={`${index}-${game.nombre}`} // puede haber varias copias del mismo juego
                   className={`border-b border-muted/50 hover:bg-muted/30 transition-colors ${
                     index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                   }`}
                 >
-                  <td className={`${SPACING.padSm} text-sm sm:text-base md:text-lg`}>{game}</td>
+                  <td className={`${SPACING.padSm} text-sm sm:text-base md:text-lg uppercase`}>{game.nombre}</td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td className="p-8 text-center text-muted-foreground text-sm sm:text-base">
-                  {texts.ludoteca.noResults.replace('{searchTerm}', searchTerm)}
+                  {searchTerm ? texts.ludoteca.noResults.replace('{searchTerm}', searchTerm) : texts.ludoteca.empty}
                 </td>
               </tr>
             )}
@@ -123,8 +110,7 @@ export function LudotecaTable() {
           {searchTerm ? (
             <>
               {texts.ludoteca.showing}: <span className="font-bold text-foreground">{filteredGames.length}</span>{' '}
-              {texts.ludoteca.of} <span className="font-bold text-foreground">{games.length}</span>{' '}
-              {texts.ludoteca.games}
+              {texts.ludoteca.of} <span className="font-bold text-foreground">{games.length}</span>
             </>
           ) : (
             <>

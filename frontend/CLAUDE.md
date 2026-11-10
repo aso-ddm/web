@@ -76,7 +76,7 @@ Las aplica el backend (ver `../CLAUDE.md`); el frontend no las sortea ni ofrece 
 - **Las bajas solo las ve la directiva**: a los vocales no se les ofrece el filtro "Baja" (el backend tampoco se las da).
 - **`tipo_cuota` no se edita** en formularios: cambia al unir o sacar de una cuota conjunta.
 - **Recuperar contraseña** muestra siempre el mismo mensaje, exista o no la cuenta.
-- **Datos personales de socios solo con sesión**: la ludoteca pública lee de Google Sheets, no de `/juegos`.
+- **Datos personales de socios solo con sesión**: la ludoteca pública (`LudotecaTable`) lee de `GET /juegos/publico` (solo nombre y tipo), no de `/juegos`.
 - Cualquier cambio de estas reglas que afecte a datos personales se refleja también en la política de privacidad:
   su texto es la configuración `texto_rgpd` (la edita la directiva en Configuración; `RgpdPage` solo la pinta), así
   que hay que avisar a la directiva o cambiarlo con una migración. El alta exige aceptarla (`acepta_rgpd`, también en el backend).
