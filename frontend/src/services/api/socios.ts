@@ -17,7 +17,7 @@ export interface ContactoDirectiva {
   nombre: string
   apellidos: string
   apodo: string | null
-  cargo: Rol
+  cargos: Rol[]
   alias_telegram: string | null
   email: string
 }

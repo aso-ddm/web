@@ -6,7 +6,7 @@ import { sociosApi } from '@/services/api/socios'
 import { QK } from '@/lib/queryKeys'
 import { getRolLabel } from '@/lib/roles'
 
-/** Contacto de presidente, secretario, tesorero y vocales; no se pinta si no hay ninguno */
+/** Contacto de presidente, secretario, tesorero, vocales y ludotecarios; no se pinta si no hay ninguno */
 export function ContactoDirectivaCard() {
   const { data, isLoading } = useQuery({
     queryKey: QK.SOCIOS_DIRECTIVA,
@@ -20,7 +20,7 @@ export function ContactoDirectivaCard() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="font-display text-lg text-primary">¿A quién pregunto si necesito algo?</CardTitle>
-        <p className="text-sm text-muted-foreground">La junta directiva del club</p>
+        <p className="text-sm text-muted-foreground">La junta directiva y la ludoteca del club</p>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -33,7 +33,7 @@ export function ContactoDirectivaCard() {
               const telegram = m.alias_telegram?.replace(/^@/, '')
               return (
                 <li key={m.id} className="rounded-lg border border-border p-3 min-w-0">
-                  <p className="text-xs text-muted-foreground font-display">{getRolLabel(m.cargo)}</p>
+                  <p className="text-xs text-muted-foreground font-display">{m.cargos.map(getRolLabel).join(' · ')}</p>
                   <p className="text-sm font-display font-bold truncate">
                     {m.nombre} {m.apellidos}
                     {m.apodo && <span className="font-normal text-muted-foreground"> ({m.apodo})</span>}

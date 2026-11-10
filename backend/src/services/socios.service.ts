@@ -20,7 +20,8 @@ function borrarComprobantes(nombres: (string | null)[]) {
 }
 
 // Listados y respuestas de mutaciones: sin historial ni trazabilidad (solo se ven en la ficha)
-const CARGOS_DIRECTIVA: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal]
+// Cargos que salen en "¿A quién pregunto?" de Mi panel, en este orden
+const CARGOS_CONTACTO: Rol[] = [Rol.presidente, Rol.secretario, Rol.tesorero, Rol.vocal, Rol.ludotecario]
 
 const SOCIO_LIST_SELECT = {
   id: true,
@@ -140,17 +141,17 @@ export class SociosService {
     })
   }
 
-  /** Cargos de la junta con su contacto, para que cualquier socio sepa a quién preguntar. Orden: presidente, secretario, tesorero, vocales */
+  /** Junta y ludotecarios con su contacto, para que cualquier socio sepa a quién preguntar.
+   *  `cargos` en el orden de CARGOS_CONTACTO; la lista se ordena por el primero (presidente … ludotecario) */
   async getDirectiva() {
     const socios = await this.prisma.usuario.findMany({
-      where: { estado: EstadoSocio.activo, roles: { hasSome: CARGOS_DIRECTIVA } },
+      where: { estado: EstadoSocio.activo, roles: { hasSome: CARGOS_CONTACTO } },
       select: { id: true, nombre: true, apellidos: true, apodo: true, roles: true, alias_telegram: true, email: true },
       orderBy: [{ nombre: 'asc' }, { apellidos: 'asc' }],
     })
-    const orden = (roles: Rol[]) => CARGOS_DIRECTIVA.findIndex((c) => roles.includes(c))
     return socios
-      .map((s) => ({ ...s, cargo: CARGOS_DIRECTIVA[orden(s.roles)], roles: undefined }))
-      .sort((a, b) => CARGOS_DIRECTIVA.indexOf(a.cargo) - CARGOS_DIRECTIVA.indexOf(b.cargo))
+      .map((s) => ({ ...s, cargos: CARGOS_CONTACTO.filter((c) => s.roles.includes(c)), roles: undefined }))
+      .sort((a, b) => CARGOS_CONTACTO.indexOf(a.cargos[0]) - CARGOS_CONTACTO.indexOf(b.cargos[0]))
   }
 
   async getPendientes() {

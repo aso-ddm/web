@@ -479,14 +479,20 @@ describe('SociosService.getAll — los vocales no ven bajas', () => {
 })
 
 describe('SociosService.getDirectiva', () => {
-  it('ordena por cargo (presidente, secretario, tesorero, vocales) y no expone los roles', async () => {
+  it('ordena por cargo (presidente … vocales, ludotecarios), incluye todos sus cargos y no expone los roles', async () => {
     vi.mocked(prisma.usuario.findMany).mockResolvedValue([
-      { id: 'v', nombre: 'Ana', roles: [Rol.vocal, Rol.ludotecario] },
+      { id: 'l', nombre: 'Aitor', roles: [Rol.ludotecario] },
+      { id: 'v', nombre: 'Ana', roles: [Rol.ludotecario, Rol.vocal] },
       { id: 't', nombre: 'Bea', roles: [Rol.tesorero] },
       { id: 'p', nombre: 'Carla', roles: [Rol.presidente, Rol.administrador] },
     ] as never)
     const junta = await service.getDirectiva()
-    expect(junta.map((m) => [m.id, m.cargo])).toEqual([['p', 'presidente'], ['t', 'tesorero'], ['v', 'vocal']])
+    expect(junta.map((m) => [m.id, m.cargos])).toEqual([
+      ['p', ['presidente']],
+      ['t', ['tesorero']],
+      ['v', ['vocal', 'ludotecario']],
+      ['l', ['ludotecario']],
+    ])
     expect(junta[0].roles).toBeUndefined()
   })
 })
