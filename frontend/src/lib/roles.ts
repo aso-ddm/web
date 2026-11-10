@@ -15,8 +15,9 @@ export const DIRECTIVA: Rol[] = ['administrador', 'presidente', 'secretario', 't
 export const DIRECTIVA_Y_VOCALES: Rol[] = [...DIRECTIVA, 'vocal']
 export const DIRECTIVA_Y_LUDOTECARIO: Rol[] = [...DIRECTIVA, 'ludotecario']
 
-/** Roles que la directiva puede asignar (administrador solo por BD/seed) */
-export const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario', 'socio_basico']
+/** Roles que la directiva puede asignar (administrador solo por BD/seed).
+ *  socio_basico no se ofrece: todos son socios; es el rol base cuando no hay cargo. */
+export const ROLES_ASIGNABLES: Rol[] = ['presidente', 'secretario', 'tesorero', 'vocal', 'ludotecario']
 
 export function getRolLabel(rol: Rol): string {
   return ROL_LABELS[rol] ?? rol
@@ -29,5 +30,6 @@ export function toggleRol(actuales: Rol[], rol: Rol): Rol[] {
   }
   // Rol base primero: se lee "Vocal · Ludotecario"
   const conservados = actuales.filter((r) => r === 'ludotecario' || r === 'administrador')
-  return [rol, ...conservados]
+  // Pulsar el cargo que ya tiene lo quita: vuelve a socio sin cargo
+  return [actuales.includes(rol) ? 'socio_basico' : rol, ...conservados]
 }

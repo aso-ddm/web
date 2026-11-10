@@ -135,7 +135,7 @@ export function GestionSociosPage() {
                           {socio.tiene_llaves && (
                             <Badge variant="outline" className="text-xs font-display gap-1"><Key className="h-3 w-3" />Llaves</Badge>
                           )}
-                          {socio.roles.map((r) => <RolBadge key={r} rol={r} />)}
+                          {socio.roles.filter((r) => r !== 'socio_basico').map((r) => <RolBadge key={r} rol={r} />)}
                         </div>
                         <SocioDatos socio={socio} />
                       </div>
