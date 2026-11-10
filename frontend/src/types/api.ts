@@ -110,6 +110,8 @@ export interface Juego {
   estado: EstadoJuego
   propietario_id?: string | null
   propietario?: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> | null
+  /** Solo en el catálogo (GET /juegos): el préstamo activo, si lo hay */
+  prestamos?: { socio: Pick<Usuario, 'id' | 'nombre' | 'apellidos'> }[]
 }
 
 // ── Préstamo ──────────────────────────────────────────────────────────────────

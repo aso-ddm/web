@@ -1,4 +1,4 @@
-import { PrismaClient, TipoLogJuego, Prisma, EstadoJuego } from '@prisma/client'
+import { PrismaClient, TipoLogJuego, Prisma, EstadoJuego, EstadoPrestamo } from '@prisma/client'
 import type { CrearJuegoInput, UpdateJuegoInput, FiltrosJuegosInput } from '../schemas/juego.schema'
 import { textoAltaJuego, type LogsJuegoService } from './logs_juego.service'
 import { HttpError } from '../lib/httpError'
@@ -6,6 +6,15 @@ import { likePattern } from '../lib/search'
 import { paginado } from '../lib/paginacion'
 
 const propietarioSelect = { select: { id: true, nombre: true, apellidos: true } }
+// Catálogo: quién tiene cada juego prestado (como mucho un préstamo activo, la reserva es atómica)
+const listadoInclude = {
+  propietario: propietarioSelect,
+  prestamos: {
+    where: { estado: EstadoPrestamo.activo },
+    take: 1,
+    select: { socio: propietarioSelect },
+  },
+} satisfies Prisma.JuegoInclude
 
 function comprobarJugadores(min?: number | null, max?: number | null) {
   if (min != null && max != null && min > max) {
@@ -59,7 +68,7 @@ export class JuegosService {
         ? await this.prisma.juego.findMany({
             where: { id: { in: ids } },
             orderBy: { nombre: 'asc' },
-            include: { propietario: propietarioSelect },
+            include: listadoInclude,
           })
         : []
 
@@ -74,7 +83,7 @@ export class JuegosService {
         skip,
         take: limit,
         orderBy: { nombre: 'asc' },
-        include: { propietario: propietarioSelect },
+        include: listadoInclude,
       }),
       this.prisma.juego.count({ where }),
     ])

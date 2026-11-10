@@ -39,6 +39,7 @@ const estadoSolicitudVariant: Record<EstadoSolicitudJuego, 'default' | 'secondar
 // memo: onSolicitar es un setter estable; escribir en el buscador no repinta todas las tarjetas
 const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego; onSolicitar: (j: Juego) => void }) {
   const disponible = juego.estado === 'en_estanteria'
+  const prestadoA = juego.estado === 'prestado' ? juego.prestamos?.[0]?.socio : undefined
   return (
     <Card className={`transition-shadow ${disponible ? 'hover:shadow-md cursor-pointer' : 'opacity-70'}`}>
       <CardContent className="pt-4 pb-3 flex flex-col gap-2 flex-1">
@@ -64,6 +65,12 @@ const JuegoCard = memo(function JuegoCard({ juego, onSolicitar }: { juego: Juego
             </span>
           )}
         </div>
+        {prestadoA && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <BookOpen className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>Lo tiene <span className="font-display font-bold text-sm text-foreground">{prestadoA.nombre} {prestadoA.apellidos}</span></span>
+          </p>
+        )}
         {juego.propietario ? (
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <Handshake className="h-3.5 w-3.5 text-secondary flex-shrink-0" />
